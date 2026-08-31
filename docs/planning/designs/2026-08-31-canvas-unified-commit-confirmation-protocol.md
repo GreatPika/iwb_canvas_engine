@@ -1,7 +1,7 @@
 ---
 schema: architecture-design/v4
 date: 2026-08-31
-commit: 539dc0c8
+commit: 12c277cd
 branch: main
 disposition: READY_FOR_CONTRACT
 outcome: R-001
@@ -15,7 +15,7 @@ outcome: R-001
 
 | ID | Kind | Locator | Use |
 | --- | --- | --- | --- |
-| S-001 | user | user request | Accepted design request, external Undo, Q1=A, Q2=A, Q3=A, final Q4=remove the created empty layer, simplicity constraint, and final scope confirmation; the earlier retain-layer proposal was explicitly superseded. |
+| S-001 | user | user request | Accepted design request, external Undo, Q1=A, Q2=A, Q3=A, final Q4=remove the created empty layer, simplicity constraint, and final scope confirmation; the earlier retain-layer proposal was explicitly superseded. The later TextEdit amendment adds only that seventh operation and supersedes the earlier text-editing exclusion. |
 | S-002 | other | `/Users/blackpika/.codex/attachments/03c044b6-f7d7-4bb8-991e-9b07810d641b/pasted-text.txt` | Complete supplied specification, including exact public protocol names and failure ordering. |
 | S-003 | research | `docs/history/research/2026-08-31-canvas-unified-commit-confirmation-protocol.md` | Historical route investigation, checked against current owners; not future behavioral authority. |
 | S-004 | repository | `AGENTS.md` | Repository lifecycle, verification, and architecture ownership rules. |
@@ -51,6 +51,13 @@ outcome: R-001
 | S-034 | repository | `docs/planning/FOLLOW_UPS.md` | Current unresolved-work registry; no registered competing work. |
 | S-035 | repository | `docs/contracts/resources.md` | Application ownership of assets and runtime borrow release. |
 | S-036 | repository | `lib/src/contracts/public/canvas_document.dart` | Public document, layer, and summary values. |
+| S-037 | repository | `lib/src/contracts/public/canvas_element.dart` | Complete existing text element and inherited immutable fields. |
+| S-038 | repository | `lib/src/contracts/public/canvas_element_update.dart` | Existing public text-field restoration capability. |
+| S-039 | repository | `lib/src/edit/element_update_application.dart` | Text update identity and revision semantics. |
+| S-040 | repository | `test/runtime/fixtures/text_editing_port_fixture.dart` | Existing text session, dismissal callback, and failure witnesses. |
+| S-041 | repository | `test/interaction/fixtures/text_edit_stale_commit_guard_fixture.dart` | Text request consumption, validation, and preparation-failure witnesses. |
+| S-042 | repository | `lib/src/store/family_tables.dart` | Exact per-element text projection from committed/prepared rows. |
+| S-043 | repository | `lib/src/frame/frame_text_layout_measurer.dart` | Existing text sizing inputs and derived measured bounds. |
 
 ### Source Coverage
 
@@ -60,7 +67,7 @@ outcome: R-001
 | research | S-003 |
 | plan | none |
 | user | S-001 |
-| repository | S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036 |
+| repository | S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043 |
 | other | S-002 |
 
 ### Evidence
@@ -102,31 +109,45 @@ outcome: R-001
 | E-033 | S-011 | `lines 3732-3795` | ID candidate observation, reservation, and accepted-ledger admission have separate roles. |
 | E-034 | S-005 | `lines 21-56` | Direct-child designs and plans are active registrations; historical artifacts do not own current behavior. |
 | E-035 | S-034 | `lines 1-14` | The follow-up registry contains no current concern entries. |
+| E-036 | S-015 | `lines 1310-1394` | commitTextEdit validates and qualifies the request, consumes equal-text no-ops without an action, and currently installs changed text before common delivery without confirmation. |
+| E-037 | S-037 | `lines 18-250` | CanvasTextElement includes text, formatting/layout inputs, inherited identity/revision, transform, flags, and metadata; measured width and height are not stored element fields. |
+| E-038 | S-015 | `lines 1360-1470` | Changed-text preparation may compensate transform translation using current/next measured layout to preserve the existing horizontal anchor and top edit edge. |
+| E-039 | S-018 | `lines 1752-1769` | Current changed-text delivery clears a matching active session before common delivery and expressly permits its listener to complete a separate nested mutation first. |
+| E-040 | S-040 | `lines 732-770` | Injected failed preparation and invalid text preserve the active session and live request; these cases do not establish recovery from a real Store installation failure. |
+| E-041 | S-041 | `lines 361-412` | Command coverage keeps a request live after a non-publishing preparation result and successfully retries after input validation fails. |
+| E-042 | S-011 | `lines 887-918` | Sparse Store preparation normalizes and freezes rows before returning the accepted document, which is available before installation. |
+| E-043 | S-042 | `lines 2025-2049` | TextRow.toElement projects the complete text element, including revision, transform, metadata, and every formatting/layout field. |
+| E-044 | S-038 | `lines 14-208` | Public text updates accept the text-specific and common mutable element fields; host restoration need not remove and re-add an existing text element. |
+| E-045 | S-039 | `lines 192-214` | A text update preserves element ID and creates the resulting element with revision incremented by one rather than restoring a supplied historical revision. |
+| E-046 | S-043 | `lines 76-107` | Text layout consumes fontSize, lineHeight, and maxWidth and derives painter width/height and local bounds; those measurements remain layout-owned data. |
+| E-047 | S-015 | `lines 3861-4063` | Text-session notification already supports silent value replacement and later explicit notification; matching-request dismissal currently notifies synchronously. |
+| E-048 | S-015 | `lines 4268-4288` | Session commit delegates to commitTextEdit; subsequent dismissal checks session identity and cannot dismiss a different newly active session. |
 
 ### Requirements
 
 | ID | Kind | Statement | Basis | Open shape |
 | --- | --- | --- | --- | --- |
 | R-001 | outcome | A host can approve or reject each supported user document operation before commitment and reliably record only applied operations for its own Undo. | S-001, S-002 | Host history storage, grouping, and UI remain host choices. |
-| R-002 | constraint | Preserve the specification's synchronous CanvasCommitResolver, six immutable sealed request variants, resolution variants, CanvasCommitLease callbacks, and prohibition on exposing internal transaction values. | S-002 | Public request data beyond the specified fields is designed here; private decomposition is not prescribed. |
-| R-003 | constraint | Draw, Delete, Erase, Rotate, and Reflect are fully validated and exactly prepared before resolution; Move captures its immutable basis first and exactly prepares only the accepted final displacement. Each admitted non-no-op operation invokes the resolver exactly once, with no second call for an adjusted Move. | S-002 | Preparation implementation is free inside the accepted ownership and timing boundary. |
+| R-002 | constraint | Preserve the specification's synchronous CanvasCommitResolver with the approved TextEdit amendment: seven immutable sealed request variants, resolution variants, CanvasCommitLease callbacks, and prohibition on exposing internal transaction values. | S-001, S-002 | Public request data beyond the specified fields is designed here; private decomposition is not prescribed. |
+| R-003 | constraint | Draw, Delete, Erase, Rotate, Reflect, and TextEdit are fully validated and exactly prepared before resolution; Move captures its immutable basis first and exactly prepares only the accepted final displacement. Each admitted non-no-op operation invokes the resolver exactly once, with no second call for an adjusted Move. | S-001, S-002 | Preparation implementation is free inside the accepted ownership and timing boundary. |
 | R-004 | constraint | Move acceptance replaces proposedDelta with the complete displacement relative to operation-start transforms; one operation has at most one document application and one committed action carrying the actual displacement. | S-002 | The existing transform action representation may be retained if it expresses the applied displacement without ambiguity. |
 | R-005 | constraint | Successful application irrevocably selects committed; only non-application selects aborted. After an acceptance returns, the selected lease method is attempted exactly once. Public-state publication precedes committed and action delivery follows it; notification failures cannot change the selected result, and a throwing committed callback cannot suppress the action. | S-002 | Internal lifecycle representation is free; no retry of a terminal callback is permitted. |
 | R-006 | constraint | Cancellation, resolver error, incompatible resolution, and pre-install failure leave committed document, document revisions, commit-owned selection, and ID admission unchanged and emit no committed action; temporary interaction cleanup remains permitted. | S-002 | Cleanup representation is free, including restoration of still-owned provisional selection. |
 | R-007 | constraint | A document no-op skips the resolver; accepted final Move zero or final unchanged preparation aborts its lease without installation or action. | S-002, E-020 | Existing valid dot strokes and zero-length line additions remain document changes. |
 | R-008 | constraint | Resolver and lease callbacks reject public mutation and nested callback entry; callback failures are contained and diagnosed without sensitive request data or a change to the operation result. | S-002, S-024, E-011 | Reuse the runtime diagnostics owner; bounded diagnostic codes and internal helpers are implementation choices. |
 | R-009 | user_decision | Requests and accepted-operation observation must let hosts retain sufficient immutable data to undo and redo the named document operations without retaining a whole-document copy. | S-001, E-004, E-019, E-026 | Hosts choose their history representation; public domain snapshots may share immutable backing. |
-| R-010 | user_decision | Confirmation includes gestures and all corresponding semantic commands, specifically direct moveSelection and commands.removeElement; service edits and history replay bypass confirmation and do not create user actions. | S-001, E-009, E-010, E-005 | Route-local adapters are free; there is no inferred user intent for arbitrary edit callbacks. |
+| R-010 | user_decision | Confirmation covers Draw, Delete, Erase, Move, Rotate, Reflect, and TextEdit through gestures and corresponding semantic commands, including direct moveSelection, commands.removeElement, and commitTextEdit; service edits and history replay bypass confirmation and do not create user actions. | S-001, E-009, E-010, E-005 | Route-local adapters are free; there is no inferred user intent for arbitrary edit callbacks. |
 | R-011 | user_decision | Hosts can restore document content and desired selection together in one atomic existing edit operation. | S-001, E-017 | Extend existing editing capabilities; do not add a second public transaction lifecycle. |
 | R-012 | user_decision | A gesture Move is cancelled as a whole when any participating element changes or external selection changes; accepted external edits remain applied, while unrelated object edits do not cancel the Move. | S-001, E-013, E-014 | Capture and conflict-detection representation are open; the operation-start basis cannot be silently rebased. |
 | R-013 | user_decision | A host can remove the empty layer created by the undone Draw in the same edit as document/selection restoration; pre-existing or nonempty layers must not be removed as a side effect of that Undo. | S-001, E-015, E-016, E-017, E-031 | Add only the missing empty-layer editing capability; the host owns history provenance. |
 | R-014 | user_decision | Build on existing deferred deletion and shared owner boundaries with the smallest complete change; do not introduce a universal transaction manager or speculative abstractions. | S-001, E-005, E-006, E-020 | Private helper names, count, and file decomposition remain open. |
-| R-015 | exclusion | No engine-owned Undo/history, public beginTransaction/commit/rollback, post-commit inverse transaction, whole-document confirmation snapshot, asynchronous resolver, per-tool resolver, second corrective Move, or new confirmation for arbitrary edit, load, clear-content, text editing, camera, or selection-only operations. | S-001, S-002 | Existing independent behaviors of these excluded routes remain authoritative. |
+| R-015 | exclusion | No engine-owned Undo/history, public beginTransaction/commit/rollback, post-commit inverse transaction, whole-document confirmation snapshot, asynchronous resolver, per-tool resolver, second corrective Move, or new confirmation for arbitrary edit, load, clear-content, text-session setup/live draft updates, camera, or selection-only operations. | S-001, S-002 | Existing independent behaviors of these excluded routes remain authoritative. |
 | R-016 | repository_rule | Preserve sparse affected-owner preparation and existing immutable sharing; no new full-document scans/copies or second mutable document/selection authority are introduced for confirmation or history reconstruction. | S-004, S-020, E-020 | Work may scale with changed elements, their actual snapshot geometry, selected IDs where already required, and affected structural owners. |
 | R-017 | constraint | Replace both old configuration callbacks and retire their obsolete resolver/request/resolution surfaces with a coherent source-breaking public migration, while retaining independently useful deletion policy/availability and element-read contracts. | S-002, E-002, E-003, E-004, E-024 | Names explicitly mandated by the specification are fixed; unrelated API and serialized document schema remain compatible. |
 | R-018 | constraint | Preserve existing operation eligibility, tools, pivot rules, resource retention, and action families except the explicitly approved confirmation, gesture-conflict, and restoration-capability changes. | S-001, S-018, S-023, S-035, E-022, E-023 | Internal routes can consolidate without redefining deletion protection or adding tools. |
 | R-019 | repository_rule | Durable behavior belongs to current contracts/architecture and their owning code; verification must observe real boundary outcomes and admit each permanent failure family independently rather than freeze private shape or scan prose. | S-004, S-005, S-021, S-022, S-027, S-033 | Existing verification owners and fixtures are preferred; fixture layout is not locked. |
 | R-020 | constraint | Generalize the private PreparedInteractionCommit consume/discard lifetime, terminal at most once. Every supported application atomically installs document, revisions, admitted IDs, and commit-owned selection: all fallible validation, data preparation, and ownership checks precede the first committed mutation, with no fallible callbacks or further checks in the install tail. Post-commit publication and notifications are outside that tail. | S-002, E-006, E-007, E-008 | Existing sealed delivery results may be reused; no second transaction payload or rollback mechanism is required. |
+| R-021 | user_decision | Add only TextEdit to the previously approved protocol scope. CanvasTextEditCommitRequest carries full immutable CanvasTextElement before and after values, including text, formatting, sizing inputs, metadata, and transform. Existing commitTextEdit uses the same non-Move preparation, resolver, lease, atomicity, no-op, failure, and existing editText action rules. These snapshots must support external Undo/Redo without engine history or a new text-layout/data model. | S-001, E-036, E-037, E-038, E-044, E-045, E-046 | Existing text rendering, UI, and public editing capabilities remain; measured dimensions stay derived and restoration does not rewind revisions. |
 
 ## Candidate Analysis
 
@@ -138,8 +159,8 @@ outcome: R-001
 
 | ID | Form | Hard constraints | Main trade-off | Basis |
 | --- | --- | --- | --- | --- |
-| F-001 | Runtime-owned confirmation lifecycle over generalized Edit/Store prepared installation; ordinary service edits remain immediate consumers of their shared preparation, with only the two accepted restoration capabilities added. | pass | Keeps the resolver, callback guard, and publication/lease ordering at their current runtime owner; preserves lower-level document and selection owners and the service-edit exemption. | R-003, R-010, R-011, R-013, R-014, E-005, E-006, E-011, E-012, E-021 |
-| F-002 | Edit-owned confirmation lifecycle over the same generalized prepared installation; runtime passes semantic requests into Edit and exposes a delivery continuation so Edit can settle a lease between state and action. | pass | Can satisfy the same outcomes, but additionally transfers semantic request/lease ownership into Edit and requires a cross-owner publication-stage continuation while the guard and delivery remain runtime-owned. | R-003, R-005, R-010, E-005, E-011, E-012, E-021 |
+| F-001 | Runtime-owned confirmation lifecycle over generalized Edit/Store prepared installation; ordinary service edits remain immediate consumers of their shared preparation, with only the two accepted restoration capabilities added and TextEdit admitted through its existing semantic command. | pass | Keeps the resolver, callback guard, and publication/lease ordering at their current runtime owner; preserves lower-level document and selection owners and the service-edit exemption. | R-003, R-010, R-011, R-013, R-014, R-021, E-005, E-006, E-011, E-012, E-021, E-036, E-039 |
+| F-002 | Edit-owned confirmation lifecycle over the same generalized prepared installation; runtime passes semantic requests into Edit and exposes a delivery continuation so Edit can settle a lease between state and action. | pass | Can satisfy the same outcomes, but additionally transfers semantic request/lease ownership into Edit and requires a cross-owner publication-stage continuation while the guard and delivery remain runtime-owned. | R-003, R-005, R-010, R-021, E-005, E-011, E-012, E-021, E-036, E-039 |
 
 ### Material-Obligation Delta
 
@@ -152,6 +173,7 @@ outcome: R-001
 | M-005 | R-013 | yes | yes | R-013, E-015, E-016, E-017 |
 | M-006 | Cross-owner semantic confirmation and publication-stage continuation | no | yes | none |
 | M-007 | R-020 | yes | yes | R-020, E-006, E-007, E-008 |
+| M-008 | R-021 | yes | yes | R-021, E-036, E-039 |
 
 ### Future Pressures
 
@@ -163,9 +185,9 @@ outcome: R-001
 
 ### D-001 — Runtime confirmation and existing subsystem ownership
 - Concerns: `form`, `owner`, `in_scope`, `out_of_scope`, `source_of_truth`, `dependency`
-- Lock: Runtime owns semantic operation classification, resolver invocation, lease settlement, and delivery order. Edit owns preparation and the single-use apply lifetime; Store owns committed document/revisions/admitted IDs; Selection owns selection and its revision; Interaction owns gesture capture and cleanup. Shared declaration-only contracts stay below implementation owners, and the public facade exports public values only. The admitted routes are pencil/marker strokes and all line terminal additions as Draw, selection deletion and direct command removal as Delete, terminal eraser as Erase, pointer and command selection movement as Move, the existing two rotations as Rotate, and both existing flips as Reflect. Route eligibility remains unchanged: selection deletion respects its policy, direct removal retains its existing broader eligibility including background, and locked/deletable flags retain their separate meanings. Direct removal returns true only after actual application, false for cancellation or no-op. R-015 routes retain their independent behavior and cannot acquire confirmation by inference from low-level add/remove/update operations. The host alone owns Undo records and asset retention; the engine retains neither completed requests nor leases as history.
+- Lock: Runtime owns semantic operation classification, resolver invocation, lease settlement, and delivery order. Edit owns preparation and the single-use apply lifetime; Store owns committed document/revisions/admitted IDs; Selection owns selection and its revision; Interaction owns gesture capture and cleanup. Shared declaration-only contracts stay below implementation owners, and the public facade exports public values only. The admitted routes are pencil/marker strokes and all line terminal additions as Draw, selection deletion and direct command removal as Delete, terminal eraser as Erase, pointer and command selection movement as Move, the existing two rotations as Rotate, both existing flips as Reflect, and changed commitTextEdit calls (including CanvasTextEditSession.commit delegation) as TextEdit. Route eligibility remains unchanged: selection deletion respects its policy, direct removal retains its existing broader eligibility including background, and locked/deletable flags retain their separate meanings. Direct removal returns true only after actual application, false for cancellation or no-op. R-015 routes retain their independent behavior and cannot acquire confirmation by inference from low-level add/remove/update operations. The host alone owns Undo records and asset retention; the engine retains neither completed requests nor leases as history.
 - Open: Cohesive runtime-local helper extraction, private method names, and declaration file layout; no new cross-owner transaction manager or configurable routing registry.
-- Basis: R-001, R-010, R-014, R-015, R-018, R-019, E-001, E-035, E-005, E-006, E-009, E-010, E-011, E-012, E-020, E-021, E-022, E-023, E-030
+- Basis: R-001, R-010, R-014, R-015, R-018, R-019, R-021, E-001, E-035, E-036, E-005, E-006, E-009, E-010, E-011, E-012, E-020, E-021, E-022, E-023, E-030
 - Form: F-001
 - Realizes: M-003
 - Depends on: none
@@ -174,9 +196,9 @@ outcome: R-001
 
 ### D-002 — Public operation facts for confirmation and external history
 - Concerns: `state_data`, `policy`
-- Lock: One required CanvasRuntimeConfig.commitResolver uses the specified synchronous sealed request and resolution families. Requests expose pre-resolution documentSummary and documentRevision plus an immutable selectedElementIdsBefore snapshot; for a pointer Move that selection snapshot is the pre-gesture selection, before provisional replacement. Collections are owned immutable snapshots, not lazy reads from live runtime state. A public immutable CanvasCommitElementEntry carries the complete CanvasElement, nullable layerId, and elementIndex; null layerId unambiguously means the ordered background list, otherwise the index is within that ordinary layer. Draw supplies its exact proposed entry, pencil/marker/line tool, target layerIndex, and createsLayer flag from prepared structural facts. This supports restoring the layer only when that Draw created it, without exposing a transaction plan. Delete supplies the complete canonical ordered removal entries; Erase supplies those entries plus immutable corridorWorld points and eraserThickness. Move preserves immutable movedElements using CanvasElementRead, proposedDelta, and initial selectionBoundsWorld; the reads contain each participant's initial transform and element revision. Rotate and Reflect supply immutable affected CanvasElementRead values, pivotWorld, the exact world transform, and the existing CanvasTransformOperation restricted respectively to the two rotations or two flips. Only Move permits a changed proposal through its accepted delta. Accepted requests may be retained by the host after the callback; only that host owns their longer lifetime. Existing immutable element/geometry backing may be shared. Removed resource descriptors remain in the document under existing deletion semantics; retaining or restoring externally discarded assets/descriptors belongs to the host, not this protocol.
+- Lock: One required CanvasRuntimeConfig.commitResolver uses the specified synchronous sealed request and resolution families. Requests expose pre-resolution documentSummary and documentRevision plus an immutable selectedElementIdsBefore snapshot; for a pointer Move that selection snapshot is the pre-gesture selection, before provisional replacement. Collections are owned immutable snapshots, not lazy reads from live runtime state. A public immutable CanvasCommitElementEntry carries the complete CanvasElement, nullable layerId, and elementIndex; null layerId unambiguously means the ordered background list, otherwise the index is within that ordinary layer. Draw supplies its exact proposed entry, pencil/marker/line tool, target layerIndex, and createsLayer flag from prepared structural facts. This supports restoring the layer only when that Draw created it, without exposing a transaction plan. Delete supplies the complete canonical ordered removal entries; Erase supplies those entries plus immutable corridorWorld points and eraserThickness. Move preserves immutable movedElements using CanvasElementRead, proposedDelta, and initial selectionBoundsWorld; the reads contain each participant's initial transform and element revision. Rotate and Reflect supply immutable affected CanvasElementRead values, pivotWorld, the exact world transform, and the existing CanvasTransformOperation restricted respectively to the two rotations or two flips. TextEdit supplies CanvasTextEditCommitRequest extends CanvasCommitRequest with final CanvasTextElement before and final CanvasTextElement after. Both are complete immutable elements with the same target ID: all text, formatting/layout inputs, metadata, transform, inherited flags, and revision are retained. before is the current committed target after request qualification; after is projected from the exact normalized prepared candidate, including any existing anchor-preserving transform compensation and its resulting revision. Sizing means the existing element fields such as fontSize, maxWidth, and lineHeight; measured width/height remain derived layout facts, not new stored fields. Existing addressable Store projections supply these two public values without exposing the prepared transaction or materializing the whole document. Only Move permits a changed proposal through its accepted delta. Accepted requests may be retained by the host after the callback; only that host owns their longer lifetime. Existing immutable element/geometry backing may be shared. Removed resource descriptors remain in the document under existing deletion semantics; retaining or restoring externally discarded assets/descriptors belongs to the host, not this protocol.
 - Open: Constructor organization and immutable-list implementation. The specified protocol names and the facts and meanings above are fixed; no new general-purpose public diff or transaction type is needed.
-- Basis: R-002, R-003, R-009, R-013, R-017, R-018, E-002, E-003, E-004, E-015, E-019, E-022, E-026, E-030
+- Basis: R-002, R-003, R-009, R-013, R-017, R-018, R-021, E-002, E-003, E-004, E-015, E-019, E-022, E-026, E-030, E-037, E-038, E-042, E-043, E-046
 - Form: F-001
 - Realizes: none
 - Depends on: D-001
@@ -185,9 +207,9 @@ outcome: R-001
 
 ### D-003 — Single-use preparation and the irreversible install boundary
 - Concerns: `owner`, `state_data`, `atomicity`
-- Lock: Generalize the existing deletion package into an internal PreparedInteractionCommit with consume and discard terminals. Its PreparedInteractionApplyResult uses the existing sealed CommitDeliveryResult meaning, not another mutable result or lease-bearing cross-owner payload. Edit preparation closes the edit handle before returning the package. Store validates and prepares the changed sparse candidate; the applier seals exact delivery/action inputs, precomputes selection normalization and its resulting revision, validates all installer capabilities, and binds the document and admitted-ID ledgers. Before the first committed assignment, consume checks one-use ownership and freshness and transfers every backing needed by the install tail. That first Store assignment is irreversible; the remaining tail only installs already prepared ID and selection ownership and returns sealed data. It performs no fallible callbacks, validation, normalization, copying, or public notification. No mutation observer can run between document and selection installation. discard releases private references and never installs; repeated terminals fail before mutation. A pre-install failure releases the package without a rollback transaction. Ordinary service edits reuse the same preparation/installation invariants and consume immediately without a resolver; explicit materialized-draft fallback must preserve the same atomic restoration guarantee rather than bypass it. An unchanged document with a changed explicit selection uses the existing selection-only branch, and a completely unchanged candidate uses neither installer.
+- Lock: Generalize the existing deletion package into an internal PreparedInteractionCommit with consume and discard terminals. Its PreparedInteractionApplyResult uses the existing sealed CommitDeliveryResult meaning, not another mutable result or lease-bearing cross-owner payload. Edit preparation closes the edit handle before returning the package. Store validates and prepares the changed sparse candidate; a private affected-element projection makes its exact TextEdit after value available before resolution, without a second preparation; the applier seals exact delivery/action inputs, precomputes selection normalization and its resulting revision, validates all installer capabilities, and binds the document and admitted-ID ledgers. Before the first committed assignment, consume checks one-use ownership and freshness and transfers every backing needed by the install tail. That first Store assignment is irreversible; the remaining tail only installs already prepared ID and selection ownership and returns sealed data. It performs no fallible callbacks, validation, normalization, copying, or public notification. No mutation observer can run between document and selection installation. discard releases private references and never installs; repeated terminals fail before mutation. A pre-install failure releases the package without a rollback transaction. Ordinary service edits reuse the same preparation/installation invariants and consume immediately without a resolver; explicit materialized-draft fallback must preserve the same atomic restoration guarantee rather than bypass it. An unchanged document with a changed explicit selection uses the existing selection-only branch, and a completely unchanged candidate uses neither installer.
 - Open: Bound capability representation, private terminal-state encoding, and reuse or aliasing of the existing result type. No public access to prepared ownership and no new independently mutable committed-state copy.
-- Basis: R-003, R-006, R-011, R-014, R-020, E-005, E-006, E-007, E-008, E-020, E-021
+- Basis: R-003, R-006, R-011, R-014, R-020, R-021, E-005, E-006, E-007, E-008, E-020, E-021, E-042, E-043
 - Form: F-001
 - Realizes: M-001, M-007
 - Depends on: D-001
@@ -251,9 +273,9 @@ outcome: R-001
 
 ### D-009 — Coherent public and internal migration
 - Concerns: `compatibility`, `migration_retirement`
-- Lock: This is an intentional source-breaking API revision, not a serialized document-format migration. Replace the two config callbacks with required commitResolver; preserve pointer/tool settings, deletion policy/availability, eraser-kind filtering, and CanvasElementRead. Replace the old Move resolution family and deletion confirmation request/decision/operation family with the new sealed protocol; replace deletion-only entries with the general public entry projection. Retire obsolete moveCommitResolver, deletionCommitResolver, CanvasMoveCommitResolver, CanvasDeletionCommitResolver, CanvasMoveResolution/CanvasMoveCommit/CanvasMoveCancel, CanvasDeletionCommitRequest/CanvasDeletionDecision/CanvasDeletionOperation/CanvasDeletionEntry exports and production references after their consumers are migrated. Move the retained CanvasMoveCommitRequest meaning into the new hierarchy. Public consumers switch over request type, return the matching acceptance with a host-owned lease or Cancel, and use the original proposed delta when accepting an unadjusted Move. A host with no history can supply its own no-op lease. Existing accepted action type/transform payloads stay compatible. The safe migration order is shared prepared/restoration capabilities, public protocol and coordinated runtime/config/route consumers, then retirement of obsolete paths once every admitted route uses the new owner. No published intermediate version runs old and new confirmation for one operation. Ordinary service-edit behavior remains exempt, public declarations remain cycle-free, and internal prepared types stay unexported. Existing compile/export/integration consumers and owning behavioral witnesses are migrated with the API; version/release notes must identify this source break without changing schema_v1. Historical research and completed plans keep their historical API descriptions.
+- Lock: This is an intentional source-breaking API revision, not a serialized document-format migration. Replace the two config callbacks with required commitResolver; preserve pointer/tool settings, deletion policy/availability, eraser-kind filtering, and CanvasElementRead. Replace the old Move resolution family and deletion confirmation request/decision/operation family with the new sealed protocol; replace deletion-only entries with the general public entry projection. Retire obsolete moveCommitResolver, deletionCommitResolver, CanvasMoveCommitResolver, CanvasDeletionCommitResolver, CanvasMoveResolution/CanvasMoveCommit/CanvasMoveCancel, CanvasDeletionCommitRequest/CanvasDeletionDecision/CanvasDeletionOperation/CanvasDeletionEntry exports and production references after their consumers are migrated. Move the retained CanvasMoveCommitRequest meaning into the new hierarchy. Public consumers switch over request type, return the matching acceptance with a host-owned lease or Cancel, and use the original proposed delta when accepting an unadjusted Move. A host with no history can supply its own no-op lease. Existing accepted action type/transform payloads stay compatible. TextEdit adds its new request variant but retains CanvasActionType.editText and the existing length-only CanvasTextEditActionPayload; full text and metadata belong in before/after, never in that action or diagnostics. Its changed-session close notification adopts D-012's post-delivery position; the former nested-before-outer-action listener order is intentionally retired as part of adding TextEdit to the unified protocol. The safe migration order is shared prepared/restoration capabilities, public protocol and coordinated runtime/config/route consumers, then retirement of obsolete paths once every admitted route uses the new owner. No published intermediate version runs old and new confirmation for one operation. Ordinary service-edit behavior remains exempt, public declarations remain cycle-free, and internal prepared types stay unexported. Existing compile/export/integration consumers and owning behavioral witnesses are migrated with the API; version/release notes must identify this source break without changing schema_v1. Historical research and completed plans keep their historical API descriptions.
 - Open: Commit grouping and internal symbol renames that preserve these dependency and retirement gates; no compatibility shim or dual-resolver precedence policy.
-- Basis: R-002, R-010, R-014, R-017, R-018, R-019, E-002, E-003, E-004, E-024, E-025, E-034
+- Basis: R-002, R-010, R-014, R-017, R-018, R-019, R-021, E-002, E-003, E-004, E-024, E-025, E-034, E-039
 - Form: F-001
 - Realizes: none
 - Depends on: D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008
@@ -273,37 +295,48 @@ outcome: R-001
 
 ### D-011 — Bounded preparation and retained-state cost
 - Concerns: `state_data`, `policy`
-- Lock: Preserve the Store's existing sparse affected-owner work bound and immutable structural sharing. Non-Move exact preparation is not repeated after acceptance; Move prepares its exact transaction once from finalDelta, not once for preview and again for correction. Requests copy only needed collections of affected facts and actual draw/eraser geometry, never a public whole-document snapshot or a duplicate mutable Store. Gesture basis is a temporary immutable historical value with a distinct purpose from live Store state; it shares backing with request/preview reads where safe and dies at cleanup unless the host retains the public request. Conflict checks consume accepted touched IDs and active participant membership rather than rescan the document. Staging selection and removing an empty layer use existing selected-set/structural-owner normalization and finalization rather than rebuilding the entire document. consume/discard do not hide preparation work or a rollback replay. No universal constant-time guarantee is claimed for copying a large stroke, normalizing selection, or changing an existing structural owner; existing owner cost remains explicit. IDs are merely observed during Draw preparation and admitted only by successful installation.
+- Lock: Preserve the Store's existing sparse affected-owner work bound and immutable structural sharing. Non-Move exact preparation is not repeated after acceptance; Move prepares its exact transaction once from finalDelta, not once for preview and again for correction. Requests copy only needed collections of affected facts and actual draw/eraser geometry and affected text snapshot data, never a public whole-document snapshot or a duplicate mutable Store. Gesture basis is a temporary immutable historical value with a distinct purpose from live Store state; it shares backing with request/preview reads where safe and dies at cleanup unless the host retains the public request. Conflict checks consume accepted touched IDs and active participant membership rather than rescan the document. Staging selection and removing an empty layer use existing selected-set/structural-owner normalization and finalization rather than rebuilding the entire document. TextEdit uses the existing target-local layout preparation and projects its accepted after once before resolution; neither its exact transaction nor anchor/layout work is repeated after acceptance. consume/discard do not hide preparation work or a rollback replay. No universal constant-time guarantee is claimed for copying a large stroke, normalizing selection, or changing an existing structural owner; existing owner cost remains explicit. IDs are merely observed during Draw preparation and admitted only by successful installation.
 - Open: Local immutable collection representation and owner-level instrumentation, preserving the existing preparation bound rather than imposing arbitrary numerical thresholds.
-- Basis: R-003, R-006, R-014, R-016, E-007, E-015, E-020, E-027, E-033
+- Basis: R-003, R-006, R-014, R-016, R-021, E-007, E-015, E-020, E-027, E-033, E-038, E-042, E-043, E-046
 - Form: F-001
 - Realizes: none
 - Depends on: D-002, D-003, D-005, D-007, D-008
 - Contract targets: `state_data`, `policy`, `acceptance`, `evidence`, `verification`, `durable_impact`, `unit_family`
 - Rationale: Generalization must retain the sparse mechanism's useful property: cost follows the affected operation and owning structures instead of total unrelated document size or discarded reconstruction.
 
+### D-012 — TextEdit request lifetime and session completion
+- Concerns: `state_data`, `temporal`, `policy`, `compatibility`
+- Lock: Existing commitTextEdit remains the sole semantic text-commit entry for direct request callers and session.commit; retain current input validation and request identity/epoch/generation/element-revision qualification, with unrelated document revision changes still permitted. Unknown or consumed requests return false without effects; known stale/invalid targets keep their existing private consumption and matching-session cleanup. Equal text returns true and consumes/closes the matching request/session as today, without resolver, document change, or action. For valid changed text, prepare the complete candidate and D-002 snapshots once before the common resolver; TextEdit accepts CanvasCommitAccept or Cancel and has no adjustable-result variant. Cancel, resolver failure, or an unapplied acceptance leaves the valid request and matching live editor draft available for retry, returning false for contained cancellation while preparation/input exceptions retain their existing error channel. D-004 alone governs returned-lease settlement, including incompatible resolutions. On application, consume the request and silently clear only its matching active session, paint suppression, and owned candidate state; record the applicable interaction revision before frame/state capture. Use the existing silent-notifier and matching-cleanup mechanisms rather than clearing unrelated session candidates. Common guarded delivery publishes state, settles the lease, emits one existing editText action and the observer, then releases its guard. Only afterward notify the already-cleared active-session value, before the command returns true. This notification may read session getters and start a separate public mutation, but cannot interleave one before the outer lease/action completes. Contain recoverable notification/error-reporting failures without changing the applied result; do not retry lease delivery. A direct commit without a matching active session emits no close notification or extra interaction revision. Preserve session identity checks so the wrapper cannot close a new session started by that late notification. This changes only changed-text close-notification order; no-op/stale dismissal, text UI, live draft updates, layout/anchor rules, and other operations remain unchanged. Hosts reverse/replay text through existing CanvasTextElementUpdate fields, including nullable clears, preserving identity and placement while revisions advance normally; optional selection restoration still composes through D-007.
+- Open: Private projection plumbing, exact placement of the existing matching-cleanup silent-notification option, and cohesive runtime helper organization. No new public text editor, measured-size fields, transaction lifecycle, history owner, or text-specific resolver is introduced.
+- Basis: R-003, R-005, R-006, R-008, R-009, R-010, R-018, R-020, R-021, E-036, E-038, E-039, E-040, E-041, E-044, E-045, E-047, E-048
+- Form: F-001
+- Realizes: M-008
+- Depends on: D-001, D-002, D-003, D-004, D-007
+- Contract targets: `state_data`, `temporal`, `policy`, `compatibility`, `acceptance`, `evidence`, `verification`, `durable_impact`, `unit_family`
+- Rationale: The existing text command and field-update API already own the required edit. Exact before/after projection adds confirmation data; moving its session-close callback after complete delivery preserves listener reads and separate mutations without allowing them to dispose or change the runtime while the outer lease is still unsettled.
+
 ## Impact Register
 
 ### I-001 — Unified public protocol and restoration contract
 - Action: update
 - Surface: `lib/src/contracts/public/canvas_runtime.dart`, `lib/src/contracts/public/canvas_actions.dart`, `lib/src/contracts/public/canvas_deletion.dart`, `lib/iwb_canvas_engine.dart`, `docs/contracts/public_api_v1.md`, and `docs/_registry/public_api_v1.yaml`.
-- Required by: D-001, D-002, D-006, D-007, D-008, D-009
-- Resulting authority: D-001, D-002, D-006, D-007, D-008, D-009
-- Contract requirement: Replace the old confirmation surface and migrate its current package consumers together under D-009; document request facts, matching resolutions, lease lifetime, route scope, final Move delta, and the two CanvasEdit capabilities. Record the intentional source break and host migration in the existing public contract; preserve serialized schema and unrelated deletion policy/read APIs. Do not create a parallel protocol document or compatibility inventory.
+- Required by: D-001, D-002, D-006, D-007, D-008, D-009, D-012
+- Resulting authority: D-001, D-002, D-006, D-007, D-008, D-009, D-012
+- Contract requirement: Replace the old confirmation surface and migrate its current package consumers together under D-009; document all seven request variants, matching resolutions, lease lifetime, route scope, final Move delta, and the two CanvasEdit capabilities. Include complete TextEdit before/after values and existing field-update Undo/Redo with normally advancing revisions; preserve the existing length-only editText action and migrate changed-session close notification to D-012. Record the intentional source break and host migration in the existing public contract; preserve serialized schema and unrelated deletion policy/read APIs. Do not create a parallel protocol document or compatibility inventory.
 
 ### I-002 — Existing implementation owners and atomic preparation contract
 - Action: update
 - Surface: `lib/src/runtime/`, `lib/src/edit/`, `lib/src/store/`, `lib/src/selection/`, `lib/src/interaction/`, `lib/src/frame/`, their declaration-only seams in `lib/src/contracts/internal/`, `docs/contracts/edit_kernel.md`, `docs/contracts/interaction_engine.md`, `docs/contracts/frame_rendering.md`, `docs/architecture/01_runtime_ownership.md`, `docs/architecture/02_package_boundaries.md`, and `docs/architecture/03_data_model.md`.
-- Required by: D-001, D-003, D-004, D-005, D-007, D-008, D-011
-- Resulting authority: D-001, D-003, D-004, D-005, D-007, D-008, D-011
-- Contract requirement: Generalize the existing prepared apply path, retain runtime-local confirmation, add staged restoration in existing edit owners, and align the named contracts with the irreversible install boundary and Move basis lifetime. Align active Move preview participant capture with D-005 while preserving ordinary frame capture and selection-decoration rules. Update only affected seams; do not add history storage, duplicated state owners, or a transaction-management subsystem. Retire superseded deletion-only internal confirmation paths after their consumers migrate.
+- Required by: D-001, D-003, D-004, D-005, D-007, D-008, D-011, D-012
+- Resulting authority: D-001, D-003, D-004, D-005, D-007, D-008, D-011, D-012
+- Contract requirement: Generalize the existing prepared apply path, retain runtime-local confirmation, add staged restoration in existing edit owners, and align the named contracts with the irreversible install boundary and Move basis lifetime. Carry TextEdit through the same prepared owner with a private affected-element after projection, preserving existing layout/anchor rules. Update text request/session lifecycle and callback order under D-012, including retry after non-application and silent matching cleanup before publication. Align active Move preview participant capture with D-005 while preserving ordinary frame capture and selection-decoration rules. Update only affected seams; do not add history storage, duplicated state owners, or a transaction-management subsystem. Retire superseded deletion-only internal confirmation paths after their consumers migrate.
 
 ### I-003 — Operation coverage and service-edit exemption
 - Action: update
 - Surface: `docs/contracts/operation_matrix.md`.
-- Required by: D-001, D-004, D-006, D-007, D-008, D-009
-- Resulting authority: D-001, D-004, D-006, D-007, D-008, D-009
-- Contract requirement: Represent all admitted gesture and command routes, cancellation/final-zero behavior, and restoration edits with their exact resolver/action exemption. Preserve current eligibility and unrelated operation rows; do not infer user operation type from low-level mutations.
+- Required by: D-001, D-004, D-006, D-007, D-008, D-009, D-012
+- Resulting authority: D-001, D-004, D-006, D-007, D-008, D-009, D-012
+- Contract requirement: Represent all admitted gesture and command routes, cancellation/final-zero behavior, and restoration edits with their exact resolver/action exemption. Include direct commitTextEdit and session.commit, equal-text/stale rejection without resolution, valid request/draft retention after cancellation, and the post-delivery close notification. Preserve current eligibility and unrelated operation rows; do not infer user operation type from low-level mutations.
 
 ### I-004 — Bounded confirmation failure diagnostics
 - Action: update
@@ -321,27 +354,27 @@ outcome: R-001
 
 ### I-006 — Existing behavioral diagrams
 - Action: update
-- Surface: `docs/diagrams/seq_edit_success.mmd`, `docs/diagrams/seq_edit_rollback.mmd`, `docs/diagrams/seq_eraser_commit.mmd`, `docs/diagrams/seq_eraser_exact_budget.mmd`, `docs/diagrams/seq_line_two_tap_commit.mmd`, `docs/diagrams/seq_pencil_marker_commit.mmd`, `docs/diagrams/seq_selected_move_preview_commit.mmd`, `docs/diagrams/seq_selected_move_cancel.mmd`, `docs/diagrams/seq_dispose_during_gesture.mmd`, `docs/diagrams/state_edit_session.mmd`, `docs/diagrams/state_selected_move.mmd`, `docs/diagrams/state_pointer_session.mmd`, `docs/diagrams/state_eraser.mmd`, `docs/diagrams/state_pencil_marker_draw.mmd`, `docs/diagrams/state_two_tap_line.mmd`, `docs/diagrams/dfd_cache_invalidation.mmd`, `docs/diagrams/dfd_pointer_preview_commit.mmd`, `docs/diagrams/dfd_public_edit.mmd`, `docs/diagrams/seq_main_paint.mmd`, `docs/diagrams/dfd_main_paint_frame.mmd`, and `docs/diagrams/c4_code_edit_kernel.mmd`.
-- Required by: D-001, D-003, D-004, D-005, D-006, D-007, D-008, D-009
-- Resulting authority: D-001, D-003, D-004, D-005, D-006, D-007, D-008, D-009
-- Contract requirement: Replace affected immediate/deletion-only/old-Move narratives with the selected preparation, guarded confirmation, cleanup, state/lease/action ordering, and conflict behavior, including the captured participant source for active Move preview without changing selection decoration or ordinary frame capture. Reconcile explicit selection restoration during edit replacement with D-007 while preserving the separate loadDocument behavior. Preserve each diagram's existing explanatory purpose; do not create a diagram per request type or restate the same protocol in new files.
+- Surface: `docs/diagrams/seq_edit_success.mmd`, `docs/diagrams/seq_edit_rollback.mmd`, `docs/diagrams/seq_eraser_commit.mmd`, `docs/diagrams/seq_eraser_exact_budget.mmd`, `docs/diagrams/seq_line_two_tap_commit.mmd`, `docs/diagrams/seq_pencil_marker_commit.mmd`, `docs/diagrams/seq_selected_move_preview_commit.mmd`, `docs/diagrams/seq_selected_move_cancel.mmd`, `docs/diagrams/seq_dispose_during_gesture.mmd`, `docs/diagrams/state_edit_session.mmd`, `docs/diagrams/state_selected_move.mmd`, `docs/diagrams/state_pointer_session.mmd`, `docs/diagrams/state_eraser.mmd`, `docs/diagrams/state_pencil_marker_draw.mmd`, `docs/diagrams/state_two_tap_line.mmd`, `docs/diagrams/dfd_cache_invalidation.mmd`, `docs/diagrams/dfd_pointer_preview_commit.mmd`, `docs/diagrams/dfd_public_edit.mmd`, `docs/diagrams/seq_main_paint.mmd`, `docs/diagrams/dfd_main_paint_frame.mmd`, `docs/diagrams/c4_code_edit_kernel.mmd`, `docs/diagrams/seq_context_action_request.mmd`, and `docs/diagrams/state_pending_context_action_request.mmd`.
+- Required by: D-001, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-012
+- Resulting authority: D-001, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-012
+- Contract requirement: Replace affected immediate/deletion-only/old-Move narratives with the selected preparation, guarded confirmation, cleanup, state/lease/action ordering, and conflict behavior, including the captured participant source for active Move preview without changing selection decoration or ordinary frame capture. Reconcile explicit selection restoration during edit replacement with D-007 while preserving the separate loadDocument behavior. In the existing context-action/text diagrams, add TextEdit resolution and cancellation/retry and replace immediate application/early session-close notification with D-012; keep unrelated context-action issuance and load behavior unchanged. Preserve each diagram's existing explanatory purpose; do not create a diagram per request type or restate the same protocol in new files.
 
 ### I-007 — Owning behavioral and public-surface verification
 - Action: update
-- Surface: Existing owning coverage under `test/api/`, `test/api_contract/`, `test/diagnostics/`, `test/runtime/`, `test/interaction/`, `test/edit/`, `test/store/`, and `test/frame/`; `docs/verification/tests.md`; `docs/verification/release_gates.md`; `docs/_registry/sections.yaml`; and generated coverage blocks owned by `docs/tool/sync_generated_docs.dart`.
-- Required by: D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011
-- Resulting authority: D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011
-- Contract requirement: Migrate affected existing consumers and adapt nearest-owner fixtures to the Assurance Register's independent failure families. Admit each added durable family with its concrete invariant, owner, failing witness, and lasting value; reuse existing fixtures when sufficient. Update the affected release-gate rules from deletion-only to the unified required resolver, and update coverage mappings and their generated projections when owning coverage changes, without adding prose scanners, copied inventories, or private-layout locks.
+- Surface: Existing owning coverage under `test/api/`, `test/api_contract/`, `test/diagnostics/`, `test/runtime/`, `test/interaction/`, `test/edit/`, `test/store/`, `test/frame/`, `test/surface/`, and `test/smoke/`; `docs/verification/tests.md`; `docs/verification/release_gates.md`; `docs/_registry/sections.yaml`; and generated coverage blocks owned by `docs/tool/sync_generated_docs.dart`.
+- Required by: D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012
+- Resulting authority: D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012
+- Contract requirement: Migrate affected existing consumers and adapt nearest-owner fixtures to the Assurance Register's independent failure families. Migrate the existing TextEdit session-order witness and retain real surface/overlay consumers; distinguish the current injected non-publishing preparation fixture from evidence of real Store failure atomicity. Admit each added durable family with its concrete invariant, owner, failing witness, and lasting value; reuse existing fixtures when sufficient. Update the affected release-gate rules from deletion-only to the unified required resolver, and update coverage mappings and their generated projections when owning coverage changes, without adding prose scanners, copied inventories, or private-layout locks.
 
 ## Assurance Register
 
 ### A-001 — Semantic route coverage and no-op silence
-- Verifies: R-003, R-007, R-010, R-015, R-018, D-001/in_scope, D-001/out_of_scope
+- Verifies: R-003, R-007, R-010, R-015, R-018, D-001/in_scope, D-001/out_of_scope, R-021, D-012/policy
 - Claim: Every admitted changing gesture or command reaches one resolver with the correct request family; excluded and no-op routes do not acquire confirmation or additional actions.
 - Failure: A command bypasses confirmation, a gesture resolves twice, a valid dot/line is misclassified as no-op, or history replay confirms itself.
-- Oracle: Drive actual public gesture/command/edit entries and observe resolver calls, request type, final document, and action count for accepted, cancelled, ineligible, and unchanged inputs. Observe direct removal's boolean alongside actual application, including its existing background eligibility.
+- Oracle: Drive actual public gesture/command/edit entries and observe resolver calls, request type, final document, and action count for accepted, cancelled, ineligible, and unchanged inputs. Observe direct removal's boolean alongside actual application, including its existing background eligibility. For TextEdit, observe direct commitTextEdit and session.commit: changed text resolves once, equal text returns true without document mutation/resolution/action, and invalid or stale requests do not resolve.
 - Proxy risk: Calling a shared resolver helper directly does not prove that every public route reaches it.
-- Evidence constraints: Exercise pencil, marker, both line completion modes, deletion command/selection, terminal eraser, pointer/command Move, both rotations and flips; retain focused coverage for service edits and the named excluded routes without inventing new semantics for them.
+- Evidence constraints: Exercise pencil, marker, both line completion modes, deletion command/selection, terminal eraser, pointer/command Move, both rotations and flips, and TextEdit through both public entries; retain focused coverage for service edits and the named excluded routes, including text-session setup/live draft updates, without inventing new semantics for them.
 - Architecture seam: Runtime semantic entry routes and public action delivery under D-001.
 
 ### A-002 — Preparation failure cannot partially install
@@ -350,7 +383,7 @@ outcome: R-001
 - Failure: A rejected preparation advances an ID/revision, or Store changes before a later selection check fails.
 - Oracle: Compare actual committed owner facts before and after failures at each real pre-install boundary; on success, read document and selection from the first public observation and find both final values. Audit the install boundary to establish that validation and backing transfers precede its first committed assignment.
 - Proxy risk: Document equality alone misses admitted IDs, revision changes, selection, or a fallible step after Store replacement.
-- Evidence constraints: Cover generalized interaction preparation, ordinary sparse restoration, and materialized/replacement restoration through their real owners. Use test-only failure injection before installation; never add a fallible production callback inside the install tail to manufacture a witness.
+- Evidence constraints: Cover generalized interaction preparation, including TextEdit before/after consistency on real pre-install failures, ordinary sparse restoration, and materialized/replacement restoration through their real owners. Use test-only failure injection before installation; never add a fallible production callback inside the install tail to manufacture a witness. A stubbed non-publishing TextEdit result proves caller behavior only, not Store atomicity.
 - Architecture seam: Edit/Store/Selection preparation and installation under D-003.
 
 ### A-003 — Prepared ownership terminates once
@@ -363,21 +396,21 @@ outcome: R-001
 - Architecture seam: The private single-use capability in D-003.
 
 ### A-004 — Applied commit settles before its action
-- Verifies: R-005, D-004/temporal, D-004/order
-- Claim: Applied state is published before the committed lease callback, and the operation action follows one attempted committed callback even when that callback throws.
+- Verifies: R-005, D-004/temporal, D-004/order, D-012/temporal
+- Claim: Applied state is published before the committed lease callback, and the operation action follows one attempted committed callback even when that callback throws; TextEdit closes its matching session silently before publication and notifies closure only after guarded lease/action/observer delivery.
 - Failure: A lease observes old public state, a successful install reaches aborted, a terminal is retried, or a recoverable notification failure suppresses the lease/action.
-- Oracle: Record observations from real state/frame subscribers, lease callbacks, action subscribers, and the existing observer. The applied document/selection must be final before committed, committed must be attempted once, aborted never, and the final action must follow. Repeat with throwing lease, notifier/error-reporting, and action callbacks at the applicable delivery boundaries.
+- Oracle: Record observations from real state/frame subscribers, lease callbacks, action subscribers, and the existing observer. The applied document/selection must be final before committed, committed must be attempted once, aborted never, and the final action must follow. For a changed TextEdit session, the first state observation sees the final text and cleared session/suppression; the close listener observes completed outer lease/action delivery, can read session getters, and can start a separate mutation after guard release. A new session it starts survives the old wrapper return. A direct request without a matching session adds no closure notification or interaction revision. Repeat with throwing lease, notifier/error-reporting, and action callbacks at the applicable delivery boundaries, including a failing late TextEdit session listener/error reporter; it cannot change success or repeat settlement.
 - Proxy risk: A standalone lease mock or ordinary listener failure does not cover a throwing frame bridge or error-reporting callback.
 - Evidence constraints: Use recoverable synchronous callback failures in actual runtime delivery; distinguish attempted terminal delivery from host callback completion. Do not claim survival of process termination or execution-preventing exhaustion.
 - Architecture seam: Runtime post-install delivery and guarded lease entry under D-004.
 
 ### A-005 — Non-application settles a returned lease
-- Verifies: R-005, R-006, D-004/policy, D-004/temporal
-- Claim: Non-applied accepted requests abort their returned lease once and preserve committed state.
+- Verifies: R-005, R-006, D-004/policy, D-004/temporal, D-012/state_data, D-012/policy
+- Claim: Non-applied accepted requests abort their returned lease once and preserve committed state; valid unapplied TextEdit requests and matching drafts remain retryable.
 - Failure: Cancellation mutates committed content or a mismatched acceptance leaks a lease.
-- Oracle: Observe actual document/revision/selection/ID facts and action count after cancel, thrown resolver, incompatible resolution, and accepted preparation failure. Returned leases abort once and never commit; callbacks that return no lease have no terminal.
+- Oracle: Observe actual document/revision/selection/ID facts and action count after cancel, thrown resolver, incompatible resolution, and accepted preparation failure. Returned leases abort once and never commit; callbacks that return no lease have no terminal. For TextEdit, observe false on contained cancellation, the unchanged active draft, and a subsequent successful retry of the same valid request; real preparation failures preserve those facts while retaining their existing error channel.
 - Proxy risk: Checking only a thrown error misses already-applied side effects or an unsettled returned lease.
-- Evidence constraints: Include operation-owned preview/provisional-selection cleanup without treating it as committed mutation; ensure cleanup does not overwrite externally owned selection. Observe actual non-application exits, not test-only substitutes.
+- Evidence constraints: Include operation-owned preview/provisional-selection cleanup without treating it as committed mutation; ensure cleanup does not overwrite externally owned selection. Observe actual non-application exits, not test-only substitutes. Include actual TextEdit preparation failure where atomicity is claimed, not only the existing injected non-publishing result.
 - Architecture seam: Runtime non-application exits under D-004.
 
 ### A-006 — Diagnostic containment and redaction
@@ -386,7 +419,7 @@ outcome: R-001
 - Failure: Diagnostics retain request/element/lease/error text, duplicate a guard failure, build disabled details, or interrupt terminal delivery.
 - Oracle: Inspect emitted diagnostics for callback failures with deliberately sensitive request/reason/error contents, and observe unchanged lease/action outcomes; observe absence of detail construction when disabled and the owning guard's existing single diagnostic treatment.
 - Proxy risk: Searching source for a logging call cannot establish emitted content or disabled behavior.
-- Evidence constraints: Use the existing diagnostics boundary and its direct observations; synthetic sensitive values remain test data. Reuse existing containment seams instead of introducing a configurable sink.
+- Evidence constraints: Use the existing diagnostics boundary and its direct observations; synthetic sensitive values remain test data, including full TextEdit text and metadata. Confirm the existing editText action still carries lengths only, not before/after contents. Reuse existing containment seams instead of introducing a configurable sink.
 - Architecture seam: Runtime safe error projection into the existing diagnostics owner under D-004.
 
 ### A-007 — Move conflict and preview membership
@@ -399,13 +432,13 @@ outcome: R-001
 - Architecture seam: Interaction's captured basis, accepted-change notification, and frame capture under D-005.
 
 ### A-008 — Public facts support host-owned reversal
-- Verifies: R-001, R-009, D-002/state_data, D-002/policy
+- Verifies: R-001, R-009, D-002/state_data, D-002/policy, R-021, D-012/state_data
 - Claim: A host can retain immutable operation facts, record only applied operations, and undo/redo each admitted operation without a production whole-document snapshot.
 - Failure: Deleted data or placement cannot be restored, retained request values change later, or cancelled/aborted operations enter history.
 - Oracle: A host harness retains only the public request and its chosen final Move delta, records it through committed, then reverses/replays through public edits. Compare restored content, element identity/order, transforms, background placement, and chosen selection against independently captured test-only expectations; verify no replay resolver/action and no record from cancellation/abort.
 - Proxy risk: Pushing/popping a document or request from a list proves neither reversal nor sufficiency of the public projection.
-- Evidence constraints: Cover Draw, Delete, Erase, Move, Rotate, and Reflect, complete deleted element data, multiple element kinds, and retained immutable collections after later edits. Test-only full snapshots may serve as an oracle, never as the host harness's history input. Resource assets remain the host's responsibility and revisions are not rewound.
-- Architecture seam: Public request/lease and existing edit capabilities under D-002, D-007, and D-008.
+- Evidence constraints: Cover Draw, Delete, Erase, Move, Rotate, Reflect, and TextEdit, complete deleted element data, multiple element kinds, and retained immutable collections after later edits. TextEdit replay restores every mutable text/common field from before/after, including nullable-field clears, metadata, sizing inputs, and compensated transform, while preserving ID and structural placement. Use expected content equality with normally advancing revisions, not historical revision equality. Test-only full snapshots may serve as an oracle, never as the host harness's history input. Resource assets remain the host's responsibility and revisions are not rewound.
+- Architecture seam: Public request/lease and existing edit capabilities under D-002, D-007, D-008, and D-012.
 
 ### A-009 — One final Move transform
 - Verifies: R-004, R-007, D-006/policy
@@ -435,10 +468,10 @@ outcome: R-001
 - Architecture seam: The existing structural edit owner and Draw projection under D-008.
 
 ### A-012 — Coherent public migration
-- Verifies: R-002, R-017, D-009/compatibility, D-009/migration_retirement, D-010/recognition, I-001
+- Verifies: R-002, R-017, D-009/compatibility, D-009/migration_retirement, D-010/recognition, I-001, D-012/compatibility
 - Claim: Public consumers use the required unified sealed protocol and restoration methods; retired confirmation exports and internal prepared capabilities are unavailable, while retained policy/read/action/schema surfaces remain compatible.
 - Failure: Old and new resolver APIs coexist, consumers require private imports, or replacing confirmation accidentally removes independently useful deletion policy or changes serialized data.
-- Oracle: Inspect the analyzer-resolved root export namespace and actual public signatures with existing owning checks, and compile representative external consumers against public imports only. Observe migrated integration behavior and preserved serialized round trips through existing owning coverage.
+- Oracle: Inspect the analyzer-resolved root export namespace and actual public signatures with existing owning checks, and compile representative external consumers against public imports only. Observe migrated integration behavior and preserved serialized round trips through existing owning coverage. For TextEdit, exercise external session listeners and real overlay consumers against the documented later close notification, preserving session-getter reads and separate mutations after outer delivery while retaining the existing text UI and length-only action payload.
 - Proxy risk: A hand-maintained expected-name list or successful internal compilation can hide leaked private types and broken external consumers.
 - Evidence constraints: Consume the current registry as inventory authority; use real declarations and existing central public-surface machinery. Bounded recognition ends at the root export/signature boundary, not arbitrary source syntax or private helper layout.
 - Architecture seam: The public facade and existing central API recognition under D-009 and D-010.
@@ -458,14 +491,14 @@ outcome: R-001
 - Failure: A fixed-size operation materializes the document or traverses unrelated element rows for its request, conflict check, selection intent, or empty-layer removal.
 - Oracle: With fixed affected facts and controlled owning structures, increase unrelated document rows and observe actual preparation/projection/row-read work through existing owner-level evidence. Account separately for affected geometry, selected sets, and structural-owner work allowed by R-016.
 - Proxy risk: Wall-clock timing alone or a small fixture can conceal whole-document work; unchanged total time does not establish locality.
-- Evidence constraints: Use direct existing counters/observations and targeted owner inspection, not arbitrary performance thresholds. Cover representative Draw, deletion/erase, transforms, and the new sparse structural operation without demanding constant time for large affected inputs.
+- Evidence constraints: Use direct existing counters/observations and targeted owner inspection, not arbitrary performance thresholds. Cover representative Draw, deletion/erase, transforms, TextEdit with fixed text/layout inputs, and the new sparse structural operation without demanding constant time for large affected inputs.
 - Architecture seam: Sparse preparation and request projection under D-011.
 
 ### A-015 — Preparation is not duplicated or deferred into consume
-- Verifies: R-003, R-020, D-003/atomicity, D-011/policy
+- Verifies: R-003, R-020, R-021, D-003/atomicity, D-011/policy
 - Claim: Non-Move exact preparation completes once before resolution; Move exact preparation occurs once after final acceptance, and consume/discard do not reconstruct or reverse the transaction.
 - Failure: Confirmation prepares the same operation again, final Move applies a correction, or consume/discard hides validation, copying, or inverse work.
-- Oracle: Observe the real preparation phase boundaries around resolver and terminal use, together with actual install effects. Non-Move requests must already correspond to the sealed candidate when the resolver runs; Move's one exact candidate must use the returned delta. Audit terminal work at the owning boundary.
+- Oracle: Observe the real preparation phase boundaries around resolver and terminal use, together with actual install effects. Non-Move requests must already correspond to the sealed candidate when the resolver runs; Move's one exact candidate must use the returned delta. For TextEdit, observe one exact preparation and its anchor/layout work before resolution; the accepted after comes from that candidate and acceptance does not repeat preparation or anchor computation. Audit terminal work at the owning boundary.
 - Proxy risk: One public action can conceal two preparations or an internal corrective edit.
 - Evidence constraints: Use existing owner-level phase observations plus boundary inspection; do not lock helper names, add a second production phase ledger, or insert callbacks into the install tail.
 - Architecture seam: Prepared lifetime and runtime resolution sequence under D-003 and D-011.
@@ -489,19 +522,19 @@ outcome: R-001
 - Architecture seam: Runtime private guarded-callback entry and public mutation guards under D-004.
 
 ### A-018 — Request context matches the actual proposal
-- Verifies: R-002, R-003, D-002/state_data, D-002/policy
+- Verifies: R-002, R-003, D-002/state_data, D-002/policy, R-021, D-012/state_data
 - Claim: The resolver receives accurate common context and operation-specific facts for the operation it is deciding.
 - Failure: The request contains stale document context, the wrong selection snapshot or placement, incorrect eraser geometry, or transform/pivot data different from the prepared proposal.
-- Oracle: Inside the real resolver, compare documentSummary/documentRevision and each operation's D-002 facts with independently captured initial facts and actual input. Include final Draw entry/layer provenance, canonical deletion order, eraser corridor/thickness, Move initial participant transforms/bounds and proposed delta, and rotation/reflection pivot, operation, and world transform. For Move with an unrelated intervening edit, document context is current while participant basis and prior selection retain their defined start meanings.
+- Oracle: Inside the real resolver, compare documentSummary/documentRevision and each operation's D-002 facts with independently captured initial facts and actual input. Include final Draw entry/layer provenance, canonical deletion order, eraser corridor/thickness, Move initial participant transforms/bounds and proposed delta, rotation/reflection pivot, operation, and world transform; and TextEdit before/after. TextEdit before equals the complete current committed target; after equals the eventual accepted element in every field, including revision and independently expected anchor-preserving transform. The proposal includes all unchanged fields and does not become a live reference after later edits. For Move with an unrelated intervening edit, document context is current while participant basis and prior selection retain their defined start meanings.
 - Proxy risk: Correct request types, compilable signatures, or successful Undo can coexist with inaccurate context used by the host's approval policy.
-- Evidence constraints: Exercise public operation routes using existing owning fixtures and immutable expected inputs; do not derive expected values by calling the projection being verified or add a production projection just for testing.
+- Evidence constraints: Exercise public operation routes using existing owning fixtures and immutable expected inputs across all seven variants; do not derive expected values by calling the projection being verified or add a production projection just for testing.
 - Architecture seam: Runtime public request projection under D-002.
 
 ## Stop Conditions
 
 ### H-001 — A current authority contradicts the accepted behavior
-- Trigger: Contract authoring or implementation finds a current owning rule or public consumer requirement incompatible with the selected operation scope, preserved eligibility, source-breaking migration, or approved Move conflict/Undo behavior.
-- Invalidates: D-001, D-005, D-007, D-008, D-009, A-001, A-012
+- Trigger: Contract authoring or implementation finds a current owning rule or public consumer requirement incompatible with the selected operation scope, preserved eligibility, source-breaking migration, approved Move conflict/Undo behavior, or TextEdit request/session completion.
+- Invalidates: D-001, D-005, D-007, D-008, D-009, D-012, A-001, A-012
 - Resolution requires: Identify the exact conflicting authority and resolve it against the accepted requirements before implementation continues. A changed product decision requires the user's decision; do not silently narrow scope, add compatibility precedence, or reinterpret existing protection rules.
 
 ### H-002 — Prepared installation requires a different boundary
@@ -511,7 +544,7 @@ outcome: R-001
 
 ### H-003 — Public operation facts cannot support the approved restoration
 - Trigger: An actual admitted operation has a persistent effect or restoration requirement that the selected public facts and existing edit capabilities plus D-007/D-008 cannot reconstruct without whole-document history or a new engine-owned history mechanism.
-- Invalidates: D-002, D-007, D-008, A-008, A-011, A-018, I-001
+- Invalidates: D-002, D-007, D-008, D-012, A-008, A-011, A-018, I-001
 - Resolution requires: Identify the missing effect and its existing owner, then resolve the smallest public-fact or capability correction before contract authoring proceeds. Do not add a generic diff protocol, asset store, or history subsystem by inference; any material scope change returns to the user.
 
 ## Contract Interface
@@ -519,16 +552,16 @@ outcome: R-001
 - Profile: `BEHAVIOR_CHANGE`
 - Obligations: `SEAM_MIGRATION`, `PUBLIC_API_CHANGE`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `NEGATIVE_PROOF_AND_FIXTURE_QUARANTINE`, `TEMPORAL_SURFACE_CLOSURE`, `ALL_OR_NOTHING_FAILURE_BOUNDARY`, `SOURCE_OF_TRUTH_SINGULARITY`, `WORK_BUDGET_CLOSURE`
 - ADR Impact: none
-- Sources: S-001, S-002, S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036
-- Requirements: R-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008, R-009, R-010, R-011, R-012, R-013, R-014, R-015, R-016, R-017, R-018, R-019, R-020
-- Commitments: D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011
+- Sources: S-001, S-002, S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043
+- Requirements: R-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008, R-009, R-010, R-011, R-012, R-013, R-014, R-015, R-016, R-017, R-018, R-019, R-020, R-021
+- Commitments: D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012
 - Assurance: A-001, A-002, A-003, A-004, A-005, A-006, A-007, A-008, A-009, A-010, A-011, A-012, A-013, A-014, A-015, A-016, A-017, A-018
 - Impacts: I-001, I-002, I-003, I-004, I-005, I-006, I-007
 - Stops: H-001, H-002, H-003
 
 ## Diagrams
 
-None: D-001 and D-003 identify ownership and the irreversible boundary; D-004 specifies success and failure ordering, and D-005 specifies Move capture and cancellation. These locks answer the material questions without a second design representation. I-005 and I-006 own the required later updates to existing explanatory diagrams.
+None: D-001 and D-003 identify ownership and the irreversible boundary; D-004 specifies success and failure ordering, D-005 specifies Move capture and cancellation, and D-012 specifies TextEdit session completion. These locks answer the material questions without a second design representation. I-005 and I-006 own the required later updates to existing explanatory diagrams.
 
 ## Readiness Matrix
 
@@ -540,13 +573,13 @@ None: D-001 and D-003 identify ownership and the irreversible boundary; D-004 sp
 | in_scope | closed | D-001 |
 | out_of_scope | closed | D-001 |
 | source_of_truth | closed | D-001 |
-| compatibility | closed | D-009 |
+| compatibility | closed | D-009, D-012 |
 | order | closed | D-004 |
-| policy | closed | D-002, D-004, D-006, D-008, D-011 |
+| policy | closed | D-002, D-004, D-006, D-008, D-011, D-012 |
 | dependency | closed | D-001 |
-| state_data | closed | D-002, D-003, D-005, D-007, D-008, D-011 |
+| state_data | closed | D-002, D-003, D-005, D-007, D-008, D-011, D-012 |
 | migration_retirement | closed | D-009 |
-| temporal | closed | D-004, D-005 |
+| temporal | closed | D-004, D-005, D-012 |
 | atomicity | closed | D-003, D-007, D-008 |
 | negative_proof_fixture | closed | D-010 |
 | recognition | closed | D-010 |
@@ -559,17 +592,17 @@ None: D-001 and D-003 identify ownership and the irreversible boundary; D-004 sp
 | Ownership | pass | D-001, D-003, A-002, A-013 |
 | Source-Of-Truth Singularity | pass | D-001, A-013 |
 | Source-Truth Minimality | pass | D-001, D-011, A-013, A-014, M-006 |
-| Boundary-Owned Policy | pass | D-002, D-004, D-006, D-008, D-011, A-005, A-006, A-009, A-011, A-014, A-015, A-017, A-018 |
+| Boundary-Owned Policy | pass | A-001, A-008, D-002, D-004, D-006, D-008, D-011, A-005, A-006, A-009, A-011, A-014, A-015, A-017, A-018, D-012 |
 | Dependency Direction | pass | D-001, A-013 |
-| Solution Proportionality | pass | F-001, F-002, M-001, M-002, M-003, M-004, M-005, M-006, M-007, R-003, E-005, E-006, E-020, R-005, E-011, E-012, E-021, R-010, E-009, E-010, R-011, E-008, E-017, R-013, E-015, E-016, R-020, E-007 |
+| Solution Proportionality | pass | F-001, F-002, M-001, M-002, M-003, M-004, M-005, M-006, M-007, M-008, R-003, E-005, E-006, E-020, R-005, E-011, E-012, E-021, R-010, E-009, E-010, R-011, E-008, E-017, R-013, E-015, E-016, R-020, E-007, R-021, E-036, E-039 |
 | Outcome-Proof Fit | pass | A-008 |
 | Verification | pass | A-001, A-002, A-003, A-004, A-005, A-006, A-007, A-008, A-009, A-010, A-011, A-012, A-013, A-014, A-015, A-016, A-017, A-018 |
 | Future Pressure | pass | P-001 |
 | Handoff Consumability | pass | CONTRACT, H-001, H-002, H-003 |
 | Negative Proof And Fixture Quarantine | pass | D-010, A-003, A-013 |
-| State/Data Ownership | pass | D-002, D-003, D-005, D-007, D-008, D-011, A-002, A-003, A-007, A-008, A-010, A-011, A-014, A-018 |
+| State/Data Ownership | pass | A-005, D-002, D-003, D-005, D-007, D-008, D-011, A-002, A-003, A-007, A-008, A-010, A-011, A-014, A-018, D-012 |
 | Sequenced Migration And Retirement | pass | D-009, A-012 |
-| Temporal Surface Closure | pass | D-004, D-005, A-004, A-005, A-007, A-017 |
+| Temporal Surface Closure | pass | D-004, D-005, A-004, A-005, A-007, A-017, D-012 |
 | All-Or-Nothing Failure Boundary | pass | D-003, D-007, D-008, A-002, A-010, A-011, A-015 |
 | Bounded Recognition Scope | pass | D-010, A-012 |
 
