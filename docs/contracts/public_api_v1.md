@@ -1558,6 +1558,7 @@ abstract interface class CanvasEdit {
   CanvasDocumentSummary get draftSummary;
 
   bool ensureLayer(CanvasLayerId id, {int? index});
+  bool removeEmptyLayer(CanvasLayerId id);
   CanvasElementId addElement(CanvasElement element, {CanvasLayerId? layerId, int? index});
   CanvasElementId addBackgroundElement(CanvasElement element, {int? index});
   bool updateElement(CanvasElementUpdate update);
@@ -1605,6 +1606,10 @@ Edit contract:
   document and installed atomically with it. It never changes live selection in
   the callback, emits no user action, and an equal normalized result is silent;
   an omitted call retains the edit's existing prune/replacement behavior;
+- CanvasEdit.removeEmptyLayer returns false without mutation unless an ordinary
+  layer with the requested id is currently empty in the same callback. It
+  removes only that layer, preserves background elements and resource
+  descriptors, and never deletes elements or performs automatic cleanup;
 - removeUnusedResource fails with false if resource is referenced by any background/content element, including invisible or locked elements.
 - clearContent removes every ordinary-layer element regardless of
   `isDeletable`, while preserving persisted background/grid metadata and the
@@ -1612,6 +1617,7 @@ Edit contract:
   retains image and vector descriptors still referenced by those preserved
   background elements and removes only descriptors that are actually unused;
 - CanvasEdit.removeElement is a low-level document edit and emits no user action event;
+- CanvasEdit.removeEmptyLayer is a low-level document edit and emits no user action event;
 - CanvasEdit.clearContent is a low-level document edit and emits no user action event.
 ```
 

@@ -150,6 +150,7 @@ final class IncompleteEdit implements CanvasEdit {
     elementCount: 0, layerCount: 0, resourceCount: 0,
   );
   @override bool ensureLayer(CanvasLayerId id, {int? index}) => false;
+  @override bool removeEmptyLayer(CanvasLayerId id) => false;
   @override CanvasElementId addElement(CanvasElement element, {CanvasLayerId? layerId, int? index}) => element.id;
   @override CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) => element.id;
   @override bool updateElement(CanvasElementUpdate update) => false;
@@ -1109,6 +1110,9 @@ final class _ConsumerEdit implements CanvasEdit {
 
   @override
   bool ensureLayer(CanvasLayerId id, {int? index}) => true;
+
+  @override
+  bool removeEmptyLayer(CanvasLayerId id) => true;
 
   @override
   bool removeElement(CanvasElementId id) => true;

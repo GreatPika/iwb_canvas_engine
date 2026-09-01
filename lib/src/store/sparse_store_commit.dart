@@ -53,6 +53,12 @@ final class StoreSparseEnsureLayer extends StoreSparseMutation {
   final int? index;
 }
 
+final class StoreSparseRemoveEmptyLayer extends StoreSparseMutation {
+  const StoreSparseRemoveEmptyLayer(this.id);
+
+  final CanvasLayerId id;
+}
+
 final class StoreSparseAddElement extends StoreSparseMutation {
   const StoreSparseAddElement({
     required this.element,

@@ -227,9 +227,7 @@ bool _isClearContentReset(
 }
 
 bool _requiresRebuild(TouchedSet touchedSet) {
-  return touchedSet.layerIds.isNotEmpty ||
-      touchedSet.backgroundLayerChanged ||
-      touchedSet.background;
+  return touchedSet.backgroundLayerChanged || touchedSet.background;
 }
 
 final class SpatialKernelSnapshot {

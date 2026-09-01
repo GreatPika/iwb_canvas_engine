@@ -158,6 +158,7 @@ abstract interface class CanvasEdit {
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
   bool ensureLayer(CanvasLayerId id, {int? index});
+  bool removeEmptyLayer(CanvasLayerId id);
   CanvasElementId addElement(
     CanvasElement element, {
     CanvasLayerId? layerId,

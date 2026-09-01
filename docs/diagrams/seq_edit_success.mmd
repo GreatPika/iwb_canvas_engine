@@ -27,7 +27,7 @@ sequenceDiagram
   EK-->>Caller: invoke fn(handle)
 
   activate Handle
-  Caller->>Handle: synchronous CanvasEdit mutations
+  Caller->>Handle: synchronous CanvasEdit mutations, including guarded empty-layer removal
   opt CanvasEdit.setSelection(ids)
     Handle->>Handle: snapshot last desired ids; retain live Selection unchanged
   end

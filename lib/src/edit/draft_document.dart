@@ -71,6 +71,8 @@ final class DraftDocument {
        );
 
   _DraftBacking _backing;
+  var _hasSuccessfulMutation = false;
+  var _isEmptyLayerRemovalOnly = false;
 
   CanvasCamera get camera => _backing.camera;
   set camera(CanvasCamera value) => _backing.camera = value;
@@ -93,6 +95,23 @@ final class DraftDocument {
 
   bool get didChange => _revisionDelta.hasChanges;
   bool get documentReplaced => _backing.documentReplaced;
+  bool get isEmptyLayerRemovalOnly => _isEmptyLayerRemovalOnly;
+  StoreSparseCommit? get emptyLayerRemovalSparseCommit {
+    if (!_isEmptyLayerRemovalOnly) {
+      return null;
+    }
+    final removedLayerIds = _structure.removedLayerIds;
+    if (removedLayerIds.isEmpty) {
+      return null;
+    }
+    return StoreSparseCommit(
+      mutations: [
+        for (final id in removedLayerIds) StoreSparseRemoveEmptyLayer(id),
+      ],
+      revisionDelta: _revisionDelta,
+    );
+  }
+
   StoreRevisionDelta get revisionDelta => _revisionDelta;
   TouchedSet get touchedSet => _touchedSet.build();
   CommitPlan get commitPlan {
@@ -173,6 +192,15 @@ final class DraftDocument {
     return true;
   }
 
+  bool removeEmptyLayer(CanvasLayerId id) {
+    if (!_structure.removeEmptyLayer(id)) {
+      return false;
+    }
+    _touchedSet.touchLayer(id);
+    _markEmptyLayerRemoval();
+    return true;
+  }
+
   CanvasElementId addElement(
     CanvasElement element, {
     CanvasLayerId? layerId,
@@ -206,6 +234,8 @@ final class DraftDocument {
     switch (mutation) {
       case StoreSparseEnsureLayer(:final id, :final index):
         ensureLayer(id, index: index);
+      case StoreSparseRemoveEmptyLayer(:final id):
+        removeEmptyLayer(id);
       case StoreSparseAddElement(
         :final element,
         :final layerId,
@@ -509,6 +539,8 @@ final class DraftDocument {
       replacementBacking: next,
     );
     _backing = next;
+    _hasSuccessfulMutation = true;
+    _isEmptyLayerRemovalOnly = false;
   }
 
   CanvasDocument _materialize() {
@@ -649,39 +681,61 @@ final class DraftDocument {
   }
 
   void _markStructural() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.structural(),
     );
   }
 
   void _markLayerStructural() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.layerStructural(),
     );
   }
 
   void _markElementUpdate(StoreRevisionDelta delta) {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(delta);
   }
 
   void _markBackground() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.background(),
     );
   }
 
   void _markGrid() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(const StoreRevisionDelta.grid());
   }
 
   void _markResource() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(const StoreRevisionDelta.resource());
   }
 
   void _markProjectionOnly() {
+    _markNonRemovalMutation();
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.projectionOnly(),
     );
+  }
+
+  void _markEmptyLayerRemoval() {
+    if (!_hasSuccessfulMutation) {
+      _isEmptyLayerRemovalOnly = true;
+    }
+    _hasSuccessfulMutation = true;
+    _revisionDelta = _revisionDelta.merge(
+      const StoreRevisionDelta.layerStructural(),
+    );
+  }
+
+  void _markNonRemovalMutation() {
+    _hasSuccessfulMutation = true;
+    _isEmptyLayerRemovalOnly = false;
   }
 }
 

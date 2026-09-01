@@ -31,6 +31,7 @@ import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
 export 'id_admission.dart' show IdAdmissionWorkKind, IdAdmissionWorkPhase;
+export 'store_commit_finalization.dart' show MaterializedStoreCommitCandidates;
 
 // Admission observations carry a semantic operation and, when it is a sparse
 // ledger visit, the visited ID. Tests own accumulation, so production retains
@@ -853,8 +854,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
 
   PreparedMaterializedStoreCommit prepareMaterializedCommit(
     CanvasDocument document,
-    StoreRevisionDelta revisionDelta,
-  ) {
+    StoreRevisionDelta revisionDelta, {
+    MaterializedStoreCommitCandidates? candidates,
+  }) {
     final candidate = CommittedDocument(document);
     _validateFinalCandidateResourceRelationships(
       _ResourceRelationshipCandidate(candidate),
@@ -886,7 +888,11 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       baseDocument: _document,
       document: acceptedDocument,
       revisionDelta: acceptedDelta,
-      touchedFacts: _committedDocumentTouchedFacts(_document, candidate),
+      touchedFacts: _committedDocumentTouchedFacts(
+        _document,
+        candidate,
+        candidates: candidates,
+      ),
       idAdmissions: _admitCompleteDocumentOwners(acceptedDocument),
     );
   }
@@ -1295,7 +1301,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
   // the one current candidate cannot diverge through a metric-only wrapper.
-  // ignore: source-lines-of-code
+  // One exhaustive mutation dispatch preserves journal ordering and prevents
+  // a second structural replay owner from drifting from Store semantics.
+  // ignore: source-lines-of-code, cyclomatic-complexity
   _SparseMutationResult _applySparseMutation(
     _StoreTransactionCandidate candidate,
     StoreSparseMutation mutation,
@@ -1305,6 +1313,10 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         candidate,
         id,
         index: index,
+      ),
+      StoreSparseRemoveEmptyLayer(:final id) => _removeEmptyLayer(
+        candidate,
+        id,
       ),
       final StoreSparseAddElement mutation => _addElement(candidate, mutation),
       final StoreSparseUpdateElement mutation => _updateElement(
@@ -1342,6 +1354,18 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       return _SparseMutationResult.unchanged();
     }
 
+    return _SparseMutationResult.changed(
+      requiredRevisionDelta: const StoreRevisionDelta.layerStructural(),
+    );
+  }
+
+  _SparseMutationResult _removeEmptyLayer(
+    _StoreTransactionCandidate candidate,
+    CanvasLayerId id,
+  ) {
+    if (!candidate.structure.removeEmptyLayer(id)) {
+      return _SparseMutationResult.unchanged();
+    }
     return _SparseMutationResult.changed(
       requiredRevisionDelta: const StoreRevisionDelta.layerStructural(),
     );
@@ -2096,15 +2120,24 @@ Iterable<CanvasElementId> _sparseElementIdsForRevisionNormalization(
 
 AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
   CommittedDocument base,
-  CommittedDocument candidate,
-) {
+  CommittedDocument candidate, {
+  MaterializedStoreCommitCandidates? candidates,
+}) {
   final resourceTouches = _resourceTouchedFacts(base, candidate);
   final elementTouches = _elementTouchedFacts(base, candidate);
 
   return _acceptedStoreTouchedFacts(
     elementTouches: elementTouches,
     resourceTouches: resourceTouches,
-    layerIds: _changedLayerIds(base.elements, candidate.elements),
+    layerIds: _changedLayerIds(
+      base.elements,
+      candidate.elements,
+      limitedToIds: _materializedLayerCandidateIds(
+        base: base.elements,
+        candidate: candidate.elements,
+        candidates: candidates,
+      ),
+    ),
     aggregateTouches: _AggregateTouchedFacts(
       backgroundLayerChanged: !_sameList(
         base.elements.backgroundElementIds,
@@ -2116,6 +2149,35 @@ AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
       palette: !_samePalette(base.palette, candidate.palette),
     ),
   );
+}
+
+Set<CanvasLayerId>? _materializedLayerCandidateIds({
+  required ElementRegistry base,
+  required ElementRegistry candidate,
+  required MaterializedStoreCommitCandidates? candidates,
+}) {
+  if (candidates == null) {
+    return null;
+  }
+
+  final layerIds = <CanvasLayerId>{...candidates.layerIds};
+  for (final elementId in candidates.addedElementIds) {
+    _addCandidateElementPlacementLayerIds(
+      layerIds,
+      base: base,
+      candidate: candidate,
+      elementId: elementId,
+    );
+  }
+  for (final elementId in candidates.removedElementIds) {
+    _addCandidateElementPlacementLayerIds(
+      layerIds,
+      base: base,
+      candidate: candidate,
+      elementId: elementId,
+    );
+  }
+  return layerIds;
 }
 
 bool _sameTouchedResources(
@@ -2373,19 +2435,33 @@ Set<CanvasLayerId> _changedLayerIds(
 
   return {
     for (final id in ids)
-      if (!_sameLayerFacts(
-        _layerRowById(base, id),
-        _layerRowById(candidate, id),
+      if (!_sameLayerLocationFacts(
+        _layerLocationById(base, id),
+        _layerLocationById(candidate, id),
       ))
         id,
   };
 }
 
-LayerRow? _layerRowById(ElementRegistry registry, CanvasLayerId id) {
+LayerLocationFacts? _layerLocationById(
+  ElementRegistry registry,
+  CanvasLayerId id,
+) {
   return LayerTable.withReadScope(
     LayerTableReadScope.rowIndex,
-    () => registry.layerTable.locationFor(id)?.row,
+    () => registry.layerTable.locationFor(id),
   );
+}
+
+bool _sameLayerLocationFacts(
+  LayerLocationFacts? before,
+  LayerLocationFacts? after,
+) {
+  if (before == null || after == null) {
+    return before == after;
+  }
+
+  return before.index == after.index && _sameLayerFacts(before.row, after.row);
 }
 
 bool _sameLayerFacts(LayerRow? before, LayerRow? after) {
@@ -2693,10 +2769,13 @@ Set<CanvasLayerId> _sparseAcceptedLayerIds({
 }) {
   final layerIds = <CanvasLayerId>{};
   for (final id in candidates.ensuredLayerIds) {
-    _addAcceptedEnsuredLayerId(layerIds, base, candidate, id);
+    _addAcceptedLayerCandidateId(layerIds, base, candidate, id);
+  }
+  for (final id in candidates.removedLayerIds) {
+    _addAcceptedLayerCandidateId(layerIds, base, candidate, id);
   }
   for (final elementId in candidates.indexedAddedElementIds) {
-    _addAcceptedAddedElementLayerId(
+    _addCandidateElementPlacementLayerIds(
       layerIds,
       base: base,
       candidate: candidate,
@@ -2704,7 +2783,12 @@ Set<CanvasLayerId> _sparseAcceptedLayerIds({
     );
   }
   for (final elementId in candidates.removedElementIds) {
-    _addAcceptedRemovedElementLayerId(layerIds, base, candidate, elementId);
+    _addCandidateElementPlacementLayerIds(
+      layerIds,
+      base: base,
+      candidate: candidate,
+      elementId: elementId,
+    );
   }
   if (candidates.clearedContent) {
     layerIds.addAll(_nonEmptyContentLayerIds(base));
@@ -2713,45 +2797,27 @@ Set<CanvasLayerId> _sparseAcceptedLayerIds({
   return layerIds;
 }
 
-void _addAcceptedEnsuredLayerId(
+void _addAcceptedLayerCandidateId(
   Set<CanvasLayerId> layerIds,
   ElementRegistry base,
   ElementRegistry candidate,
   CanvasLayerId id,
 ) {
-  if (!base.containsLayer(id) && candidate.containsLayer(id)) {
+  final baseLocation = base.layerTable.locationFor(id);
+  final candidateLocation = candidate.layerTable.locationFor(id);
+  if (!_sameLayerLocationFacts(baseLocation, candidateLocation)) {
     layerIds.add(id);
   }
 }
 
-void _addAcceptedAddedElementLayerId(
+void _addCandidateElementPlacementLayerIds(
   Set<CanvasLayerId> layerIds, {
   required ElementRegistry base,
   required ElementRegistry candidate,
   required CanvasElementId elementId,
 }) {
-  if (FamilyTables.readSparseBase(
-            () => base.familyTables.elementByCanvasId(elementId),
-          ) ==
-          null &&
-      candidate.familyTables.elementByCanvasId(elementId) != null) {
-    _addContentLayerForElement(layerIds, candidate, elementId);
-  }
-}
-
-void _addAcceptedRemovedElementLayerId(
-  Set<CanvasLayerId> layerIds,
-  ElementRegistry base,
-  ElementRegistry candidate,
-  CanvasElementId id,
-) {
-  if (FamilyTables.readSparseBase(
-            () => base.familyTables.elementByCanvasId(id),
-          ) !=
-          null &&
-      candidate.familyTables.elementByCanvasId(id) == null) {
-    _addContentLayerForElement(layerIds, base, id);
-  }
+  _addContentLayerForElement(layerIds, base, elementId);
+  _addContentLayerForElement(layerIds, candidate, elementId);
 }
 
 void _addContentLayerForElement(
@@ -3376,6 +3442,7 @@ final class _SparseTransactionAccounting {
               after: resourceDescriptorAfterMutation,
             );
       case StoreSparseEnsureLayer() ||
+          StoreSparseRemoveEmptyLayer() ||
           StoreSparseUpdateElement() ||
           StoreSparseRemoveElement() ||
           StoreSparseRemoveUnusedResource() ||
@@ -3468,6 +3535,8 @@ final class _SparseTransactionAccounting {
     switch (mutation) {
       case StoreSparseEnsureLayer(:final id):
         _addAdmission(_admittedLayerIds, id.value);
+      case StoreSparseRemoveEmptyLayer():
+        break;
       case StoreSparseAddElement(:final element, :final layerId):
         _addAdmission(_admittedElementIds, element.id.value);
         if (layerId != null) {
@@ -3557,16 +3626,21 @@ final class _SparseTransactionAccounting {
 // ignore: coupling-between-object-classes
 final class _SparseAcceptedLayerCandidates {
   final Set<CanvasLayerId> ensuredLayerIds = {};
+  final Set<CanvasLayerId> removedLayerIds = {};
   final Set<CanvasElementId> indexedAddedElementIds = {};
   final Set<CanvasElementId> removedElementIds = {};
   bool clearedContent = false;
 
   // The exhaustive switch keeps every layer-relevant journal mutation visible.
-  // ignore: cyclomatic-complexity
+  // The sealed mutation taxonomy keeps touched facts at the same owner as
+  // replay, so a separate dispatcher would create duplicate classification.
+  // ignore: cyclomatic-complexity, source-lines-of-code
   bool addMutation(StoreSparseMutation mutation) {
     switch (mutation) {
       case StoreSparseEnsureLayer(:final id):
         return ensuredLayerIds.add(id);
+      case StoreSparseRemoveEmptyLayer(:final id):
+        return removedLayerIds.add(id);
       case StoreSparseAddElement(
         :final element,
         :final index,
@@ -3608,11 +3682,15 @@ final class _SparseTouchedCommittedFacts {
   bool palette = false;
 
   // Keeping the sparse mutation taxonomy together makes omissions visible when
-  // new sparse mutation types are added.
-  // ignore: cyclomatic-complexity
+  // new sparse mutation types are added; a second classifier would duplicate
+  // replay ownership and risk divergent finalization facts.
+  // ignore: cyclomatic-complexity, source-lines-of-code
   void addMutation(StoreSparseMutation mutation) {
     switch (mutation) {
       case StoreSparseEnsureLayer(:final id):
+        touchedElementStructure = true;
+        layerIds.add(id);
+      case StoreSparseRemoveEmptyLayer(:final id):
         touchedElementStructure = true;
         layerIds.add(id);
       case StoreSparseAddElement(

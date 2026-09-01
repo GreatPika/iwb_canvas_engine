@@ -12,6 +12,7 @@ void main() {
   _testStructuralElementChangesTouchedUpdate();
   _testUpdateThenRemove();
   _testStructuralRevisionRebase();
+  _testEmptyLayerStructuralRevisionRebase();
 }
 
 void _testOrdinaryTouchedUpdate() {
@@ -164,5 +165,35 @@ void _testStructuralRevisionRebase() {
     expect(changed.elementHandlesCalls, 0);
     expect(changed.elementHandleForIdCalls, 2);
     expect(candidateRevisions, {1});
+  });
+}
+
+void _testEmptyLayerStructuralRevisionRebase() {
+  test('empty layer changes rebind candidates without rebuilding elements', () {
+    final kernel = SpatialKernel();
+    kernel.rebuild(
+      SpatialFrameFactsPortFixture([
+        spatialRect('a', order: 1),
+        spatialRect('b', order: 2),
+      ]),
+    );
+    final layerOnly = SpatialFrameFactsPortFixture([
+      spatialRect('a', order: 1),
+      spatialRect('b', order: 2),
+    ], structuralRevision: 1);
+
+    kernel.applyTouched(
+      layerOnly,
+      TouchedSet(layerIds: [CanvasLayerId('empty-layer')]),
+    );
+
+    expect(layerOnly.elementHandlesCalls, 0);
+    expect(layerOnly.elementHandleForIdCalls, 0);
+    expect(kernel.snapshot.isInvalid, isFalse);
+    expect(kernel.snapshot.entryCount, 2);
+    expect(
+      spatialCandidateRevisions(kernel.queryHit(spatialWindowNearOrigin(1))),
+      {1},
+    );
   });
 }

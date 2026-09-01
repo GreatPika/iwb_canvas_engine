@@ -11,6 +11,9 @@ import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 
 import 'sparse_edit_session_support.dart';
 
+// This fixture's test registration intentionally lists each structural owner
+// witness together so its coverage family stays discoverable at one seam.
+// ignore: source-lines-of-code
 void registerSparseEditSessionStructureTests() {
   test(
     'materialized Draft indexed structure matches the sequential placement oracle',
@@ -52,6 +55,520 @@ void registerSparseEditSessionStructureTests() {
       returnsNormally,
     ),
   );
+  test(
+    'empty-layer removal preserves callback-local structural ownership across sparse and materialized edits',
+    () =>
+        expect(_emptyLayerRemovalPreservesStructuralOwnership, returnsNormally),
+  );
+  test(
+    'empty-layer removal composes and publishes final state atomically in sparse and materialized edits',
+    () => expect(_materializedEmptyLayerRemovalComposition, returnsNormally),
+  );
+}
+
+void _emptyLayerRemovalPreservesStructuralOwnership() {
+  final document = _emptyLayerRemovalDocument();
+  _expectSparseAndPromotedEmptyLayerRemoval(document);
+  _expectMaterializedEmptyLayerRemoval(document);
+  _expectRecreatedEmptyLayerRebindsSpatialCandidates(document);
+  _expectMaterializedMovedLayerAndContentAddUsesExactSpatialTouches(document);
+  _expectReaddedElementTouchesBothContentLayerPlacements(document);
+  _expectSameLayerElementRecreationIsSilent(document);
+}
+
+/// Keeps the public lifetime and atomic-publication oracle in one fixture;
+/// splitting it would hide the shared final-candidate boundary for metrics.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: Shared public trace preserves the atomic final-candidate oracle.
+void _materializedEmptyLayerRemovalComposition() {
+  final document = _emptyLayerRemovalDocument();
+  final emptyId = CanvasLayerId('empty');
+  final afterId = CanvasLayerId('after');
+  final restoredId = CanvasElementId('restored-after-read');
+
+  final addBeforeRemove = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  final beforeRevision = addBeforeRemove.state.value.revisions.document;
+  addBeforeRemove.edits.edit((edit) {
+    edit.readDraftDocument();
+    edit.addElement(
+      sparseRect(restoredId.value),
+      layerId: CanvasLayerId('before'),
+    );
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+  });
+  expect(addBeforeRemove.state.value.revisions.document, beforeRevision + 1);
+  expect(addBeforeRemove.readDocument().layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    CanvasLayerId('populated'),
+    afterId,
+  ]);
+
+  final removeBeforeAdd = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  removeBeforeAdd.edits.edit((edit) {
+    edit.readDraftDocument();
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+    edit.addElement(
+      sparseRect(restoredId.value),
+      layerId: CanvasLayerId('before'),
+    );
+  });
+  expect(
+    removeBeforeAdd.readDocument().layers.first.elements.single.id,
+    restoredId,
+  );
+
+  final multiRemove = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  multiRemove.edits.edit((edit) {
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+    edit.readDraftDocument();
+    expect(edit.removeEmptyLayer(afterId), isTrue);
+  });
+  expect(multiRemove.readDocument().layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    CanvasLayerId('populated'),
+  ]);
+
+  final compensated = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  final compensatedRevision = compensated.state.value.revisions.document;
+  compensated.edits.edit((edit) {
+    edit.readDraftDocument();
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+    expect(edit.ensureLayer(emptyId, index: 1), isTrue);
+  });
+  expect(compensated.state.value.revisions.document, compensatedRevision);
+  final compensatedDocument = compensated.readDocument();
+  expect(
+    compensatedDocument.layers.map((layer) => layer.id),
+    document.layers.map((layer) => layer.id),
+  );
+  expect(
+    compensatedDocument.backgroundElements.map((element) => element.id),
+    document.backgroundElements.map((element) => element.id),
+  );
+  expect(
+    compensatedDocument.resources.map((resource) => resource.id),
+    document.resources.map((resource) => resource.id),
+  );
+
+  _expectAtomicEmptyLayerRemovalPublication(document, materialize: false);
+  _expectAtomicEmptyLayerRemovalPublication(document, materialize: true);
+}
+
+// Both routes must share this complete public publication oracle; splitting
+// assertions would obscure the required sparse/materialized parity.
+// ignore: halstead-volume, source-lines-of-code, reason: One public atomicity trace must remain identical across both routes.
+void _expectAtomicEmptyLayerRemovalPublication(
+  CanvasDocument document, {
+  required bool materialize,
+}) {
+  final emptyId = CanvasLayerId('empty');
+  final afterId = CanvasLayerId('after');
+  final atomic = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  final previouslySelectedId = CanvasElementId('populated-element');
+  atomic.selection.setSelection([previouslySelectedId]);
+  final beforeAtomic = atomic.state.value;
+  final publications =
+      <
+        ({
+          CanvasRuntimeState state,
+          CanvasDocument document,
+          Set<CanvasElementId> selectedIds,
+        })
+      >[];
+  atomic.state.addListener(
+    () => publications.add((
+      state: atomic.state.value,
+      document: atomic.readDocument(),
+      selectedIds: atomic.selectedElementIds,
+    )),
+  );
+  final atomicRestoredId = CanvasElementId('atomically-restored');
+  atomic.edits.edit((edit) {
+    if (materialize) {
+      edit.readDraftDocument();
+    }
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+    edit.addElement(
+      sparseRect(atomicRestoredId.value),
+      layerId: CanvasLayerId('before'),
+    );
+    edit.setSelection([atomicRestoredId]);
+    expect(atomic.selectedElementIds, {previouslySelectedId});
+  });
+
+  expect(publications, hasLength(1));
+  final publication = publications.single;
+  expect(
+    publication.state.revisions.document,
+    beforeAtomic.revisions.document + 1,
+  );
+  expect(
+    publication.state.revisions.selection,
+    beforeAtomic.revisions.selection + 1,
+  );
+  expect(publication.state.summary.elementCount, 3);
+  expect(publication.state.summary.layerCount, 3);
+  expect(publication.state.summary.resourceCount, 1);
+  expect(publication.state.summary.selectedCount, 1);
+  expect(publication.selectedIds, {atomicRestoredId});
+  expect(publication.document.layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    CanvasLayerId('populated'),
+    afterId,
+  ]);
+  expect(
+    publication.document.layers.first.elements.map((element) => element.id),
+    [atomicRestoredId],
+  );
+  expect(
+    publication.document.backgroundElements.map((element) => element.id),
+    document.backgroundElements.map((element) => element.id),
+  );
+  expect(
+    publication.document.resources.map((resource) => resource.id),
+    document.resources.map((resource) => resource.id),
+  );
+}
+
+// Commit delivery and the following spatial revision check are one Runtime
+// boundary witness; splitting them would hide the rebind cause and effect.
+// ignore: halstead-volume, reason: The public Runtime rebind witness is clearer as one trace.
+void _expectRecreatedEmptyLayerRebindsSpatialCandidates(
+  CanvasDocument document,
+) {
+  for (final materialize in [false, true]) {
+    _expectMovedEmptyLayerRebindsSpatialCandidates(
+      document,
+      materialize: materialize,
+    );
+    _expectSameIndexEmptyLayerRecreationIsSilent(
+      document,
+      materialize: materialize,
+    );
+  }
+}
+
+/// One Runtime witness retains effect delivery, rebind, and bounded frame work.
+// ignore: halstead-volume, source-lines-of-code, reason: One Runtime route must retain its delivered-effect, frame-work, and query oracle.
+void _expectMovedEmptyLayerRebindsSpatialCandidates(
+  CanvasDocument document, {
+  required bool materialize,
+}) {
+  final spatialDeliveries = SparseRuntimeSpatialDeliveryRecorder();
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(
+    document,
+    spatialDeliveryRecorder: spatialDeliveries,
+  );
+  final emptyId = CanvasLayerId('empty');
+  final beforeRevision = root.frameRevisions.structuralRevision;
+  final beforeEntryCount = root.spatialKernel.snapshot.entryCount;
+  var frameHandleEnumerations = 0;
+
+  observeSparseRuntimeFrameHandleEnumerations(
+    () => frameHandleEnumerations += 1,
+    () => root.edits.edit((edit) {
+      if (materialize) {
+        edit.readDraftDocument();
+      }
+      expect(edit.removeEmptyLayer(emptyId), isTrue);
+      expect(edit.ensureLayer(emptyId, index: 0), isTrue);
+    }),
+  );
+
+  expect(root.frameRevisions.structuralRevision, beforeRevision + 1);
+  expect(root.spatialKernel.snapshot.structuralRevision, beforeRevision + 1);
+  expect(root.spatialKernel.snapshot.isInvalid, isFalse);
+  expect(root.spatialKernel.snapshot.entryCount, beforeEntryCount);
+  expect(frameHandleEnumerations, 0);
+  expect(spatialDeliveries.spatialDeliveries, hasLength(1));
+  _expectBoundedSpatialDelivery(
+    spatialDeliveries.spatialDeliveries.single,
+    layerIds: {emptyId},
+  );
+  final query = sparseRuntimeCurrentHitQuery(root);
+  expect(query.candidateIds, [CanvasElementId('populated-element')]);
+  expect(query.candidateStructuralRevisions, {beforeRevision + 1});
+}
+
+void _expectSameIndexEmptyLayerRecreationIsSilent(
+  CanvasDocument document, {
+  required bool materialize,
+}) {
+  final spatialDeliveries = SparseRuntimeSpatialDeliveryRecorder();
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(
+    document,
+    spatialDeliveryRecorder: spatialDeliveries,
+  );
+  final emptyId = CanvasLayerId('empty');
+  final beforeDocumentRevision = root.state.value.revisions.document;
+  var statePublications = 0;
+  var frameHandleEnumerations = 0;
+  root.state.addListener(() => statePublications += 1);
+
+  observeSparseRuntimeFrameHandleEnumerations(
+    () => frameHandleEnumerations += 1,
+    () => root.edits.edit((edit) {
+      if (materialize) {
+        edit.readDraftDocument();
+      }
+      expect(edit.removeEmptyLayer(emptyId), isTrue);
+      expect(edit.ensureLayer(emptyId, index: 1), isTrue);
+    }),
+  );
+
+  expect(root.state.value.revisions.document, beforeDocumentRevision);
+  expect(statePublications, 0);
+  expect(spatialDeliveries.spatialDeliveries, isEmpty);
+  expect(frameHandleEnumerations, 0);
+}
+
+/// This materialized trace guards bounded Store classification when structural
+/// layer work and content insertion share one accepted final candidate.
+void _expectMaterializedMovedLayerAndContentAddUsesExactSpatialTouches(
+  CanvasDocument document,
+) {
+  final spatialDeliveries = SparseRuntimeSpatialDeliveryRecorder();
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(
+    document,
+    spatialDeliveryRecorder: spatialDeliveries,
+  );
+  final emptyId = CanvasLayerId('empty');
+  final beforeId = CanvasLayerId('before');
+  final addedId = CanvasElementId('added-with-moved-layer');
+  final beforeRevision = root.frameRevisions.structuralRevision;
+  var frameHandleEnumerations = 0;
+
+  observeSparseRuntimeFrameHandleEnumerations(
+    () => frameHandleEnumerations += 1,
+    () => _materializeMoveEmptyLayerAndAddContent(
+      (callback) => root.edits.edit(callback),
+      emptyId: emptyId,
+      contentLayerId: beforeId,
+      elementId: addedId,
+    ),
+  );
+
+  expect(root.frameRevisions.structuralRevision, beforeRevision + 1);
+  expect(frameHandleEnumerations, 0);
+  expect(spatialDeliveries.spatialDeliveries, hasLength(1));
+  _expectBoundedSpatialDelivery(
+    spatialDeliveries.spatialDeliveries.single,
+    layerIds: {emptyId, beforeId},
+    elementIds: {addedId},
+  );
+  _expectCurrentAddedAndPopulatedQuery(
+    sparseRuntimeCurrentHitQuery(root),
+    addedId: addedId,
+    structuralRevision: beforeRevision + 1,
+  );
+}
+
+void _materializeMoveEmptyLayerAndAddContent(
+  void Function(void Function(CanvasEdit edit)) runEdit, {
+  required CanvasLayerId emptyId,
+  required CanvasLayerId contentLayerId,
+  required CanvasElementId elementId,
+}) {
+  runEdit((edit) {
+    edit.readDraftDocument();
+    expect(edit.removeEmptyLayer(emptyId), isTrue);
+    expect(edit.ensureLayer(emptyId, index: 0), isTrue);
+    edit.addElement(sparseRect(elementId.value), layerId: contentLayerId);
+  });
+}
+
+void _expectBoundedSpatialDelivery(
+  SparseRuntimeSpatialDelivery delivery, {
+  required Set<CanvasLayerId> layerIds,
+  Set<CanvasElementId> elementIds = const {},
+}) {
+  expect(delivery.layerIds, layerIds);
+  expect(delivery.elementIds, elementIds);
+  expect(delivery.backgroundLayerChanged, isFalse);
+  expect(delivery.background, isFalse);
+  expect(delivery.documentReplaced, isFalse);
+}
+
+void _expectCurrentAddedAndPopulatedQuery(
+  SparseRuntimeSpatialQuery query, {
+  required CanvasElementId addedId,
+  required int structuralRevision,
+}) {
+  expect(
+    query.candidateIds,
+    unorderedEquals([addedId, CanvasElementId('populated-element')]),
+  );
+  expect(query.candidateStructuralRevisions, {structuralRevision});
+}
+
+void _expectReaddedElementTouchesBothContentLayerPlacements(
+  CanvasDocument document,
+) {
+  for (final materialize in [false, true]) {
+    final spatialDeliveries = SparseRuntimeSpatialDeliveryRecorder();
+    final root = sparseRuntimeRootWithCommittedDocumentSeed(
+      document,
+      spatialDeliveryRecorder: spatialDeliveries,
+    );
+    final beforeRevision = root.frameRevisions.structuralRevision;
+    var frameHandleEnumerations = 0;
+
+    observeSparseRuntimeFrameHandleEnumerations(
+      () => frameHandleEnumerations += 1,
+      () => root.edits.edit(
+        (edit) => _moveEmptyLayerAndReaddPopulatedElement(edit, materialize),
+      ),
+    );
+
+    expect(frameHandleEnumerations, 0);
+    expect(spatialDeliveries.spatialDeliveries, hasLength(1));
+    expect(spatialDeliveries.spatialDeliveries.single.layerIds, {
+      CanvasLayerId('empty'),
+      CanvasLayerId('before'),
+      CanvasLayerId('populated'),
+    });
+    final query = sparseRuntimeCurrentHitQuery(root);
+    expect(query.candidateIds, [CanvasElementId('populated-element')]);
+    expect(query.candidateStructuralRevisions, {beforeRevision + 1});
+  }
+}
+
+void _moveEmptyLayerAndReaddPopulatedElement(
+  CanvasEdit edit,
+  bool materialize,
+) {
+  if (materialize) {
+    edit.readDraftDocument();
+  }
+  expect(edit.removeEmptyLayer(CanvasLayerId('empty')), isTrue);
+  expect(edit.ensureLayer(CanvasLayerId('empty'), index: 0), isTrue);
+  expect(edit.removeElement(CanvasElementId('populated-element')), isTrue);
+  edit.addElement(
+    sparseRect('populated-element'),
+    layerId: CanvasLayerId('before'),
+    index: 0,
+  );
+}
+
+void _expectSameLayerElementRecreationIsSilent(CanvasDocument document) {
+  for (final materialize in [false, true]) {
+    final spatialDeliveries = SparseRuntimeSpatialDeliveryRecorder();
+    final root = sparseRuntimeRootWithCommittedDocumentSeed(
+      document,
+      spatialDeliveryRecorder: spatialDeliveries,
+    );
+    final beforeDocumentRevision = root.state.value.revisions.document;
+    var statePublications = 0;
+    var frameHandleEnumerations = 0;
+    root.state.addListener(() => statePublications += 1);
+
+    observeSparseRuntimeFrameHandleEnumerations(
+      () => frameHandleEnumerations += 1,
+      () => root.edits.edit((edit) {
+        if (materialize) {
+          edit.readDraftDocument();
+        }
+        expect(
+          edit.removeElement(CanvasElementId('populated-element')),
+          isTrue,
+        );
+        edit.addElement(
+          sparseRect('populated-element'),
+          layerId: CanvasLayerId('populated'),
+        );
+      }),
+    );
+
+    expect(root.state.value.revisions.document, beforeDocumentRevision);
+    expect(statePublications, 0);
+    expect(spatialDeliveries.spatialDeliveries, isEmpty);
+    expect(frameHandleEnumerations, 0);
+  }
+}
+
+CanvasDocument _emptyLayerRemovalDocument() {
+  final emptyId = CanvasLayerId('empty');
+  final populatedId = CanvasLayerId('populated');
+  return CanvasDocument(
+    resources: [sparseImageResource('retained-resource')],
+    backgroundElements: [sparseRect('retained-background')],
+    layers: [
+      CanvasLayer(id: CanvasLayerId('before')),
+      CanvasLayer(id: emptyId),
+      CanvasLayer(id: populatedId, elements: [sparseRect('populated-element')]),
+      CanvasLayer(id: CanvasLayerId('after')),
+    ],
+  );
+}
+
+// The parity trace keeps sparse, promotion, restoration, and selection intent
+// in one observable callback so their shared final candidate remains legible.
+// ignore: halstead-volume
+void _expectSparseAndPromotedEmptyLayerRemoval(CanvasDocument document) {
+  final emptyId = CanvasLayerId('empty');
+  final populatedId = CanvasLayerId('populated');
+  final sparse = sparseSessionForDocument(document);
+  expect(sparse.removeEmptyLayer(CanvasLayerId('missing')), isFalse);
+  expect(sparse.removeEmptyLayer(populatedId), isFalse);
+  expect(sparse.removeEmptyLayer(emptyId), isTrue);
+  expect(sparse.removeEmptyLayer(emptyId), isFalse);
+  expect(sparse.revisionDelta.structural, isTrue);
+  expect(sparse.revisionDelta.document, isTrue);
+  final promoted = sparse.readDraftDocument();
+  expect(promoted.layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    populatedId,
+    CanvasLayerId('after'),
+  ]);
+  expect(promoted.backgroundElements.map((element) => element.id), [
+    CanvasElementId('retained-background'),
+  ]);
+  expect(promoted.resources.map((resource) => resource.id), [
+    CanvasResourceId('retained-resource'),
+  ]);
+
+  final restoring = sparseSessionForDocument(document);
+  final restoredId = CanvasElementId('restored-content');
+  expect(restoring.removeEmptyLayer(emptyId), isTrue);
+  restoring.addElement(
+    sparseRect(restoredId.value),
+    layerId: CanvasLayerId('before'),
+  );
+  restoring.setSelection([restoredId]);
+  expect(restoring.commitPlan.revisionDelta.document, isTrue);
+  expect(restoring.pendingSelectionEffect?.elementIds, [restoredId]);
+  final restored = restoring.readDraftDocument();
+  expect(restored.layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    populatedId,
+    CanvasLayerId('after'),
+  ]);
+  expect(restored.layers.first.elements.map((element) => element.id), [
+    restoredId,
+  ]);
+}
+
+void _expectMaterializedEmptyLayerRemoval(CanvasDocument document) {
+  final emptyId = CanvasLayerId('empty');
+  final populatedId = CanvasLayerId('populated');
+  final materialized = DraftDocument(document);
+  expect(materialized.removeEmptyLayer(populatedId), isFalse);
+  expect(
+    materialized.removeElement(CanvasElementId('populated-element')),
+    isTrue,
+  );
+  expect(materialized.removeEmptyLayer(populatedId), isTrue);
+  expect(materialized.removeEmptyLayer(populatedId), isFalse);
+  expect(materialized.readDocument().layers.map((layer) => layer.id), [
+    CanvasLayerId('before'),
+    emptyId,
+    CanvasLayerId('after'),
+  ]);
+
+  final removeEnsureRemove = DraftDocument(document);
+  expect(removeEnsureRemove.removeEmptyLayer(emptyId), isTrue);
+  expect(removeEnsureRemove.ensureLayer(emptyId, index: 1), isTrue);
+  expect(removeEnsureRemove.removeEmptyLayer(emptyId), isTrue);
+  expect(removeEnsureRemove.removeEmptyLayer(emptyId), isFalse);
 }
 
 // This one ordered trace intentionally keeps each placement transition beside

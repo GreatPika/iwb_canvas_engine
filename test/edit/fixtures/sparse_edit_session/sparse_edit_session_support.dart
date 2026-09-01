@@ -1,9 +1,99 @@
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/element_registry.dart';
+
+import '../../../support/runtime_root_with_committed_document_seed.dart'
+    as runtime_root_seed;
+
+RuntimeRoot sparseRuntimeRootWithCommittedDocumentSeed(
+  CanvasDocument document, {
+  SparseRuntimeSpatialDeliveryRecorder? spatialDeliveryRecorder,
+}) => runtime_root_seed.runtimeRootWithCommittedDocumentSeed(
+  document,
+  commitEffectObserver: spatialDeliveryRecorder?.observe,
+);
+
+/// Records Runtime's real delivered spatial effect as immutable test evidence.
+final class SparseRuntimeSpatialDeliveryRecorder {
+  final List<SparseRuntimeSpatialDelivery> spatialDeliveries = [];
+
+  void observe(List<CommitDeliveryEffect> effects) {
+    for (final effect in effects) {
+      if (effect case SpatialDeliveryEffect(:final touchedSet)) {
+        spatialDeliveries.add(
+          SparseRuntimeSpatialDelivery(
+            layerIds: touchedSet.layerIds,
+            elementIds: touchedSet.elementIds,
+            backgroundLayerChanged: touchedSet.backgroundLayerChanged,
+            background: touchedSet.background,
+            documentReplaced: touchedSet.documentReplaced,
+          ),
+        );
+      }
+    }
+  }
+}
+
+final class SparseRuntimeSpatialDelivery {
+  SparseRuntimeSpatialDelivery({
+    required Iterable<CanvasLayerId> layerIds,
+    required Iterable<CanvasElementId> elementIds,
+    required this.backgroundLayerChanged,
+    required this.background,
+    required this.documentReplaced,
+  }) : layerIds = Set.unmodifiable(layerIds),
+       elementIds = Set.unmodifiable(elementIds);
+
+  final Set<CanvasLayerId> layerIds;
+  final Set<CanvasElementId> elementIds;
+  final bool backgroundLayerChanged;
+  final bool background;
+  final bool documentReplaced;
+}
+
+final class SparseRuntimeSpatialQuery {
+  SparseRuntimeSpatialQuery({
+    required Iterable<CanvasElementId> candidateIds,
+    required Iterable<int> candidateStructuralRevisions,
+  }) : candidateIds = List.unmodifiable(candidateIds),
+       candidateStructuralRevisions = Set.unmodifiable(
+         candidateStructuralRevisions,
+       );
+
+  final List<CanvasElementId> candidateIds;
+  final Set<int> candidateStructuralRevisions;
+}
+
+SparseRuntimeSpatialQuery sparseRuntimeCurrentHitQuery(RuntimeRoot root) {
+  final result = root.spatialKernel.queryHit(
+    SpatialQueryWindow(
+      boundsWorld: const Rect.fromLTRB(-20, -20, 20, 20),
+      structuralRevision: root.frameRevisions.structuralRevision,
+    ),
+  );
+  return switch (result) {
+    SpatialCandidatesResult(:final orderedCandidates) =>
+      SparseRuntimeSpatialQuery(
+        candidateIds: orderedCandidates.map((candidate) => candidate.id),
+        candidateStructuralRevisions: orderedCandidates.map(
+          (candidate) => candidate.structuralRevision,
+        ),
+      ),
+    _ => throw StateError('Expected current spatial candidates, got $result.'),
+  };
+}
+
+T observeSparseRuntimeFrameHandleEnumerations<T>(
+  void Function() sink,
+  T Function() operation,
+) => RuntimeRoot.observeFrameHandleEnumerations(sink, operation);
 
 CanvasDocument baseSparseDocument() {
   return CanvasDocument(

@@ -268,6 +268,7 @@ final class ElementRegistryStructuralEditor {
 
   final ElementRegistry _base;
   final Map<CanvasLayerId, _StructuralLayerState> _layerStates = {};
+  Set<CanvasLayerId>? _removedLayerIds;
   final Map<CanvasElementId, ElementLocationFacts?> _locationChanges = {};
   final SplayTreeSet<_StructuralLayerState> _contentOrderStatesSinceClear =
       SplayTreeSet(
@@ -317,7 +318,8 @@ final class ElementRegistryStructuralEditor {
   bool containsLayer(CanvasLayerId id) {
     _ensureOpen();
     return _layerOrder?.containsId(id) ??
-        _layerStates.containsKey(id) || _base.layerTable.contains(id);
+        (!(_removedLayerIds?.contains(id) ?? false) &&
+            (_layerStates.containsKey(id) || _base.layerTable.contains(id)));
   }
 
   bool get hasBackgroundElements => currentBackgroundElementIds.isNotEmpty;
@@ -360,10 +362,30 @@ final class ElementRegistryStructuralEditor {
       return false;
     }
     _openLayerOrder().insert(id, index: index);
-    _layerStates[id] = _StructuralLayerState.added(
+    _restoreRemovedLayer(id);
+    _layerStates.putIfAbsent(
       id,
-      _nextLayerStateInsertionOrder++,
+      () => _StructuralLayerState.added(id, _nextLayerStateInsertionOrder++),
     );
+    _changed = true;
+    return true;
+  }
+
+  bool removeEmptyLayer(CanvasLayerId id) {
+    _ensureOpen();
+    if (!containsLayer(id)) {
+      return false;
+    }
+    final state = _stateForLayer(id);
+    if (state == null || _contentIdsFor(state).isNotEmpty) {
+      return false;
+    }
+    if (_openLayerOrder().remove(id) == null) {
+      throw StateError('current layer order is missing ${id.value}.');
+    }
+    _discardContentOrder(state);
+    _contentOrderStatesSinceClear.remove(state);
+    (_removedLayerIds ??= {}).add(id);
     _changed = true;
     return true;
   }
@@ -475,6 +497,9 @@ final class ElementRegistryStructuralEditor {
       _finalized = true;
       _sealMutableState();
       return facts;
+    }
+    if (_canReuseElementOrderFacts()) {
+      return _finalizeLayerOnly();
     }
 
     final rows = <LayerRow>[];
@@ -695,6 +720,114 @@ final class ElementRegistryStructuralEditor {
     _sealMutableState();
     return comparisonFacts;
   }
+
+  bool _canReuseElementOrderFacts() =>
+      _backgroundOrder == null &&
+      !_contentCleared &&
+      _locationChanges.isEmpty &&
+      _contentOrderStatesSinceClear.isEmpty;
+
+  // This condition-specific finalization keeps the layer comparison and its
+  // one publication payload together, avoiding a second traversal or state.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
+  ElementRegistryStructuralComparisonFacts _finalizeLayerOnly() {
+    final rows = <LayerRow>[];
+    final locations = <CanvasLayerId, LayerLocationFacts>{};
+    var layerStructureChanged = false;
+    var layerOrderChanged = false;
+    var layerMetadataChanged = false;
+    var layerTableMatchesBase = true;
+    var index = 0;
+    final layerIds =
+        _layerOrder?.orderedValues ??
+        _base.layerTable.rows.map((row) => row.id);
+    try {
+      for (final id in layerIds) {
+        _record(
+          ElementRegistryStructuralEditorWorkKind.finalTraversalVisit,
+          order: ElementRegistryStructuralOrderKind.layer,
+        );
+        final state = _requiredStateForLayer(id);
+        final baseAtIndex = index < _base.layerTable.rows.length
+            ? _base.layerTable.rows[index]
+            : null;
+        final rowFromState = state.baseRow;
+        final metadata = rowFromState?.metadata ?? const CanvasMetadata.empty();
+        if (rowFromState == null) {
+          layerStructureChanged = true;
+        } else if (rowFromState.metadata != metadata) {
+          layerMetadataChanged = true;
+        }
+        if (baseAtIndex == null || baseAtIndex.id != id) {
+          layerOrderChanged = true;
+        }
+        final row = rowFromState != null && rowFromState.metadata == metadata
+            ? rowFromState
+            : LayerRow.fromSparseTransactionFacts(
+                id: id,
+                elementIds: rowFromState?.elementIds ?? const [],
+                metadata: metadata,
+              );
+        if (!identical(row, baseAtIndex)) {
+          layerTableMatchesBase = false;
+        }
+        rows.add(row);
+        final previous = _base.layerTable.layerLocationFacts[id];
+        locations[id] =
+            previous != null &&
+                identical(previous.row, row) &&
+                previous.index == index
+            ? previous
+            : LayerLocationFacts(row: row, index: index);
+        index += 1;
+      }
+    } finally {
+      _discardLayerOrder();
+    }
+    if (index != _base.layerTable.rows.length) {
+      layerTableMatchesBase = false;
+      layerStructureChanged = true;
+      layerOrderChanged = true;
+    }
+    final facts = ElementRegistryStructuralComparisonFacts(
+      elementCountChanged: false,
+      backgroundOrderChanged: false,
+      flatContentOrderChanged: false,
+      contentPlacementChanged: false,
+      frameOrderChanged: false,
+      elementLocationFactsChanged: false,
+      layerStructureChanged: layerStructureChanged,
+      layerOrderChanged: layerOrderChanged,
+      layerMetadataChanged: layerMetadataChanged,
+    );
+    _finalizedComparisonFacts = facts;
+    if (layerTableMatchesBase) {
+      _finalized = true;
+      _sealMutableState();
+      return facts;
+    }
+    _preparedStructuralFacts = _PreparedElementRegistryStructuralFacts(
+      rows: rows,
+      layerLocationFacts: locations,
+      orderFacts: _baseOrderFacts(),
+      layerTableMatchesBase: false,
+      backgroundMatchesBase: true,
+      contentOrderMatchesBase: true,
+      frameOrderMatchesBase: true,
+      elementLocationFactsMatchBase: true,
+    );
+    _finalized = true;
+    _sealMutableState();
+    return facts;
+  }
+
+  _ElementRegistryOrderFacts _baseOrderFacts() => _ElementRegistryOrderFacts(
+    backgroundElementIds: _base.backgroundElementIds,
+    contentElementOrder: _base.contentElementOrder,
+    frameElementOrder: _base.frameElementOrder,
+    frameOrderTokensById: _base.frameOrderTokensById,
+    elementLocationFacts: _base.elementLocationFacts,
+  );
 
   // Each derived owner selects its base identity or prepared replacement as
   // one atomic materialization decision. Splitting these branches would make
@@ -953,8 +1086,18 @@ final class ElementRegistryStructuralEditor {
 
   void _sealMutableState() {
     _layerStates.clear();
+    _removedLayerIds?.clear();
+    _removedLayerIds = null;
     _locationChanges.clear();
     _contentOrderStatesSinceClear.clear();
+  }
+
+  void _restoreRemovedLayer(CanvasLayerId id) {
+    final removedLayerIds = _removedLayerIds;
+    removedLayerIds?.remove(id);
+    if (removedLayerIds?.isEmpty ?? false) {
+      _removedLayerIds = null;
+    }
   }
 
   void _ensureOpen() {

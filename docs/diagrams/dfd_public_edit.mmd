@@ -69,7 +69,7 @@ flowchart LR
   Committed -->|"sparse committed facts"| SparseJournal
   Committed -->|"projection only for explicit materialization"| MaterializedFallback
   SessionGate -->|"valid live handle"| EditHandle
-  EditHandle -->|"ordinary document/resource mutations"| SparseJournal
+  EditHandle -->|"ordinary document/resource mutations, including guarded empty-layer removal"| SparseJournal
   EditHandle -.->|"explicit draft projection/replacement"| MaterializedFallback
   EditHandle -->|"callback completes"| Finalize
   Finalize -->|"synchronous callback value"| Touched

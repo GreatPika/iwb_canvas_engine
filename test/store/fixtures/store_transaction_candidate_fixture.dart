@@ -486,6 +486,12 @@ final class _CandidateStateOracle {
         final target = _clampedIndex(index, layerIds.length);
         layerIds.insert(target, id.value);
         contentByLayer[id.value] = [];
+      case StoreSparseRemoveEmptyLayer(:final id):
+        final elements = contentByLayer[id.value];
+        if (elements != null && elements.isEmpty) {
+          contentByLayer.remove(id.value);
+          layerIds.remove(id.value);
+        }
       case StoreSparseAddElement(
         :final element,
         :final layerId,

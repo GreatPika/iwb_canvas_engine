@@ -94,6 +94,21 @@ final class SparseEditStructure {
     return true;
   }
 
+  bool removeEmptyLayer(CanvasLayerId id) {
+    if (!hasLayer(id)) {
+      return false;
+    }
+    final contentOrder = _openContentOrder(id);
+    if (contentOrder.length > 0) {
+      return false;
+    }
+    if (_openLayerOrder().remove(id) == null) {
+      throw StateError('Sparse layer order is missing ${id.value}.');
+    }
+    _contentOrders.remove(id)?.discard();
+    return true;
+  }
+
   CanvasLayerId? lastLayerId() => _openLayerOrder().last;
 
   void addBackground(CanvasElementId id, {int? index}) {

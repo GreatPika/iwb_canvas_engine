@@ -84,6 +84,7 @@ final class DraftStructure {
     IndexedOrderSequence<CanvasElementId, CanvasElementId>
   >
   _contentOrders = _DraftDirectMap(DraftStructureMapKind.contentOrders);
+  Set<CanvasLayerId>? _removedLayerIds;
   late final IndexedOrderSequence<CanvasLayerId, CanvasLayerId> _layerOrder;
   late final IndexedOrderSequence<CanvasElementId, CanvasElementId>
   _backgroundOrder;
@@ -92,7 +93,10 @@ final class DraftStructure {
   int get layerCount => _layerOrder.length;
   int get backgroundElementCount => _backgroundOrder.length;
   int get contentElementCount => _contentElementCount;
-  bool hasLayer(CanvasLayerId id) => _layersById.containsKey(id);
+  Iterable<CanvasLayerId> get removedLayerIds =>
+      _removedLayerIds ?? const <CanvasLayerId>[];
+  bool hasLayer(CanvasLayerId id) =>
+      !(_removedLayerIds?.contains(id) ?? false) && _layersById.containsKey(id);
 
   bool hasElement(CanvasElementId id) => _elementsById.containsKey(id);
 
@@ -106,17 +110,46 @@ final class DraftStructure {
     if (hasLayer(id)) {
       return false;
     }
-    _layersById.write(id, _DraftStructureLayer(id: id, metadata: metadata));
-    _contentOrders.write(
-      id,
-      _openOrder(
-        DraftStructureOrderKind.content,
-        const <CanvasElementId>[],
-        layerId: id,
-      ),
-    );
+    if (_layersById.read(id) == null) {
+      _layersById.write(id, _DraftStructureLayer(id: id, metadata: metadata));
+      _contentOrders.write(
+        id,
+        _openOrder(
+          DraftStructureOrderKind.content,
+          const <CanvasElementId>[],
+          layerId: id,
+        ),
+      );
+    }
+    _restoreRemovedLayer(id);
     _layerOrder.insert(id, index: index);
     return true;
+  }
+
+  bool removeEmptyLayer(CanvasLayerId id) {
+    if (!hasLayer(id)) {
+      return false;
+    }
+    final contentOrder = _contentOrders.read(id);
+    if (contentOrder == null) {
+      throw StateError('Draft layer is missing its content order.');
+    }
+    if (contentOrder.length > 0) {
+      return false;
+    }
+    if (_layerOrder.remove(id) == null) {
+      throw StateError('Draft layer order is missing ${id.value}.');
+    }
+    (_removedLayerIds ??= {}).add(id);
+    return true;
+  }
+
+  void _restoreRemovedLayer(CanvasLayerId id) {
+    final removedLayerIds = _removedLayerIds;
+    removedLayerIds?.remove(id);
+    if (removedLayerIds?.isEmpty ?? false) {
+      _removedLayerIds = null;
+    }
   }
 
   void addBackground(CanvasElement element, {int? index}) {

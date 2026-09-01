@@ -104,6 +104,8 @@ final class EditSession implements CanvasEdit {
   );
   bool get hasMaterializedDraft => _backing?.isMaterialized ?? false;
   bool get didReplaceDraftDocument => _backing?.documentReplaced ?? false;
+  StoreSparseCommit? get materializedEmptyLayerRemovalSparseCommit =>
+      _backing?.materializedEmptyLayerRemovalSparseCommit;
   StoreSparseCommit get sparseCommit => _documentBacking.sparseCommit;
   Set<CanvasElementId> get selectedElementIds =>
       _documentBacking.selectedElementIds;
@@ -136,6 +138,12 @@ final class EditSession implements CanvasEdit {
   bool ensureLayer(CanvasLayerId id, {int? index}) {
     _ensureActive();
     return _documentBacking.ensureLayer(id, index: index);
+  }
+
+  @override
+  bool removeEmptyLayer(CanvasLayerId id) {
+    _ensureActive();
+    return _documentBacking.removeEmptyLayer(id);
   }
 
   @override
@@ -287,6 +295,7 @@ abstract interface class _EditSessionBacking {
   bool get didChange;
   bool get isMaterialized;
   bool get documentReplaced;
+  StoreSparseCommit? get materializedEmptyLayerRemovalSparseCommit;
   Set<CanvasElementId> get selectedElementIds;
   StoreRevisionDelta get revisionDelta;
   TouchedSet get touchedSet;
@@ -294,6 +303,7 @@ abstract interface class _EditSessionBacking {
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
   bool ensureLayer(CanvasLayerId id, {int? index});
+  bool removeEmptyLayer(CanvasLayerId id);
   CanvasElementId addElement(
     CanvasElement element, {
     CanvasLayerId? layerId,
@@ -341,6 +351,10 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   bool get documentReplaced => _draft.documentReplaced;
 
   @override
+  StoreSparseCommit? get materializedEmptyLayerRemovalSparseCommit =>
+      _draft.emptyLayerRemovalSparseCommit;
+
+  @override
   Set<CanvasElementId> get selectedElementIds => _draft.selectedElementIds;
 
   @override
@@ -360,6 +374,9 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   bool ensureLayer(CanvasLayerId id, {int? index}) {
     return _draft.ensureLayer(id, index: index);
   }
+
+  @override
+  bool removeEmptyLayer(CanvasLayerId id) => _draft.removeEmptyLayer(id);
 
   @override
   CanvasElementId addElement(
@@ -529,6 +546,10 @@ final class _SparseEditBacking implements _EditSessionBacking {
   bool get documentReplaced => _draft?.documentReplaced ?? false;
 
   @override
+  StoreSparseCommit? get materializedEmptyLayerRemovalSparseCommit =>
+      _draft?.emptyLayerRemovalSparseCommit;
+
+  @override
   Set<CanvasElementId> get selectedElementIds => _selectedElementIds;
 
   @override
@@ -573,6 +594,20 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _touchedSet.touchLayer(id);
     _mergeRevisionDelta(const StoreRevisionDelta.layerStructural());
 
+    return true;
+  }
+
+  @override
+  bool removeEmptyLayer(CanvasLayerId id) {
+    if (_isMaterialized) {
+      return _materializedDraft.removeEmptyLayer(id);
+    }
+    if (!_structure.removeEmptyLayer(id)) {
+      return false;
+    }
+    _mutationJournal.append(StoreSparseRemoveEmptyLayer(id));
+    _touchedSet.touchLayer(id);
+    _mergeRevisionDelta(const StoreRevisionDelta.layerStructural());
     return true;
   }
 

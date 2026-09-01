@@ -145,6 +145,10 @@ discriminator. A successful sparse install swaps committed tables and revision
 state directly; it does not create or retain a public `CanvasDocument`.
 Materialized fallback remains available only for explicit draft projection
 requests such as `CanvasEdit.readDraftDocument` and whole-draft replacement.
+The structural owner also supports guarded removal of one current empty ordinary
+layer. It reads the requested layer and its own content order only, preserves
+background and descriptor owners, and retains no removal provenance after the
+edit closes.
 
 `CommitApplier` owns the accepted apply lifetime across current Store
 preparation. It converts a materialized accepted document to one

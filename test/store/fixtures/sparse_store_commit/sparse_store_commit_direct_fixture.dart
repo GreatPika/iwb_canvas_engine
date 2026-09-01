@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/element_registry.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
@@ -27,6 +29,15 @@ void registerSparseInstallTests() {
   test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
+  );
+  test(
+    'removes only existing empty layers through sparse Store preparation',
+    () => expect(_removesOnlyExistingEmptyLayers, returnsNormally),
+  );
+  test(
+    'empty-layer removal finalizes only layer ownership',
+    () =>
+        expect(_emptyLayerRemovalFinalizesOnlyLayerOwnership, returnsNormally),
   );
 }
 
@@ -279,6 +290,231 @@ StoreSparseCommit _resourceCompensation() {
       ),
     ],
   );
+}
+
+void _removesOnlyExistingEmptyLayers() {
+  final emptyId = CanvasLayerId('empty-layer');
+  final document = _emptyLayerDocument(emptyId);
+  final store = documentStoreWithDocument(document);
+  _expectRejectedEmptyLayerRemovals(store);
+  _expectAcceptedEmptyLayerRemoval(store, emptyId);
+  _expectLayerRecreationIsSilent(document, emptyId);
+}
+
+void _emptyLayerRemovalFinalizesOnlyLayerOwnership() {
+  final events = <ElementRegistryStructuralEditorWorkEvent>[];
+  final store = documentStoreWithDocument(
+    _emptyLayerDocument(CanvasLayerId('empty-layer')),
+  );
+  final prepared = ElementRegistry.observeSparseStructuralEditorWork(
+    events.add,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.layerStructural(),
+        mutations: [StoreSparseRemoveEmptyLayer(CanvasLayerId('empty-layer'))],
+      ),
+    ),
+  );
+  expect(prepared.hasChanges, isTrue);
+  expect(
+    events
+        .where(
+          (event) =>
+              event.kind ==
+              ElementRegistryStructuralEditorWorkKind.finalTraversalVisit,
+        )
+        .map((event) => event.order),
+    everyElement(ElementRegistryStructuralOrderKind.layer),
+  );
+}
+
+CanvasDocument _emptyLayerDocument(CanvasLayerId emptyId) {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('retained-resource'),
+        source: CanvasResourceSource.appKey('retained-resource'),
+      ),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('retained-background'),
+        resourceId: CanvasResourceId('retained-resource'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(id: CanvasLayerId('before')),
+      CanvasLayer(id: emptyId),
+      CanvasLayer(
+        id: CanvasLayerId('nonempty-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('retained-content'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+      CanvasLayer(id: CanvasLayerId('after')),
+    ],
+  );
+}
+
+void _expectRejectedEmptyLayerRemovals(DocumentStoreKernel store) {
+  for (final id in [
+    CanvasLayerId('missing'),
+    CanvasLayerId('nonempty-layer'),
+  ]) {
+    final prepared = store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.layerStructural(),
+        mutations: [StoreSparseRemoveEmptyLayer(id)],
+      ),
+    );
+    expect(prepared.hasChanges, isFalse);
+    expect(prepared.touchedFacts.hasTouches, isFalse);
+  }
+}
+
+// This one Store acceptance trace keeps the prepared facts, install, and ID
+// reuse assertions together so the structural owner seam remains explicit.
+// ignore: halstead-volume, source-lines-of-code, reason: The direct Store handoff is safer to verify as one lifecycle trace.
+void _expectAcceptedEmptyLayerRemoval(
+  DocumentStoreKernel store,
+  CanvasLayerId emptyId,
+) {
+  final beforeRevision = store.documentRevision;
+  final prepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [StoreSparseRemoveEmptyLayer(emptyId)],
+    ),
+  );
+  expect(prepared.revisionDelta.structural, isTrue);
+  expect(prepared.touchedFacts.layerIds, {emptyId});
+  store.installSparseCommit(prepared);
+  expect(store.documentRevision, beforeRevision + 1);
+  expect(store.layerIds, [
+    CanvasLayerId('before'),
+    CanvasLayerId('nonempty-layer'),
+    CanvasLayerId('after'),
+  ]);
+  expect(store.backgroundElementIds, [CanvasElementId('retained-background')]);
+  expect(store.resourceIds, contains(CanvasResourceId('retained-resource')));
+  final repeated = store.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [StoreSparseRemoveEmptyLayer(emptyId)],
+    ),
+  );
+  expect(repeated.hasChanges, isFalse);
+  final recreated = store.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [StoreSparseEnsureLayer(emptyId, index: 1)],
+    ),
+  );
+  store.installSparseCommit(recreated);
+  expect(store.layerIds, [
+    CanvasLayerId('before'),
+    emptyId,
+    CanvasLayerId('nonempty-layer'),
+    CanvasLayerId('after'),
+  ]);
+}
+
+// Equality, moved-location acceptance, and the next removal share one Store
+// candidate lifecycle; splitting them would hide final-candidate semantics.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: One structural Store trace keeps compensation and moved-ID facts together.
+void _expectLayerRecreationIsSilent(
+  CanvasDocument document,
+  CanvasLayerId emptyId,
+) {
+  final compensatedStore = documentStoreWithDocument(document);
+  final compensated = compensatedStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [
+        StoreSparseRemoveEmptyLayer(emptyId),
+        StoreSparseEnsureLayer(emptyId, index: 1),
+      ],
+    ),
+  );
+  expect(compensated.hasChanges, isFalse);
+  expect(compensated.touchedFacts.hasTouches, isFalse);
+
+  final materializedMovedDocument = CanvasDocument(
+    camera: document.camera,
+    background: document.background,
+    palette: document.palette,
+    resources: document.resources,
+    backgroundElements: document.backgroundElements,
+    layers: [
+      document.layers[1],
+      document.layers[0],
+      ...document.layers.skip(2),
+    ],
+    metadata: document.metadata,
+  );
+  final unboundedMaterializedStore = documentStoreWithDocument(document);
+  final unboundedMaterialized = unboundedMaterializedStore
+      .prepareMaterializedCommit(
+        materializedMovedDocument,
+        const StoreRevisionDelta.layerStructural(),
+      );
+  expect(unboundedMaterialized.touchedFacts.layerIds, {
+    emptyId,
+    CanvasLayerId('before'),
+  });
+  final boundedMaterializedStore = documentStoreWithDocument(document);
+  final boundedMaterialized = boundedMaterializedStore
+      .prepareMaterializedCommit(
+        materializedMovedDocument,
+        const StoreRevisionDelta.layerStructural(),
+        candidates: MaterializedStoreCommitCandidates(layerIds: [emptyId]),
+      );
+  expect(boundedMaterialized.touchedFacts.layerIds, {emptyId});
+
+  final movedStore = documentStoreWithDocument(document);
+  final beforeMovedRevision = movedStore.documentRevision;
+  final moved = movedStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [
+        StoreSparseRemoveEmptyLayer(emptyId),
+        StoreSparseEnsureLayer(emptyId, index: 0),
+      ],
+    ),
+  );
+  expect(moved.hasChanges, isTrue);
+  expect(moved.touchedFacts.layerIds, {emptyId});
+  movedStore.installSparseCommit(moved);
+  expect(movedStore.documentRevision, beforeMovedRevision + 1);
+  expect(movedStore.layerIds, [
+    emptyId,
+    CanvasLayerId('before'),
+    CanvasLayerId('nonempty-layer'),
+    CanvasLayerId('after'),
+  ]);
+
+  final removedAgainStore = documentStoreWithDocument(document);
+  final removedAgain = removedAgainStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.layerStructural(),
+      mutations: [
+        StoreSparseRemoveEmptyLayer(emptyId),
+        StoreSparseEnsureLayer(emptyId, index: 1),
+        StoreSparseRemoveEmptyLayer(emptyId),
+      ],
+    ),
+  );
+  expect(removedAgain.hasChanges, isTrue);
+  removedAgainStore.installSparseCommit(removedAgain);
+  expect(removedAgainStore.layerIds, [
+    CanvasLayerId('before'),
+    CanvasLayerId('nonempty-layer'),
+    CanvasLayerId('after'),
+  ]);
 }
 
 void _normalizesSelectionAgainstPreparedSparseCommit() {

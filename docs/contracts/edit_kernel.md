@@ -151,6 +151,15 @@ back the session discards the intent; document load remains an independent
 selection-clear path.
 
 A callback that only calls `setSelection` leaves its sparse backing unopened.
+
+`CanvasEdit.removeEmptyLayer` is a guarded structural mutation. Sparse sessions
+check the current callback-local layer order and only open the requested
+content order to establish emptiness; materialized Draft and direct Store
+replay use the same guarded operation. An absent or nonempty layer leaves the
+journal, revisions, selected intent, background elements, and resources
+unchanged. Removing then ensuring the same empty layer within one edit retains
+final-state equality, so finalization publishes no change when document and
+selection return to their initial values.
 Store membership checks only the desired IDs against indexed final-candidate
 facts; Selection equality then visits only current selected IDs.
 

@@ -23,7 +23,7 @@ sequenceDiagram
 
   alt callback throws
     activate Handle
-    Caller->>Handle: document/resource mutations or setSelection intent
+    Caller->>Handle: document/resource mutations, guarded empty-layer removal, or setSelection intent
     opt document/resource mutation
       Handle->>Sparse: open Store facts/selection snapshot and record mutation
       Sparse->>Touched: record exact sparse mutation facts
@@ -44,7 +44,7 @@ sequenceDiagram
     Note over EK: Returned Future is treated as a rollback path and no async mutation may outlive the session.
   else preflight fails before atomic install
     activate Handle
-    Caller->>Handle: document/resource mutations or setSelection intent
+    Caller->>Handle: document/resource mutations, guarded empty-layer removal, or setSelection intent
     opt document/resource mutation
       Handle->>Sparse: open Store facts/selection snapshot and record mutation
       Sparse->>Touched: record exact sparse mutation facts

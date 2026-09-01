@@ -380,6 +380,15 @@ sequential clear barriers, and one bounded selective descriptor-table lifecycle
 using owner observations. These suites assert actual result, revision, touched,
 and resource effects rather than preflight candidates.
 
+`CanvasEdit.removeEmptyLayer` coverage stays with those same structural owners:
+`test/edit/sparse_edit_session_test.dart` verifies that only a currently empty
+ordinary layer can be removed, absent/nonempty calls are silent, and sparse,
+promoted, and materialized edits preserve final-state equality, atomic
+selection composition, bounded Runtime spatial delivery, and same-ID element
+placement compensation/rebind. The direct Store replay, accepted
+layer-location/touched facts, retained background/resources, and bounded versus
+unbounded Store facts remain owned by `test/store/sparse_store_commit_test.dart`.
+
 `test/edit/net_no_op_edit_commit_test.dart` includes the accepted-interaction
 fixture for the single-use prepared lifetime across materialized, replacement,
 sparse, selection-only, and no-op forms. It compares committed owner revisions,

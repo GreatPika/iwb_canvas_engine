@@ -34,7 +34,7 @@ stateDiagram-v2
     Opening --> CallbackExecuting: invoke fn(handle)
 
     state "Callback executing" as CallbackExecuting
-    CallbackExecuting --> CallbackExecuting: synchronous CanvasEdit mutation / record sparse journal, touched facts, or one desired-selection snapshot
+    CallbackExecuting --> CallbackExecuting: synchronous CanvasEdit mutation / guarded empty-layer check and sparse journal record, touched facts, or one desired-selection snapshot
     CallbackExecuting --> MaterializedFallback: readDraftDocument or replaceDraftDocument
     MaterializedFallback --> CallbackExecuting: replay sparse journal into rollback-safe draft
     CallbackExecuting --> CallbackExecuting: nested edit(fn) attempt / throw StateError; no nested session opens

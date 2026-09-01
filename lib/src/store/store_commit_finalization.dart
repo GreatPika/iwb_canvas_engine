@@ -3,6 +3,27 @@ import 'committed_document.dart';
 import 'id_admission.dart';
 import 'store_revision_delta.dart';
 
+/// Internal bounded inputs for Store's materialized final-facts comparison.
+///
+/// Callers name draft-local mutation candidates only. Store derives and checks
+/// the owning content-layer facts against its base and final registries.
+final class MaterializedStoreCommitCandidates {
+  MaterializedStoreCommitCandidates({
+    Iterable<CanvasLayerId> layerIds = const [],
+    Iterable<CanvasElementId> addedElementIds = const [],
+    Iterable<CanvasElementId> removedElementIds = const [],
+  }) : layerIds = Set.unmodifiable(layerIds),
+       addedElementIds = Set.unmodifiable(addedElementIds),
+       removedElementIds = Set.unmodifiable(removedElementIds);
+
+  final Set<CanvasLayerId> layerIds;
+  final Set<CanvasElementId> addedElementIds;
+  final Set<CanvasElementId> removedElementIds;
+
+  bool get isEmpty =>
+      layerIds.isEmpty && addedElementIds.isEmpty && removedElementIds.isEmpty;
+}
+
 final class PreparedMaterializedStoreCommit {
   const PreparedMaterializedStoreCommit({
     required this.baseDocument,

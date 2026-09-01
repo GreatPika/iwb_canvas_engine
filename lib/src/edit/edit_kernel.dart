@@ -38,8 +38,9 @@ typedef SparseCommitPreparer =
 typedef MaterializedCommitPreparer =
     PreparedMaterializedStoreCommit Function(
       CanvasDocument document,
-      StoreRevisionDelta revisionDelta,
-    );
+      StoreRevisionDelta revisionDelta, {
+      MaterializedStoreCommitCandidates? candidates,
+    });
 typedef DocumentLoadInstaller = void Function(String json);
 
 // EditKernel owns the route handoff between public callbacks, sparse session
@@ -240,6 +241,20 @@ final class EditKernel {
     }
     final selectedElementIds = session.selectedElementIds;
     if (session.hasMaterializedDraft) {
+      final emptyLayerRemovalCommit =
+          session.materializedEmptyLayerRemovalSparseCommit;
+      if (emptyLayerRemovalCommit != null) {
+        final prepared = _prepareSparseCommit(emptyLayerRemovalCommit);
+        return _acceptedPreparedStoreCommit(
+          _AcceptedStoreCommitInput(
+            document: AcceptedSparseStoreDocument(commit: prepared),
+            revisionDelta: prepared.revisionDelta,
+            touchedFacts: prepared.touchedFacts,
+            selectedElementIds: selectedElementIds,
+            selectionEffect: selectionEffect,
+          ),
+        );
+      }
       if (session.didReplaceDraftDocument) {
         return _AcceptedEditCommit(
           document: AcceptedMaterializedDocument(
@@ -253,9 +268,16 @@ final class EditKernel {
           ),
         );
       }
+      final touchedSet = session.touchedSet;
+      final candidates = MaterializedStoreCommitCandidates(
+        layerIds: touchedSet.layerIds,
+        addedElementIds: touchedSet.addedElementIds,
+        removedElementIds: touchedSet.removedElementIds,
+      );
       final prepared = _prepareMaterializedCommit(
         session.readDraftDocument(),
         session.revisionDelta,
+        candidates: candidates.isEmpty ? null : candidates,
       );
 
       return _acceptedPreparedStoreCommit(
