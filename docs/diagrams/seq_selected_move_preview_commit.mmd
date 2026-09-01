@@ -146,7 +146,7 @@ sequenceDiagram
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       IE-->>Tools: finish with no edit and no action event
-    else resolver throws or returns non-finite delta
+    else resolver callback, guard, or bounded diagnostic failure
       IE->>Cleanup: typed cleanup request for selected move session
         Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
@@ -155,8 +155,19 @@ sequenceDiagram
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
-      IE-->>Tools: rethrow projected runtime-safe error
+      IE-->>Tools: finish contained non-application
+    else resolver returns non-finite delta
+      IE->>Cleanup: typed cleanup request for selected move session
+        Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
+      IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Preview->>Frame: request main-scene repaint cleanup
+      Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
+      IE-->>Tools: rethrow invalid-result ArgumentError
     else finite committed delta accepted
+      Runtime->>Runtime: seal shared transform/action preparation from immutable participants, final transform, operation, pivot, and timestamp
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed, nested edit, or resolver reentrant mutation
       EK->>Store: read committed revision snapshot
@@ -164,7 +175,7 @@ sequenceDiagram
       EK->>SelectionFacts: read selection snapshot
       SelectionFacts-->>EK: selected ids and selectionRevision
       EK->>Draft: create rollback-safe draft
-      IE->>EK: provide transform mutation request and moveSelection action descriptor
+      Runtime->>EK: provide shared transform mutation request and moveSelection action descriptor
       EK->>Draft: for each movable selected id, set transform
       Note over EK,Draft: newTransform = CanvasTransform.translation(delta).multiply(oldTransform)
       Draft->>Touched: record transformedElementIds, geometryChangedElementIds, visualChangedElementIds

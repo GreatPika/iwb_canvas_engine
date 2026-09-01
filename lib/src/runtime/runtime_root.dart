@@ -1226,40 +1226,14 @@ final class RuntimeRoot
     if (commandFacts.movableElements.isEmpty) {
       return;
     }
-    final elementIds = commandFacts.movableElements.map((e) => e.id);
-    final List<CommitActionIntent> actionIntents;
-    if (operation == CanvasTransformOperation.move) {
-      actionIntents = [
-        MoveSelectionActionIntent(
-          elementIds: elementIds,
-          transform: transform,
-          timestampHintMs: timestampMs,
-        ),
-      ];
-    } else {
-      final pivot = pivotWorld;
-      if (pivot == null) {
-        throw StateError(
-          'Pivot is required for non-move selection transforms.',
-        );
-      }
-      actionIntents = [
-        TransformSelectionActionIntent(
-          elementIds: elementIds,
-          transform: transform,
-          operation: operation,
-          pivotWorld: pivot,
-          timestampHintMs: timestampMs,
-        ),
-      ];
-    }
-    final applyResult = _editKernel.prepareInteractionCommit((edit) {
-      for (final element in commandFacts.movableElements) {
-        edit.updateElement(
-          _transformUpdate(element, transform.multiply(element.transform)),
-        );
-      }
-    }, augmentPlan: (plan) => plan.withActionIntents(actionIntents));
+    final applyResult = _prepareSelectionTransformCommit(
+      participants: commandFacts.movableElements,
+      elementIds: commandFacts.movableElements.map((element) => element.id),
+      transform: transform,
+      operation: operation,
+      pivotWorld: pivotWorld,
+      timestampHintMs: timestampMs,
+    );
     _deliverEditCommitResult(applyResult);
   }
 
@@ -2983,21 +2957,57 @@ final class RuntimeRoot
   }) {
     final transform = CanvasTransform.translation(delta);
 
+    return _prepareSelectionTransformCommit(
+      participants: intent.movedElements,
+      elementIds: intent.movableIds,
+      transform: transform,
+      operation: CanvasTransformOperation.move,
+      pivotWorld: null,
+      timestampHintMs: timestampHintMs,
+    );
+  }
+
+  // Both selected commands and pointer Move arrive with qualified immutable
+  // participants. This owner seals their start-relative updates and action
+  // together, while each caller retains its own admission and cleanup policy.
+  // Keeping every sealing input explicit avoids a per-operation wrapper and
+  // makes the transform/action contract readable at its only shared owner.
+  // ignore: number-of-parameters
+  CommitDeliveryResult _prepareSelectionTransformCommit({
+    required Iterable<CanvasElementRead> participants,
+    required Iterable<CanvasElementId> elementIds,
+    required CanvasTransform transform,
+    required CanvasTransformOperation operation,
+    required Offset? pivotWorld,
+    required int? timestampHintMs,
+  }) {
+    final actionIntent = switch (operation) {
+      CanvasTransformOperation.move => MoveSelectionActionIntent(
+        elementIds: elementIds,
+        transform: transform,
+        timestampHintMs: timestampHintMs,
+      ),
+      _ => TransformSelectionActionIntent(
+        elementIds: elementIds,
+        transform: transform,
+        operation: operation,
+        pivotWorld: pivotWorld ??
+            (throw StateError(
+              'Pivot is required for non-move selection transforms.',
+            )),
+        timestampHintMs: timestampHintMs,
+      ),
+    };
+
     return _editKernel.prepareInteractionCommit(
       (edit) {
-        for (final element in intent.movedElements) {
+        for (final element in participants) {
           edit.updateElement(
             _transformUpdate(element, transform.multiply(element.transform)),
           );
         }
       },
-      augmentPlan: (plan) => plan.withActionIntents([
-        MoveSelectionActionIntent(
-          elementIds: intent.movableIds,
-          transform: transform,
-          timestampHintMs: timestampHintMs,
-        ),
-      ]),
+      augmentPlan: (plan) => plan.withActionIntents([actionIntent]),
     );
   }
 
