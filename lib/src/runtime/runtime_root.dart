@@ -603,6 +603,8 @@ final class RuntimeRoot
       gridStyle: gridStyle,
       preview: preview,
       previewRevision: _interactionEngine.previewRevision,
+      selectedMoveParticipantIds:
+          _interactionEngine.activeSelectedMoveParticipantIds,
       viewCameraOffset: _viewCamera.offset,
       viewCameraRevision: _viewCameraRevision,
       textEditSuppression: _textEditingPort.activeFrameSuppression,
@@ -951,23 +953,31 @@ final class RuntimeRoot
 
   void setSelection(Iterable<CanvasElementId> ids) {
     ensureRuntimeMutationAllowed();
-    _publishSelectionChange(_selection.setSelection(ids));
+    _publishSelectionChange(
+      _applyExternalSelectionChange(_selection.setSelection(ids)),
+    );
   }
 
   void toggleSelection(CanvasElementId id) {
     ensureRuntimeMutationAllowed();
-    _publishSelectionChange(_selection.toggleSelection(id));
+    _publishSelectionChange(
+      _applyExternalSelectionChange(_selection.toggleSelection(id)),
+    );
   }
 
   void clearSelection() {
     ensureRuntimeMutationAllowed();
-    _publishSelectionChange(_selection.clearSelection());
+    _publishSelectionChange(
+      _applyExternalSelectionChange(_selection.clearSelection()),
+    );
   }
 
   void selectAll({required bool onlySelectable}) {
     ensureRuntimeMutationAllowed();
     _publishSelectionChange(
-      _selection.selectAll(onlySelectable: onlySelectable),
+      _applyExternalSelectionChange(
+        _selection.selectAll(onlySelectable: onlySelectable),
+      ),
     );
   }
 
@@ -2073,6 +2083,20 @@ final class RuntimeRoot
     );
   }
 
+  bool _applyExternalSelectionChange(bool didChange) {
+    if (!didChange) {
+      return false;
+    }
+    final cleanup = _interactionEngine.invalidateSelectedMoveForAcceptedChange(
+      touchedIds: const [],
+      documentReplaced: false,
+      selectionChanged: true,
+    );
+    _applyPointerCleanupSelection(cleanup);
+
+    return didChange || cleanup.publicStateNeeded;
+  }
+
   void _publishRuntimeState({
     required _RuntimeSurfaceRepaintTarget? surfaceRepaintTarget,
   }) {
@@ -2418,11 +2442,19 @@ final class RuntimeRoot
 
   // The ordered guard, callbacks, and assert-only real-list wrapper share one
   // owner boundary; splitting them would make release and delivery order less clear.
-  // ignore: halstead-volume, source-lines-of-code
+  // The conflict handoff stays here because it must precede every public delivery.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: Delivery and pre-public conflict handoff require one ordered boundary.
   void _deliverEditCommitResult(
     CommitDeliveryResult applyResult, {
     RuntimeNonTextRoute? route,
   }) {
+    final invalidatedMoveCleanup = _invalidateSelectedMoveForAcceptedDelivery(
+      applyResult,
+    );
+    _applyPointerCleanupSelection(invalidatedMoveCleanup);
+    final result = invalidatedMoveCleanup.publicStateNeeded
+        ? _withInteractionCleanupEffects(applyResult, invalidatedMoveCleanup)
+        : applyResult;
     if (route != null) {
       assert(
         _recordRouteTemporalEvent(
@@ -2432,7 +2464,7 @@ final class RuntimeRoot
         'runtime route temporal event observation failed',
       );
     }
-    var deliveryResult = applyResult;
+    var deliveryResult = result;
     assert(() {
       // The test-only wrapper must see RuntimeRoot's real sealed collections.
       // ignore: invalid_use_of_visible_for_testing_member
@@ -2503,6 +2535,34 @@ final class RuntimeRoot
         'runtime common delivery event observation failed',
       );
     }
+  }
+
+  InteractionCleanupOutcome _invalidateSelectedMoveForAcceptedDelivery(
+    CommitDeliveryResult result,
+  ) {
+    return _interactionEngine.invalidateSelectedMoveForAcceptedChange(
+      touchedIds: result.acceptedTouchedElementIds,
+      documentReplaced: result.replacedDocument,
+      selectionChanged: result.didChangeSelection,
+    );
+  }
+
+  CommitDeliveryResult _withInteractionCleanupEffects(
+    CommitDeliveryResult result,
+    InteractionCleanupOutcome cleanup,
+  ) {
+    return CommitDeliveryResult(
+      shouldPublishState:
+          result.shouldPublishState || cleanup.publicStateNeeded,
+      replacedDocument: result.replacedDocument,
+      didChangeSelection: result.didChangeSelection,
+      effects: _mergeRepaintEffects(
+        result.effects,
+        _cleanupDeliveryEffects(cleanup),
+      ),
+      actionIntents: result.actionIntents,
+      acceptedTouchedElementIds: result.acceptedTouchedElementIds,
+    );
   }
 
   void _deliverLoadResult(
@@ -3266,11 +3326,13 @@ final class RuntimeRoot
       shouldPublishState:
           result.shouldPublishState || cleanup.publicStateNeeded,
       replacedDocument: result.replacedDocument,
+      didChangeSelection: result.didChangeSelection,
       effects: _mergeRepaintEffects(
         result.effects,
         _cleanupDeliveryEffects(cleanup),
       ),
       actionIntents: result.actionIntents,
+      acceptedTouchedElementIds: result.acceptedTouchedElementIds,
     );
     assert(
       _recordRouteTemporalEvent(

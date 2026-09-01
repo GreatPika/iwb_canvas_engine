@@ -31,6 +31,7 @@ CapturedMainFrame capturedMainFrame({
   Offset viewCameraOffset = Offset.zero,
   double devicePixelRatio = 1,
   SelectionFacts? selectionFacts,
+  Iterable<CanvasElementId> selectedMoveParticipantIds = const [],
   CanvasSelectionStyle selectionStyle = CanvasSelectionStyle.defaultStyle,
   CanvasGridStyle gridStyle = CanvasGridStyle.defaultStyle,
   SpatialPaintQuery? queryPaint,
@@ -59,6 +60,7 @@ CapturedMainFrame capturedMainFrame({
       preview: preview,
       previewRevision: previewRevision,
       viewCameraOffset: viewCameraOffset,
+      selectedMoveParticipantIds: selectedMoveParticipantIds,
     ),
   );
 }

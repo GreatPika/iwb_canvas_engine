@@ -78,6 +78,12 @@ void _registerSelectedMoveTerminalTests() {
   _testGroupInteriorStaleSelectionDoesNotResolve();
   _testSelectedMoveInvalidTerminalDoesNotResolve();
   _testSelectedMoveEmptyMovableSetDoesNotResolve();
+  _testParticipantChangeCancelsBeforeResolverPublication();
+  _testSameIdReplacementCancelsBeforeResolverPublication();
+  _testExternalSelectionChangeCancelsBeforeResolverPublication();
+  _testUnrelatedAndNoOpEditsPreserveCapturedMoveBasis();
+  _testMixedEditNoOpSelectionPreservesCapturedMoveBasis();
+  _testRealFrameExcludesNewlyEligibleSelectedNonparticipant();
   _testSelectedMoveCommitWithResolver();
   _testGroupInteriorSelectedMoveCommitWithResolver();
   _testSelectedVectorMoveCommitUpdatesDocument();
@@ -582,7 +588,7 @@ void _testSelectedMoveDragStartSlopFallbackUsesTapSlop() {
 
 // This witness needs the down/move sequence and each preview delta together:
 // extracting a phase would separate the temporal route oracle from its setup.
-// ignore: halstead-volume
+// ignore: halstead-volume, reason: Start, accepted edit, and terminal absence are one causal witness.
 void _testSelectedMoveContinuesInsideSlopAfterPreviewStart() {
   test('selected move keeps preview live when crossing back through start', () {
     final root = _runtimeRoot(
@@ -830,6 +836,9 @@ void _testSelectedMoveInvalidTerminalDoesNotResolve() {
   });
 }
 
+// This end-to-end conflict witness keeps start, accepted edit, and terminal
+// absence together so it proves cancellation precedes resolver publication.
+// ignore: halstead-volume, reason: Replacement commit and terminal absence define this identity witness.
 void _testSelectedMoveEmptyMovableSetDoesNotResolve() {
   test('selected move empty movable set terminal cannot edit or act', () async {
     final scenario = _noCommitScenario();
@@ -845,6 +854,8 @@ void _testSelectedMoveEmptyMovableSetDoesNotResolve() {
         ),
       ),
     );
+    expect(root.preview, isA<CanvasNoPreview>());
+    expect(root.interactionEngine.activeSession, isNull);
     root.handlePointer(
       _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
     );
@@ -856,6 +867,242 @@ void _testSelectedMoveEmptyMovableSetDoesNotResolve() {
     expect(scenario.resolverCalls(), 0);
     _expectNoMoveEffects(scenario, expectedLocked: true);
   });
+}
+
+void _testParticipantChangeCancelsBeforeResolverPublication() {
+  test(
+    'participant change clears an active move before resolver publication',
+    () {
+      final scenario = _noCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(root);
+
+      root.edits.edit(
+        (edit) => edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('a'),
+            opacity: const CanvasFieldSet(0.5),
+          ),
+        ),
+      );
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.interactionEngine.activeSession, isNull);
+      expect(_rect(root, 'a').opacity, 0.5);
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      );
+      expect(scenario.resolverCalls(), 0);
+      expect(scenario.actions, isEmpty);
+      expect(_rect(root, 'a').transform, CanvasTransform.identity);
+    },
+  );
+}
+
+// Same-ID replacement must include the replacement commit and terminal absence
+// in one witness; separating them would lose its identity-conflict meaning.
+// ignore: halstead-volume
+void _testSameIdReplacementCancelsBeforeResolverPublication() {
+  test('same-ID participant replacement clears an active move', () {
+    final scenario = _noCommitScenario();
+    final root = scenario.root;
+    root.selection.setSelection([CanvasElementId('a')]);
+    _startSelectedMove(root);
+
+    root.edits.edit((edit) {
+      expect(edit.removeElement(CanvasElementId('a')), isTrue);
+      edit.addElement(
+        CanvasRectElement(id: CanvasElementId('a'), size: const Size(20, 20)),
+        layerId: CanvasLayerId('layer-a'),
+      );
+    });
+
+    expect(root.preview, isA<CanvasNoPreview>());
+    expect(root.interactionEngine.activeSession, isNull);
+    expect(_rect(root, 'a').size, const Size(20, 20));
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+    );
+    expect(scenario.resolverCalls(), 0);
+    expect(scenario.actions, isEmpty);
+  });
+}
+
+void _testExternalSelectionChangeCancelsBeforeResolverPublication() {
+  test(
+    'external selection change clears an active move without restoring it',
+    () {
+      final scenario = _noCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(root);
+
+      root.selection.setSelection([CanvasElementId('b')]);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.interactionEngine.activeSession, isNull);
+      expect(root.selection.selectedElementIds, {CanvasElementId('b')});
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      );
+      expect(scenario.resolverCalls(), 0);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+// The no-op, unrelated edit, and terminal commit are one preservation witness:
+// all three are required to distinguish a retained exact basis from staleness.
+// ignore: halstead-volume, source-lines-of-code, reason: No-op, unrelated edit, and terminal commit define one preservation witness.
+void _testUnrelatedAndNoOpEditsPreserveCapturedMoveBasis() {
+  test(
+    'unrelated and no-op edits preserve exact captured move participants',
+    () async {
+      CanvasMoveCommitRequest? request;
+      final scenario = _noCommitScenario(
+        resolver: (value) {
+          request = value;
+          return const CanvasMoveCommit(delta: Offset(9, 0));
+        },
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(root);
+
+      root.edits.edit(
+        (edit) => edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('b'),
+            opacity: const CanvasFieldSet(0.5),
+          ),
+        ),
+      );
+      root.edits.edit(
+        (edit) => edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('a'),
+            transform: const CanvasFieldSet(CanvasTransform.identity),
+          ),
+        ),
+      );
+
+      expect(root.interactionEngine.activeSession, isNotNull);
+      expect(root.preview, isA<CanvasSelectedMovePreview>());
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      expect(request?.movedElements.map((element) => element.id), [
+        CanvasElementId('a'),
+      ]);
+      expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
+      expect(_rect(root, 'b').transform.translation, const Offset(20, 0));
+    },
+  );
+}
+
+// The mixed accepted edit and terminal commit are one causal witness: splitting
+// them would not prove that an unchanged selection is distinct from a conflict.
+// ignore: halstead-volume, reason: The pre-public selection outcome and terminal viability must stay coupled.
+void _testMixedEditNoOpSelectionPreservesCapturedMoveBasis() {
+  test(
+    'mixed edit no-op selection preserves active move before publication',
+    () async {
+      final scenario = _noCommitScenario(
+        resolver: (_) => const CanvasMoveCommit(delta: Offset(9, 0)),
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(root);
+
+      root.edits.edit((edit) {
+        edit.setSelection([CanvasElementId('a')]);
+        edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('b'),
+            opacity: const CanvasFieldSet(0.5),
+          ),
+        );
+      });
+
+      expect(root.interactionEngine.activeSession, isNotNull);
+      expect(root.preview, isA<CanvasSelectedMovePreview>());
+      expect(_rect(root, 'b').opacity, 0.5);
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
+    },
+  );
+}
+
+// The real pointer, accepted-edit, frame, and terminal route is one causal
+// witness: separating it would not prove the runtime-supplied frame basis.
+// ignore: halstead-volume, source-lines-of-code, reason: Gesture survival and actual paint membership must stay coupled.
+void _testRealFrameExcludesNewlyEligibleSelectedNonparticipant() {
+  test(
+    'real frame excludes selected object that becomes movable mid gesture',
+    () async {
+      CanvasMoveCommitRequest? request;
+      final scenario = _noCommitScenario(
+        resolver: (value) {
+          request = value;
+
+          return const CanvasMoveCommit(delta: _selectedMoveDragEnd);
+        },
+      );
+      final root = scenario.root;
+      root.selection.setSelection([
+        CanvasElementId('a'),
+        CanvasElementId('locked'),
+      ]);
+      _startSelectedMove(root);
+
+      root.edits.edit(
+        (edit) => edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('locked'),
+            isLocked: const CanvasFieldSet(false),
+          ),
+        ),
+      );
+
+      expect(root.interactionEngine.activeSession, isNotNull);
+      final frame = root.buildResourceFreeMainFrame(
+        viewportWorldBounds: const Rect.fromLTWH(-20, -20, 120, 80),
+        devicePixelRatio: 1,
+        selectionStyle: CanvasSelectionStyle.defaultStyle,
+        gridStyle: CanvasGridStyle.defaultStyle,
+      );
+      final records = frame.selectedMoveSupplementPlan.mergedRecords;
+      final participant = records.singleWhere(
+        (record) => record.id == CanvasElementId('a'),
+      );
+      final newlyEligible = records.singleWhere(
+        (record) => record.id == CanvasElementId('locked'),
+      );
+
+      expect(participant.transform.translation, _selectedMoveDragEnd);
+      expect(newlyEligible.transform.translation, const Offset(40, 0));
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      expect(request?.movedElements.map((element) => element.id), [
+        CanvasElementId('a'),
+      ]);
+      expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
+      expect(_rect(root, 'locked').transform.translation, const Offset(40, 0));
+    },
+  );
 }
 
 void _testSelectedMoveCommitWithResolver() {

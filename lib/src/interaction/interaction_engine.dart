@@ -122,6 +122,42 @@ final class InteractionEngine {
   bool get activeSessionOwnsPendingLine =>
       _activeSession?.kind == PointerSessionKind.drawLineEndpoint;
 
+  /// Exact captured membership for the active main-scene move preview.
+  ///
+  /// The public preview remains delta-only; this internal frame input prevents
+  /// later eligibility changes from joining an in-flight gesture.
+  List<CanvasElementId> get activeSelectedMoveParticipantIds {
+    final session = _activeSession;
+    if (session == null || session.kind != PointerSessionKind.moveModePointer) {
+      return const [];
+    }
+
+    return session.selectedMoveBasis?.participantIds ?? const [];
+  }
+
+  /// Cancels only a selected move whose captured participants were changed by
+  /// an already accepted document result. The cleanup's guarded provisional
+  /// selection restoration cannot overwrite a newer external selection.
+  InteractionCleanupOutcome invalidateSelectedMoveForAcceptedChange({
+    required Iterable<CanvasElementId> touchedIds,
+    required bool documentReplaced,
+    required bool selectionChanged,
+  }) {
+    final session = _activeSession;
+    if (session == null || session.kind != PointerSessionKind.moveModePointer) {
+      return InteractionCleanupOutcome.noChange;
+    }
+    final participantIds =
+        session.selectedMoveBasis?.participantIds ?? const <CanvasElementId>[];
+    final participantChanged =
+        documentReplaced || touchedIds.any(participantIds.contains);
+    if (!participantChanged && !selectionChanged) {
+      return InteractionCleanupOutcome.noChange;
+    }
+
+    return _cleanupWithReason(PointerCleanupReason.staleTerminal);
+  }
+
   void markActiveProvisionalSelectionReplacementApplied({
     required int selectionRevision,
   }) {
@@ -490,7 +526,11 @@ final class InteractionEngine {
     }
     final selection = _selectedMoveStartDecision(sample);
     if (selection.admitted) {
-      _activeSession = _selectedMoveSession(sample, selection);
+      final basis = selection.basis;
+      if (basis == null) {
+        throw StateError('Admitted selected move requires a session basis.');
+      }
+      _activeSession = _selectedMoveSession(sample, selection, basis);
 
       return _privateAdmitted(sample);
     }
@@ -1566,6 +1606,8 @@ final class InteractionEngine {
         sessionSelectedIds: selectionCapture.selectedIds,
         sessionMovableIds: selectionCapture.movableIds,
         selectionRevision: selectionCapture.revision,
+        movableParticipants:
+            session.selectedMoveBasis?.participants ?? const [],
         provisionalSelectionReplacementApplied:
             session.provisionalSelectionReplacementApplied,
         provisionalSelectionReplacementRevision:
@@ -1668,6 +1710,7 @@ final class InteractionEngine {
   PointerSession _selectedMoveSession(
     NormalizedPointerSample sample,
     SelectedMoveStartDecision selection,
+    SelectedMoveSessionBasis basis,
   ) {
     return PointerSession.selectedMove(
       token: PointerSessionToken(_nextToken++),
@@ -1680,6 +1723,7 @@ final class InteractionEngine {
       capturedMovableIds: selection.movableIds,
       previousSelectionIds: selection.previousSelectionIds,
       capturedSelectionRevision: selection.selectionRevision,
+      basis: basis,
       lastPreview: _initialSelectedMovePreview(sample),
       dragStartSlop: _effectiveDragStartSlop,
     );

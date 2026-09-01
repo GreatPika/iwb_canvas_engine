@@ -67,6 +67,7 @@ final class FrameCaptureService {
     final capturedHandles = _capturedHandles(
       spatialCandidates: spatialCandidates,
       selectedIds: selection.selectedElementIds,
+      selectedMoveParticipantIds: inputs.selectedMoveParticipantIds,
       structuralRevision: structuralRevision,
     );
     final resolved = _resolvedElementsAndDescriptors(capturedHandles);
@@ -87,16 +88,47 @@ final class FrameCaptureService {
   List<FrameElementHandle> _capturedHandles({
     required Iterable<FrameElementHandle> spatialCandidates,
     required Iterable<CanvasElementId> selectedIds,
+    required Iterable<CanvasElementId> selectedMoveParticipantIds,
     required int structuralRevision,
   }) {
     final handles = <FrameElementHandle>[];
     final seen = <CanvasElementId>{};
-    for (final handle in spatialCandidates) {
+    _appendUniqueHandles(handles, seen, spatialCandidates);
+    _appendHandlesForIds(
+      handles: handles,
+      seen: seen,
+      ids: selectedIds,
+      structuralRevision: structuralRevision,
+    );
+    _appendHandlesForIds(
+      handles: handles,
+      seen: seen,
+      ids: selectedMoveParticipantIds,
+      structuralRevision: structuralRevision,
+    );
+
+    return handles;
+  }
+
+  void _appendUniqueHandles(
+    List<FrameElementHandle> handles,
+    Set<CanvasElementId> seen,
+    Iterable<FrameElementHandle> candidates,
+  ) {
+    for (final handle in candidates) {
       if (seen.add(handle.id)) {
         handles.add(handle);
       }
     }
-    for (final id in selectedIds) {
+  }
+
+  void _appendHandlesForIds({
+    required List<FrameElementHandle> handles,
+    required Set<CanvasElementId> seen,
+    required Iterable<CanvasElementId> ids,
+    required int structuralRevision,
+  }) {
+    for (final id in ids) {
       if (seen.contains(id)) {
         continue;
       }
@@ -105,8 +137,6 @@ final class FrameCaptureService {
         handles.add(handle);
       }
     }
-
-    return handles;
   }
 
   _ResolvedFrameRows _resolvedElementsAndDescriptors(

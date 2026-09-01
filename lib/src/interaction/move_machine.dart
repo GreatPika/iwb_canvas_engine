@@ -9,6 +9,9 @@ import 'interaction_runtime_intents.dart';
 import 'pointer_session.dart';
 import 'pointer_session_identity.dart';
 
+// Start-to-terminal Move decisions intentionally retain the complete typed
+// basis; splitting the decision would obscure the captured-identity invariant.
+// ignore: coupling-between-object-classes, reason: Start-to-terminal decisions retain one typed basis.
 final class MoveMachine {
   const MoveMachine();
 
@@ -29,6 +32,11 @@ final class MoveMachine {
         movableIds: facts.movableSelectedIds,
         previousSelectionIds: facts.selectedIds,
         selectionRevision: facts.selectionRevision,
+        basis: _selectedMoveBasis(
+          participants: facts.movableParticipants,
+          documentSummary: facts.documentSummary,
+          selectionBoundsWorld: facts.selectionBoundsWorld,
+        ),
       );
     }
     final unselectedMovableHit = _unselectedMovableHitDecision(facts);
@@ -57,12 +65,15 @@ final class MoveMachine {
   }) {
     final proposedDelta = terminalWorld - session.startWorld;
     final selectionCapture = session.selectionCapture;
+    final basis = session.selectedMoveBasis;
     if (proposedDelta == Offset.zero ||
-        facts.movableIds.isEmpty ||
+        basis == null ||
+        basis.participants.isEmpty ||
         facts.selectionRevision != selectionCapture.revision &&
             !session.provisionalSelectionReplacementApplied ||
         facts.controllerEpoch != session.controllerEpoch.value ||
-        !facts.hasDocumentChangesAvailable) {
+        !facts.hasDocumentChangesAvailable ||
+        !facts.participantsAreCurrent) {
       return const SelectedMoveTerminalDecision.cleanupOnly();
     }
 
@@ -70,10 +81,10 @@ final class MoveMachine {
       sessionId: session.sessionId,
       pointerToken: session.token,
       proposedDelta: proposedDelta,
-      movableIds: facts.movableIds,
-      movedElements: facts.movedElements,
-      documentSummary: facts.documentSummary,
-      selectionBoundsWorld: facts.selectionBoundsWorld,
+      movableIds: basis.participantIds,
+      movedElements: basis.movedElements,
+      documentSummary: basis.documentSummary,
+      selectionBoundsWorld: basis.selectionBoundsWorld,
     );
   }
 }
@@ -91,7 +102,36 @@ SelectedMoveStartDecision _unselectedMovableHitDecision(
     movableIds: [hitId],
     previousSelectionIds: facts.selectedIds,
     selectionRevision: facts.selectionRevision,
+    basis: _selectedMoveBasis(
+      participants: facts.movableParticipants.where(
+        (participant) => participant.element.id == hitId,
+      ),
+      documentSummary: facts.documentSummary,
+      selectionBoundsWorld: _participantBounds(facts, hitId),
+    ),
   );
+}
+
+SelectedMoveSessionBasis _selectedMoveBasis({
+  required Iterable<SelectedMoveParticipantFacts> participants,
+  required CanvasDocumentSummary documentSummary,
+  required Rect selectionBoundsWorld,
+}) {
+  return SelectedMoveSessionBasis(
+    participants: participants,
+    documentSummary: documentSummary,
+    selectionBoundsWorld: selectionBoundsWorld,
+  );
+}
+
+Rect _participantBounds(SelectedMoveStartFacts facts, CanvasElementId id) {
+  for (final participant in facts.movableParticipants) {
+    if (participant.element.id == id) {
+      return participant.element.boundsWorld;
+    }
+  }
+
+  return Rect.zero;
 }
 
 bool _admitsGroupUnionStart(SelectedMoveStartFacts facts) {
@@ -122,13 +162,15 @@ final class SelectedMoveStartDecision {
       selectedIds = const [],
       movableIds = const [],
       previousSelectionIds = const [],
-      selectionRevision = 0;
+      selectionRevision = 0,
+      basis = null;
 
   SelectedMoveStartDecision.admitted({
     required Iterable<CanvasElementId> selectedIds,
     required Iterable<CanvasElementId> movableIds,
     required Iterable<CanvasElementId> previousSelectionIds,
     required this.selectionRevision,
+    required this.basis,
     this.suppressMarqueeDrag = false,
   }) : admitted = true,
        selectedIds = List.unmodifiable(selectedIds),
@@ -140,6 +182,7 @@ final class SelectedMoveStartDecision {
   final List<CanvasElementId> movableIds;
   final List<CanvasElementId> previousSelectionIds;
   final int selectionRevision;
+  final SelectedMoveSessionBasis? basis;
   final bool suppressMarqueeDrag;
 }
 

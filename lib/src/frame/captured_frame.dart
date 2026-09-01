@@ -4,6 +4,7 @@ import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../geometry/spatial_query_result.dart';
@@ -19,6 +20,7 @@ final class FrameCaptureInputs {
     this.viewCameraOffset = Offset.zero,
     this.viewCameraRevision = 0,
     this.textEditSuppression,
+    this.selectedMoveParticipantIds = const [],
   });
 
   final Rect viewportWorldBounds;
@@ -30,6 +32,7 @@ final class FrameCaptureInputs {
   final CanvasPreviewState preview;
   final int previewRevision;
   final TextEditPaintSuppression? textEditSuppression;
+  final Iterable<CanvasElementId> selectedMoveParticipantIds;
 
   Rect get effectiveWorldBounds => viewportWorldBounds.shift(viewCameraOffset);
 }

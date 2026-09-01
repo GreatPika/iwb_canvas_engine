@@ -11,6 +11,7 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../store/committed_document.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_commit_finalization.dart';
@@ -214,9 +215,11 @@ final class CommitApplier {
       if (scope is _SealedDeliveryWorkScope) {
         observed = CommitDeliveryResult.sealed(
           shouldPublishState: result.shouldPublishState,
+          didChangeSelection: result.didChangeSelection,
           replacedDocument: result.replacedDocument,
           effects: scope.observeEffects(result.effects),
           actionIntents: scope.observeActions(result.actionIntents),
+          acceptedTouchedElementIds: result.acceptedTouchedElementIds,
         );
       }
       return true;
@@ -444,6 +447,7 @@ final class _PreparedApplyState {
       documentRevisionChanged: documentRevisionChanged,
       documentReplaced: documentReplaced,
       didChangeSelection: didChangeSelection,
+      acceptedTouchedElementIds: plan.touchedSet.elementIds,
       deliveryEffects: deliveryEffects,
       actionIntents: actionIntents,
     );
@@ -476,6 +480,7 @@ CommitDeliveryResult _resultFor({
   required bool documentRevisionChanged,
   required bool documentReplaced,
   required bool didChangeSelection,
+  required Iterable<CanvasElementId> acceptedTouchedElementIds,
   required List<CommitDeliveryEffect> deliveryEffects,
   required List<CommitActionIntent> actionIntents,
 }) {
@@ -487,9 +492,11 @@ CommitDeliveryResult _resultFor({
 
   return CommitDeliveryResult.sealed(
     shouldPublishState: shouldPublishState,
+    didChangeSelection: didChangeSelection,
     replacedDocument: documentReplaced,
     effects: deliveryEffects,
     actionIntents: shouldPublishState ? actionIntents : const [],
+    acceptedTouchedElementIds: Set.unmodifiable(acceptedTouchedElementIds),
   );
 }
 

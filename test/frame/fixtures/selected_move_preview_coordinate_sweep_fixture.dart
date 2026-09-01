@@ -24,6 +24,9 @@ const _imageSize = Size(120, 180);
 const _origin = Offset(240, 180);
 final _selectedId = CanvasElementId('selected');
 
+/// Rationale: the coordinate sweep and membership exclusion share the same
+/// frame path, so this fixture keeps their paint-plan relation visible.
+// ignore: halstead-volume, source-lines-of-code, reason: The sweep and membership exclusion share one real frame path.
 void main() {
   test('selected image preview renders at every swept integer coordinate', () {
     final failures = <String>[];
@@ -43,6 +46,39 @@ void main() {
     }
 
     expect(failures, isEmpty, reason: failures.take(12).join('\n'));
+  });
+  test('selected move preview shifts only captured participants', () {
+    final frameFacts = frameFactsPort(elements: _selectedMoveRows());
+    final spatialKernel = SpatialKernel()..rebuild(frameFacts);
+    final frame = capturedMainFrame(
+      frameFacts: frameFacts,
+      selectionFacts: SelectionFacts(
+        selectedElementIds: [_selectedId, CanvasElementId('neighbor')],
+        selectionRevision: 2,
+      ),
+      selectedMoveParticipantIds: [_selectedId],
+      preview: const CanvasSelectedMovePreview(delta: Offset(10, 0)),
+      viewport: _viewport,
+      queryPaint: spatialKernel.queryPaint,
+    );
+    final ordinary =
+        OrdinaryPaintPlanner().buildOrdinaryPlan(frame)
+            as OrdinaryPaintPlanReady;
+    final output = _buildSelectedMoveSupplement(
+      frame: frame,
+      ordinaryPlan: ordinary.plan,
+      frameFacts: frameFacts,
+      spatialKernel: spatialKernel,
+    );
+
+    final selected = output.mergedRecords.singleWhere(
+      (record) => record.id == _selectedId,
+    );
+    final newlyEligible = output.mergedRecords.singleWhere(
+      (record) => record.id == CanvasElementId('neighbor'),
+    );
+    expect(selected.transform.translation, _origin + const Offset(10, 0));
+    expect(newlyEligible.transform.translation, const Offset(8, 8));
   });
 }
 
@@ -107,6 +143,7 @@ CapturedMainFrame _captureSelectedMoveFrame({
     ),
     preview: CanvasSelectedMovePreview(delta: target - _origin),
     viewport: _viewport,
+    selectedMoveParticipantIds: [_selectedId],
     queryPaint: spatialKernel.queryPaint,
   );
 }

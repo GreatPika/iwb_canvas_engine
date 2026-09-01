@@ -46,13 +46,13 @@ RuntimeSelectedMoveReadModels selectedMoveReadModels(
       for (final handle in inputs.handles)
         if (requestedIds.contains(handle.id))
           if (inputs.frame.resolveElement(handle) case final facts?)
-            _elementRead(facts, inputs.geometryPolicy),
+            elementReadForMove(facts, inputs.geometryPolicy),
     ],
     documentSummary: inputs.documentSummary(),
   );
 }
 
-CanvasElementRead _elementRead(
+CanvasElementRead elementReadForMove(
   FrameElementFacts facts,
   GeometryPolicy geometryPolicy,
 ) {

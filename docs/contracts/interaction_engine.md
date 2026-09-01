@@ -168,6 +168,18 @@ bounds-only misses, stale or otherwise unreliable hit-query facts, non-finite
 group bounds, and occluded union-only starts. Rejected selected-move starts
 produce no selected-move preview, resolver call, action, or document mutation.
 
+An admitted selected-move session retains its exact movable participant basis:
+public ids, generation, element revision, transform, bounds, prior selection,
+and pointer session/controller-epoch identity. Before any accepted document or
+selection outcome is published, RuntimeRoot routes its touched ids and actual
+selection outcome to that session. A touched participant (including a
+remove/re-add with the same id), document replacement, or external selection
+change cancels the whole gesture before a resolver/action can run. Unrelated
+accepted edits and final no-ops leave the basis live. Terminal request facts and
+start-relative transforms use that retained basis rather than re-reading a
+current movable subset; cleanup releases it and only conditionally rolls back
+provisional selection, so it cannot overwrite a newer external selection.
+
 Unselected movable-hit drag uses provisional selection. Pointer-down captures
 the hit as a pending single-object move candidate while preserving the previous
 selection ids. Before the pointer exits effective drag-start slop the gesture is

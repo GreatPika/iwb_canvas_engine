@@ -683,7 +683,7 @@ edges:
       - path: docs/contracts/interaction_engine.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot composes the runtime-local InteractionReadPort adapter so interaction receives immutable selected-move and marquee fact bundles instead of concrete store, selection, spatial, frame, resource, edit, or public stream owners.
+      - RuntimeRoot composes the runtime-local InteractionReadPort adapter so interaction receives immutable selected-move participant bases and marquee fact bundles instead of concrete store, selection, spatial, frame, resource, edit, or public stream owners. Before public delivery it routes accepted touched ids and external selection outcomes back to the active Move session, while Frame receives that session's captured preview membership.
     actual:
       compositionFields:
         - InteractionReadPort

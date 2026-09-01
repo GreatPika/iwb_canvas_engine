@@ -55,6 +55,13 @@ final class SelectedMoveStartFacts {
     required this.controllerEpoch,
     required this.selectionRevision,
     required this.hitSelectedMovable,
+    Iterable<SelectedMoveParticipantFacts> movableParticipants = const [],
+    this.documentSummary = const CanvasDocumentSummary(
+      elementCount: 0,
+      layerCount: 0,
+      resourceCount: 0,
+    ),
+    this.selectionBoundsWorld = Rect.zero,
     this.topmostMovableHitId,
     this.topmostHitId,
     this.topmostHitOrderToken,
@@ -65,12 +72,16 @@ final class SelectedMoveStartFacts {
     this.groupUnionOcclusionReliable = true,
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : selectedIds = List.unmodifiable(selectedIds),
-       movableSelectedIds = List.unmodifiable(movableSelectedIds);
+       movableSelectedIds = List.unmodifiable(movableSelectedIds),
+       movableParticipants = List.unmodifiable(movableParticipants);
 
   final List<CanvasElementId> selectedIds;
   final List<CanvasElementId> movableSelectedIds;
   final int controllerEpoch;
   final int selectionRevision;
+  final List<SelectedMoveParticipantFacts> movableParticipants;
+  final CanvasDocumentSummary documentSummary;
+  final Rect selectionBoundsWorld;
   final bool hitSelectedMovable;
   final CanvasElementId? topmostMovableHitId;
   final CanvasElementId? topmostHitId;
@@ -83,32 +94,53 @@ final class SelectedMoveStartFacts {
   final InteractionReadQueryFacts query;
 }
 
+/// Immutable identity and geometry basis retained by one selected-move gesture.
+///
+/// The generation distinguishes remove/re-add of the same public element ID.
+final class SelectedMoveParticipantFacts {
+  const SelectedMoveParticipantFacts({
+    required this.element,
+    required this.generation,
+  });
+
+  final CanvasElementRead element;
+  final int generation;
+}
+
 final class SelectedMoveCommitReadRequest {
   SelectedMoveCommitReadRequest({
     required Iterable<CanvasElementId> sessionSelectedIds,
     required Iterable<CanvasElementId> sessionMovableIds,
     required this.selectionRevision,
+    Iterable<SelectedMoveParticipantFacts> movableParticipants = const [],
     this.provisionalSelectionReplacementApplied = false,
     this.provisionalSelectionReplacementRevision,
   }) : sessionSelectedIds = List.unmodifiable(sessionSelectedIds),
-       sessionMovableIds = List.unmodifiable(sessionMovableIds);
+       sessionMovableIds = List.unmodifiable(sessionMovableIds),
+       movableParticipants = List.unmodifiable(movableParticipants);
 
   final List<CanvasElementId> sessionSelectedIds;
   final List<CanvasElementId> sessionMovableIds;
   final int selectionRevision;
+  final List<SelectedMoveParticipantFacts> movableParticipants;
   final bool provisionalSelectionReplacementApplied;
   final int? provisionalSelectionReplacementRevision;
 }
 
 final class SelectedMoveCommitFacts {
   SelectedMoveCommitFacts({
-    required Iterable<CanvasElementId> movableIds,
-    required Iterable<CanvasElementRead> movedElements,
-    required this.documentSummary,
-    required this.selectionBoundsWorld,
     required this.controllerEpoch,
     required this.selectionRevision,
     required this.hasDocumentChangesAvailable,
+    Iterable<CanvasElementId> movableIds = const [],
+    Iterable<CanvasElementRead> movedElements = const [],
+    this.documentSummary = const CanvasDocumentSummary(
+      elementCount: 0,
+      layerCount: 0,
+      resourceCount: 0,
+    ),
+    this.selectionBoundsWorld = Rect.zero,
+    this.participantsAreCurrent = true,
     Iterable<CanvasElementId> skippedSessionIds = const [],
   }) : movableIds = List.unmodifiable(movableIds),
        movedElements = List.unmodifiable(movedElements),
@@ -121,6 +153,7 @@ final class SelectedMoveCommitFacts {
   final int controllerEpoch;
   final int selectionRevision;
   final bool hasDocumentChangesAvailable;
+  final bool participantsAreCurrent;
   final List<CanvasElementId> _skippedSessionIds;
   List<CanvasElementId> get skippedSessionIds => _skippedSessionIds;
 }

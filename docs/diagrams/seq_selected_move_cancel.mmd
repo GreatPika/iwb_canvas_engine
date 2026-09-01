@@ -38,9 +38,9 @@ sequenceDiagram
   Store-->>ReadPort: movable flags in document order
   ReadPort->>Spatial: hit-test down position once through spatial query APIs
   Spatial-->>ReadPort: top visible selectable element id
-  ReadPort-->>IE: selected ids, movable ids, and hit-selected fact in document order
+  ReadPort-->>IE: selected ids and immutable movable participant basis (id/generation/revision/transform/bounds) in document order
   IE->>IE: start active selected move session
-  Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
+  Note over IE: Session stores pointer token, sessionId, epoch, prior selection, immutable participant basis, and current preview delta.
   IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)
   IE->>Preview: bump previewRevision for selected move preview
   Preview-->>Runtime: preview revision fact
@@ -79,7 +79,7 @@ sequenceDiagram
     end
     Ordinary-->>Frame: ordinary committed records
     Frame->>Supplement: stage selected move supplement
-    Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+    Supplement->>Supplement: filter captured participant ids from ordinary records for this frame
     Supplement->>Spatial: query selected supplement shifted by -previewDelta
     Spatial-->>Supplement: selected supplement candidate handles
     Supplement->>Facts: resolve selected supplement handles against captured revisions
@@ -105,6 +105,10 @@ sequenceDiagram
     Tools->>IE: same-token cancel sample
     IE->>IE: classify active selected move as cancelled
     Note over IE,Resolver: Resolver is not called for pointer cancel.
+  else accepted participant touch, same-id replacement, or external selection change
+    Runtime->>IE: route accepted touched ids/selection outcome before publication
+    IE->>IE: classify active selected move as conflicted
+    Note over IE,Resolver: Resolver is not called; guarded provisional cleanup cannot overwrite newer selection.
   else mode change or interactive disabled during session
     User->>Surface: mode change or interactive=false
     Surface->>Tools: route active session cancel before disabling routing

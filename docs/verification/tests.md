@@ -1474,7 +1474,15 @@ Permanent artifact admission:
   preparation, rejected guard-release/no-preparation branches, post-success
   cleanup, and closed-apply/cleanup/common-delivery traces whose real
   frame/state/action/observer callbacks see the cleaned selected-move state
-  and merged repaint intent.
+  and merged repaint intent. It also proves participant style/eligibility
+  changes, same-id replacement, and external selection changes clear a live
+  Move before resolver publication; unrelated and final no-op edits retain the
+  original participant/request basis. Its real pointer-to-frame route further
+  proves that a selected nonparticipant becoming movable during the gesture
+  remains ordinary paint and does not enter the captured move basis.
+- `test/frame/selected_move_preview_coordinate_sweep_test.dart` proves the
+  selected-move supplement shifts only captured gesture participants, so a
+  live selected object that becomes eligible later remains ordinary paint.
 - `test/interaction/select_machine_test.dart` proves marquee preview,
   normalized world rects, point-click topmost hit selection including line
   hits, spatial/exact filtering, stale/deleted skipping, unchanged-selection

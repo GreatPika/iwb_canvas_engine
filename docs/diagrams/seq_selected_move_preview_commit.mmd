@@ -42,11 +42,11 @@ sequenceDiagram
   ReadPort->>ReadPort: derive selected union bounds and selected top order
   ReadPort->>Spatial: hit-test down position once through spatial query APIs
   Spatial-->>ReadPort: exact top-hit id/order candidates
-  ReadPort-->>IE: selected ids, movable ids, exact hit id/order, group union, selected top order, and occlusion facts
+  ReadPort-->>IE: selected ids, immutable movable participant basis (id/generation/revision/transform/bounds), exact hit id/order, group union, selected top order, and occlusion facts
 
   alt exact hit is selected movable, or reliable multi-select group union is inside and not occluded
     IE->>IE: start selected move session
-    Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
+    Note over IE: Session stores pointer token, sessionId, epoch, prior selection, and immutable participant basis with delta Offset.zero.
     IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)
     IE->>Preview: bump previewRevision for selected move preview
     Preview-->>Runtime: preview revision fact
@@ -61,7 +61,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: compute previewDelta from session start position
-    Note over IE,Spatial: No per-delta hit-test. Preview uses selected ids and the session delta captured at pointer down.
+    Note over IE,Spatial: No per-delta hit-test. Preview uses captured participant ids and the session delta; live selection/eligibility cannot join it.
     IE->>Preview: replace immutable CanvasSelectedMovePreview(delta)
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview-->>Runtime: preview revision fact
@@ -90,7 +90,7 @@ sequenceDiagram
     end
     Ordinary-->>Frame: ordinary committed records
     Frame->>Supplement: stage selected move supplement
-    Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+    Supplement->>Supplement: filter captured participant ids from ordinary records for this frame
     Supplement->>Spatial: query selected supplement shifted by -previewDelta
     Spatial-->>Supplement: selected supplement candidate handles
     Supplement->>Facts: resolve selected supplement handles against captured revisions
@@ -128,9 +128,9 @@ sequenceDiagram
     IE->>ReadPort: read selected move commit facts
     ReadPort->>SelectionFacts: read selected ids and selectionRevision
     SelectionFacts-->>ReadPort: selected ids
-    ReadPort->>Store: read summary, moved element reads, and selected bounds
-    Store-->>ReadPort: CanvasMoveCommitRequest inputs
-    ReadPort-->>IE: CanvasMoveCommitRequest inputs
+    ReadPort->>Store: verify captured participant identity/revision/bounds only
+    Store-->>ReadPort: retained basis is current or conflicted
+    ReadPort-->>IE: terminal conflict fact; request inputs remain captured
 
     opt resolver configured
       Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard

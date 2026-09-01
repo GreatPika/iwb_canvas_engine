@@ -290,9 +290,10 @@ Algorithm:
 8. Rejected shifted admission publishes the ordinary records unchanged for that
    paint, exposes the internal rejection reason, and performs no ordinary cache
    writes.
-9. For admitted shifted candidates, read selected ids through the captured
-   selection facts boundary and filter movable selected ids from the ordinary
-   record stream for this frame only.
+9. For admitted shifted candidates, filter the runtime-supplied immutable
+   selected-move participant ids captured at gesture start from the ordinary
+   record stream for this frame only. Do not re-filter live selection or
+   eligibility: a newly eligible selected object never joins an active preview.
 10. Resolve selected handles through `FrameFactsPort` against the captured
    structuralRevision, generation, and orderToken.
 11. If the selected row facts are current, create shifted RenderElementRecord
@@ -307,7 +308,7 @@ Algorithm:
 
 Accepted internal ownership: `OrdinaryPaintPlanner` owns steps 1 through 6, while
 `SelectedMoveSupplementPlanner` owns steps 7 through 15. The supplement planner
-consumes captured selection facts and ordinary records for the current frame,
+consumes captured selected-move participant ids and ordinary records for the current frame,
 but does not write the ordinary `OrdinaryPaintRecordCache`, does not render overlays, and
 does not global sort the scene.
 

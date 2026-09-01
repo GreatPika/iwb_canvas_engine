@@ -1,9 +1,12 @@
 import 'dart:ui';
 
+import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'draw_stroke_machine.dart';
 import 'eraser_machine.dart';
+import 'interaction_read_port.dart';
 import 'line_machine.dart';
 import 'pointer_session_identity.dart';
 
@@ -38,6 +41,28 @@ final class PointerSessionSelectionCapture {
   final int revision;
 }
 
+/// Immutable facts retained for the lifetime of one selected-move gesture.
+final class SelectedMoveSessionBasis {
+  SelectedMoveSessionBasis({
+    required Iterable<SelectedMoveParticipantFacts> participants,
+    required this.documentSummary,
+    required this.selectionBoundsWorld,
+  }) : participants = List.unmodifiable(participants) {
+    participantIds = List<CanvasElementId>.unmodifiable(
+      this.participants.map((participant) => participant.element.id),
+    );
+    movedElements = List<CanvasElementRead>.unmodifiable(
+      this.participants.map((participant) => participant.element),
+    );
+  }
+
+  final List<SelectedMoveParticipantFacts> participants;
+  late final List<CanvasElementId> participantIds;
+  late final List<CanvasElementRead> movedElements;
+  final CanvasDocumentSummary documentSummary;
+  final Rect selectionBoundsWorld;
+}
+
 // One active pointer can carry move, marquee, stroke, or line payloads. Keeping
 // those variants in this value keeps token/session identity updates atomic.
 // ignore: coupling-between-object-classes, number-of-methods
@@ -67,6 +92,7 @@ final class PointerSession {
     required Iterable<CanvasElementId> capturedMovableIds,
     required Iterable<CanvasElementId> previousSelectionIds,
     required int capturedSelectionRevision,
+    required SelectedMoveSessionBasis basis,
     required CanvasPreviewState lastPreview,
     required double dragStartSlop,
     bool provisionalSelectionReplacementApplied = false,
@@ -92,6 +118,7 @@ final class PointerSession {
         capturedMovableIds: capturedMovableIds,
         previousSelectionIds: previousSelectionIds,
         capturedSelectionRevision: capturedSelectionRevision,
+        basis: basis,
         lastPreview: lastPreview,
       ),
     );
@@ -265,6 +292,10 @@ final class PointerSession {
   Offset get currentWorld => _payload.currentWorld;
   PointerSessionSelectionCapture get selectionCapture =>
       _payload.selectionCapture;
+  SelectedMoveSessionBasis? get selectedMoveBasis => switch (_payload) {
+    _SelectedMovePointerPayload(:final basis) => basis,
+    _ => null,
+  };
   PointerStrokeCapture? get strokeCapture => _payload.strokeCapture;
   PointerEraserCapture? get eraserCapture => _payload.eraserCapture;
   PointerLineFirstTapCapture? get lineFirstTapCapture =>
@@ -488,6 +519,7 @@ final class _SelectedMovePointerPayload extends _PointerSessionPayload {
     required Iterable<CanvasElementId> capturedMovableIds,
     required Iterable<CanvasElementId> previousSelectionIds,
     required this.capturedSelectionRevision,
+    required this.basis,
     required super.lastPreview,
   }) : capturedSelectedIds = List.unmodifiable(capturedSelectedIds),
        capturedMovableIds = List.unmodifiable(capturedMovableIds),
@@ -497,6 +529,7 @@ final class _SelectedMovePointerPayload extends _PointerSessionPayload {
   final List<CanvasElementId> capturedMovableIds;
   final List<CanvasElementId> previousSelectionIds;
   final int capturedSelectionRevision;
+  final SelectedMoveSessionBasis basis;
 
   @override
   PointerSessionSelectionCapture get selectionCapture =>
@@ -516,6 +549,7 @@ final class _SelectedMovePointerPayload extends _PointerSessionPayload {
       capturedMovableIds: capturedMovableIds,
       previousSelectionIds: previousSelectionIds,
       capturedSelectionRevision: capturedSelectionRevision,
+      basis: basis,
       lastPreview: lastPreview,
     );
   }

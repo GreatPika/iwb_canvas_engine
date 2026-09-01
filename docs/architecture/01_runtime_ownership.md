@@ -55,7 +55,7 @@ Runtime responsibilities are split as follows:
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
+| InteractionEngine | pointer sessions, immutable selected-move participant basis/conflict state, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
 | CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image/vector references, or committed descriptors |
@@ -151,6 +151,16 @@ expose mutation APIs, draft access, `CanvasDocument`
 projection, store internals, resource/session internals, selection internals, or
 per-property concrete owner probes. Committed mutations requested by interaction
 still go through `EditKernel`.
+
+For selected move, that one start response becomes the session-owned immutable
+participant basis (id, generation, revision, transform, bounds, prior
+selection, token/session/epoch). RuntimeRoot remains the accepted-change
+delivery owner: before publishing an edit or selection outcome, it routes the
+accepted touched ids and selection change to InteractionEngine. Interaction
+cancels only when this basis conflicts; it neither compares a global document
+revision nor keeps a persistent generation mirror. Frame receives the active
+basis membership as an input, so selected-move paint cannot recruit objects
+that become selectable/transformable after pointer-down.
 
 `RuntimeRoot` materializes `CanvasRuntimeConfig.eraserElementKinds` once and
 passes only that runtime-owned policy to its `InteractionReadPort` adapter.

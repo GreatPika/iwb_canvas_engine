@@ -99,6 +99,8 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
   final FrameFactsPort _frame;
   final RuntimeDocumentSummaryReader _documentSummary;
+
+  static const _moveGeometryPolicy = GeometryPolicy();
   final SelectionFactsPort _selection;
   final SpatialKernel _spatial;
   final int Function() _controllerEpoch;
@@ -162,8 +164,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
   @override
   // Move-start reads keep selection ids, exact hit facts, group bounds, and
-  // occlusion in one snapshot so the gesture owner cannot mix revisions.
-  // ignore: halstead-volume, source-lines-of-code
+  // the retained participant basis in one snapshot so the gesture owner cannot
+  // mix revisions. Keeping that boundary together is safer than metric splits.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: One move-start snapshot must retain all identity facts.
   SelectedMoveStartFacts selectedMoveStartFacts(
     SelectedMoveStartReadRequest request,
   ) {
@@ -192,6 +195,25 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     final hitFacts = hit == null
         ? null
         : interactionFactsForId(candidates, hit.id);
+    final unselectedMovableHitId = _movableHitId(hitFacts);
+    final capturedMoveHandles = <FrameElementHandle>[
+      for (final handle in selectedHandles)
+        if (movableIds.contains(handle.id)) handle,
+    ];
+    if (unselectedMovableHitId != null &&
+        !selectedIds.contains(unselectedMovableHitId)) {
+      final handle = _frame.elementHandleForId(
+        context.structuralRevision,
+        unselectedMovableHitId,
+      );
+      if (handle != null) {
+        capturedMoveHandles.add(handle);
+      }
+    }
+    final moveParticipants = _selectedMoveParticipantFacts(
+      capturedMoveHandles,
+      candidates,
+    );
     final contentQuery = _spatial.queryContext(
       SpatialQueryWindow(
         boundsWorld: _pointQueryWindow(request.worldPosition),
@@ -226,8 +248,11 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       movableSelectedIds: movableIds,
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
+      movableParticipants: moveParticipants,
+      documentSummary: _documentSummary(),
+      selectionBoundsWorld: _participantBounds(moveParticipants),
       hitSelectedMovable: hit != null && movableIds.contains(hit.id),
-      topmostMovableHitId: _movableHitId(hitFacts),
+      topmostMovableHitId: unselectedMovableHitId,
       topmostHitId: hit?.id,
       topmostHitOrderToken: hit?.orderToken,
       selectedGroupBoundsWorld: selectedGroup.boundsWorld,
@@ -240,10 +265,46 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   }
 
   @override
+  // Terminal compatibility facts and the captured-basis comparison share one
+  // bounded owner read; separating them would risk two inconsistent snapshots.
+  // ignore: halstead-volume, source-lines-of-code, reason: Terminal compatibility and identity comparison need one snapshot.
   SelectedMoveCommitFacts selectedMoveCommitFacts(
     SelectedMoveCommitReadRequest request,
   ) {
     final context = _selectedMoveStartReadContext();
+    if (request.movableParticipants.isNotEmpty) {
+      return _capturedSelectedMoveCommitFacts(context, request);
+    }
+
+    return _legacySelectedMoveCommitFacts(context, request);
+  }
+
+  SelectedMoveCommitFacts _capturedSelectedMoveCommitFacts(
+    _SelectedMoveStartReadContext context,
+    SelectedMoveCommitReadRequest request,
+  ) {
+    final participantsAreCurrent = _selectedMoveParticipantsAreCurrent(
+      structuralRevision: context.structuralRevision,
+      participants: request.movableParticipants,
+    );
+
+    return SelectedMoveCommitFacts(
+      controllerEpoch: context.controllerEpoch,
+      selectionRevision: context.selection.selectionRevision,
+      hasDocumentChangesAvailable:
+          participantsAreCurrent &&
+          _selectedMoveCommitSelectionIsCurrent(context.selection, request),
+      participantsAreCurrent: participantsAreCurrent,
+      skippedSessionIds: participantsAreCurrent
+          ? const []
+          : request.sessionMovableIds,
+    );
+  }
+
+  SelectedMoveCommitFacts _legacySelectedMoveCommitFacts(
+    _SelectedMoveStartReadContext context,
+    SelectedMoveCommitReadRequest request,
+  ) {
     final sessionSelectedIds = request.sessionSelectedIds.toSet();
     final requestedMovableIds = request.sessionMovableIds
         .where(sessionSelectedIds.contains)
@@ -820,11 +881,70 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     ]);
   }
 
+  List<SelectedMoveParticipantFacts> _selectedMoveParticipantFacts(
+    Iterable<FrameElementHandle> handles,
+    RuntimeResolvedSpatialCandidates candidates,
+  ) {
+    return List.unmodifiable([
+      for (final handle in handles)
+        if (interactionFactsForId(candidates, handle.id) ??
+                _frame.resolveElement(handle)
+            case final facts?)
+          SelectedMoveParticipantFacts(
+            element: elementReadForMove(facts, _moveGeometryPolicy),
+            generation: facts.generation,
+          ),
+    ]);
+  }
+
+  Rect _participantBounds(Iterable<SelectedMoveParticipantFacts> participants) {
+    final iterator = participants.iterator;
+    if (!iterator.moveNext()) {
+      return Rect.zero;
+    }
+    var bounds = iterator.current.element.boundsWorld;
+    while (iterator.moveNext()) {
+      bounds = bounds.expandToInclude(iterator.current.element.boundsWorld);
+    }
+
+    return bounds;
+  }
+
+  bool _selectedMoveParticipantsAreCurrent({
+    required int structuralRevision,
+    required Iterable<SelectedMoveParticipantFacts> participants,
+  }) {
+    for (final participant in participants) {
+      final handle = _frame.elementHandleForId(
+        structuralRevision,
+        participant.element.id,
+      );
+      if (handle == null) {
+        return false;
+      }
+      final current = _frame.resolveElement(handle);
+      if (current == null ||
+          current.generation != participant.generation ||
+          current.revision != participant.element.revision ||
+          current.transform != participant.element.transform ||
+          !_isMovableFacts(current) ||
+          _moveGeometryPolicy.boundsFor(current).paintBoundsWorld !=
+              participant.element.boundsWorld) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   bool _isMovable(FrameElementHandle handle) {
     final facts = _frame.resolveElement(handle);
 
-    return facts != null &&
-        facts.locationKind == FrameElementLocationKind.content &&
+    return facts != null && _isMovableFacts(facts);
+  }
+
+  bool _isMovableFacts(FrameElementFacts facts) {
+    return facts.locationKind == FrameElementLocationKind.content &&
         facts.isVisible &&
         facts.isSelectable &&
         !facts.isLocked &&
@@ -849,7 +969,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
   // Group union admission facts stay together because bounds, top order, and
   // occlusion are one invariant over the same selected handles.
-  // ignore: halstead-volume
+  // ignore: halstead-volume, source-lines-of-code, reason: Bounds, order, and occlusion are one selected-group admission invariant.
   _SelectedGroupMoveStartFacts _selectedGroupFacts({
     required List<FrameElementHandle> selectedHandles,
     required List<CanvasElementId> selectedIds,
@@ -858,6 +978,15 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   }) {
     if (selectedIds.isEmpty) {
       return const _SelectedGroupMoveStartFacts.none();
+    }
+    if (selectedHandles.length == 1) {
+      return _SelectedGroupMoveStartFacts(
+        boundsWorld: null,
+        topOrderToken: selectedHandles.single.orderToken,
+        insideUnion: false,
+        occluded: false,
+        occlusionReliable: occlusion.isReliable,
+      );
     }
     final selected = selectedIds.toSet();
     final facts = [

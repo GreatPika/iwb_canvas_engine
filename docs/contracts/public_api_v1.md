@@ -2967,6 +2967,12 @@ Resolver rules:
 - not called during preview;
 - not called if movement is zero;
 - not called if selected movable set is empty;
+- not called after an accepted change touches a captured participant, replaces
+  its document identity, or changes selection externally; these cancel the
+  whole gesture before publication;
+- request movedElements, bounds, and start-relative movement retain the
+  pointer-down participant basis; unrelated accepted edits and final no-ops do
+  not rebase that basis;
 - not called when gesture is cancelled by `loadDocumentFromJson`/modeChange/dispose;
 - reentrant public mutation from inside resolver throws StateError;
 - returned delta must be finite;
