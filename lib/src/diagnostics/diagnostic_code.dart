@@ -56,5 +56,5 @@ enum InteractionDiagnosticCode {
   invalidTerminalCleanup,
   selectedMoveStartDeniedNotMovable,
   resolverReentrantMutationRejected,
-  deletionResolverFailed,
+  resolverCallbackFailed,
 }

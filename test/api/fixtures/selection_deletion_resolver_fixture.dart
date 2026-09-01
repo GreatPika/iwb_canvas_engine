@@ -82,7 +82,7 @@ void main() {
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _acceptExposesExactRequestAndExistingAction() async {
   CanvasDeletionCommitRequest? request;
-  final installTrace = <String>[];
+  final preparationAndInstallTrace = <String>[];
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(
     CommittedDocument(_document()),
   );
@@ -91,7 +91,7 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
     config: CanvasRuntimeConfig(
       deletionCommitResolver: (candidate) {
         request = candidate;
-        installTrace.add('resolver-return');
+        preparationAndInstallTrace.add('resolver-return');
         return CanvasDeletionDecision.accept;
       },
     ),
@@ -103,12 +103,12 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   root.state.addListener(() => stateEvents.add(root.state.value));
   root.state.addListener(() {
     deliveryEvents.add('state');
-    installTrace.add('state');
+    preparationAndInstallTrace.add('state');
   });
   final subscription = root.actions.listen((action) {
     actions.add(action);
     deliveryEvents.add('action');
-    installTrace.add('action');
+    preparationAndInstallTrace.add('action');
   });
   addTearDown(subscription.cancel);
   _prepareIndependentEraser(root);
@@ -120,7 +120,7 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   _beginIndependentEraser(root);
   final eraser = _IndependentEraserSnapshot.capture(root);
   deliveryEvents.clear();
-  installTrace.clear();
+  preparationAndInstallTrace.clear();
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   List<DeletionEntryFacts>? projected;
 
@@ -129,11 +129,11 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
     () => DocumentStoreKernel.observeDeletionPreparedInstall(
       (event) {
         if (event == DeletionPreparedInstallEvent.installed) {
-          installTrace.add('store');
+          preparationAndInstallTrace.add('store');
         }
       },
       () => SelectionKernel.observePreparedInstall(
-        () => installTrace.add('selection'),
+        () => preparationAndInstallTrace.add('selection'),
         () => DocumentStoreKernel.observeDeletionEntryProjection(
           (entries) => projected = entries,
           () => root.selection.deleteSelection(timestampMs: 41),
@@ -141,9 +141,9 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
       ),
     ),
   );
-  // This marker is deliberately synchronous: a deferred install would put it
-  // before Store or Selection and fail the public route continuity witness.
-  installTrace.add('route-return');
+  // This marker is deliberately synchronous. Selection preparation is complete
+  // before resolution, while its install still follows the resolver and Store.
+  preparationAndInstallTrace.add('route-return');
   await Future<void>.delayed(Duration.zero);
 
   final received = request;
@@ -179,10 +179,10 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   expect(actions.single.timestampMs, 41);
   expect(stateEvents, isNotEmpty);
   expect(deliveryEvents.take(2), ['state', 'action']);
-  expect(installTrace, [
+  expect(preparationAndInstallTrace, [
+    'selection',
     'resolver-return',
     'store',
-    'selection',
     'state',
     'action',
     'route-return',
@@ -268,7 +268,7 @@ void _ordinaryResolverThrowsAreContained() {
     expect(
       record.code,
       const DiagnosticCode.interaction(
-        InteractionDiagnosticCode.deletionResolverFailed,
+        InteractionDiagnosticCode.resolverCallbackFailed,
       ),
     );
     expect(record.details, {

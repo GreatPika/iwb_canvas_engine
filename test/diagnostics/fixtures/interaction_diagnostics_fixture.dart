@@ -15,6 +15,7 @@ import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
@@ -27,6 +28,7 @@ void main() {
   _testResolverReentrantMutationDiagnostic();
   _testCodecDiagnosticsRemainDataCodes();
   _testDeletionResolverDiagnostics();
+  _testMoveResolverDiagnosticObservationFailuresAreContained();
 }
 
 void _testRecordsEveryInteractionDiagnosticCode() {
@@ -240,11 +242,8 @@ void _testResolverReentrantMutationDiagnostic() {
       _sample(CanvasPointerLifecyclePhase.move, const Offset(10, 0)),
     );
 
-    expect(
-      () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(10, 0)),
-      ),
-      throwsStateError,
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, const Offset(10, 0)),
     );
 
     expect(actions, isEmpty);
@@ -330,8 +329,8 @@ void _testDeletionResolverDiagnostics() {
       });
       addTearDown(disabled.dispose);
       final before = DiagnosticRecord.allocations.count;
-      final diagnosticWork = <DeletionResolverDiagnosticWorkEvent>[];
-      RuntimeInteractionDiagnosticsAdapter.observeDeletionResolverDiagnosticWork(
+      final diagnosticWork = <ResolverCallbackDiagnosticWorkEvent>[];
+      RuntimeInteractionDiagnosticsAdapter.observeResolverCallbackDiagnosticWork(
         diagnosticWork.add,
         () => _triggerDeletion(disabled, route),
       );
@@ -340,6 +339,96 @@ void _testDeletionResolverDiagnostics() {
       expect(diagnosticWork, isEmpty);
     }
   });
+}
+
+// The adapter's two construction phases can fail independently, but both must
+// stay inside the existing Move callback containment boundary.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testMoveResolverDiagnosticObservationFailuresAreContained() {
+  for (final phase in ResolverCallbackDiagnosticWorkEvent.values) {
+    test(
+      'Move resolver contains diagnostic observation failure at ${phase.name}',
+      () {
+        var resolverThrows = true;
+        final actions = <CanvasActionCommitted>[];
+        final root = runtimeRootWithCommittedDocumentSeed(
+          _document(),
+          config: CanvasRuntimeConfig(
+            deletionCommitResolver: acceptDeletionCommit,
+            diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+            moveCommitResolver: (_) {
+              if (resolverThrows) {
+                throw StateError('sensitive resolver failure must not leak');
+              }
+              return const CanvasMoveCommit(delta: Offset(10, 0));
+            },
+          ),
+        );
+        addTearDown(root.dispose);
+        final subscription = root.actions.listen(actions.add);
+        addTearDown(subscription.cancel);
+        root.selection.setSelection([CanvasElementId('a')]);
+
+        final cleanupReasons = <PointerCleanupReason>[];
+        final routeEvents = <RuntimeRouteTemporalEvent>[];
+        RuntimeRoot.observeRouteTemporalEvents(
+          routeEvents.add,
+          () => InteractionEngine.observeCleanup(
+            cleanupReasons.add,
+            () =>
+                RuntimeInteractionDiagnosticsAdapter.observeResolverCallbackDiagnosticWork((
+                  event,
+                ) {
+                  if (event == phase) {
+                    throw StateError(
+                      'sensitive ${phase.name} observer failure must not leak',
+                    );
+                  }
+                }, () => _deliverSelectedMove(root)),
+          ),
+        );
+
+        expect(cleanupReasons, [PointerCleanupReason.resolverError]);
+        expect(root.preview, isA<CanvasNoPreview>());
+        expect(root.interactionEngine.activeSession, isNull);
+        expect(_rect(root, 'a').transform, CanvasTransform.identity);
+        expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+        expect(actions, isEmpty);
+        expect(root.diagnosticRecords, isEmpty);
+        expect(
+          routeEvents
+              .map((event) => event.kind)
+              .where(
+                (kind) =>
+                    kind ==
+                        RuntimeRouteTemporalEventKind.resolverGuardEntered ||
+                    kind == RuntimeRouteTemporalEventKind.resolverGuardReleased,
+              ),
+          [
+            RuntimeRouteTemporalEventKind.resolverGuardEntered,
+            RuntimeRouteTemporalEventKind.resolverGuardReleased,
+          ],
+        );
+
+        expect(root.generateElementId(), isNotNull);
+        resolverThrows = false;
+        _deliverSelectedMove(root);
+        expect(actions, hasLength(1));
+        expect(_rect(root, 'a').transform.translation, const Offset(10, 0));
+        expect(root.diagnosticRecords, isEmpty);
+      },
+    );
+  }
+}
+
+void _deliverSelectedMove(RuntimeRoot root) {
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.move, const Offset(10, 0)),
+  );
+  root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.up, const Offset(10, 0)),
+  );
 }
 
 RuntimeRoot _deletionRoot(
@@ -382,7 +471,7 @@ void _expectBoundedDeletionFailure(
   expect(
     record.code,
     const DiagnosticCode.interaction(
-      InteractionDiagnosticCode.deletionResolverFailed,
+      InteractionDiagnosticCode.resolverCallbackFailed,
     ),
   );
   expect(record.severity, DiagnosticSeverity.warning);

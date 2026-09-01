@@ -7,34 +7,34 @@ import '../diagnostics/diagnostics_hub.dart';
 import '../interaction/interaction_diagnostics_sink.dart';
 
 @visibleForTesting
-enum DeletionResolverDiagnosticWorkEvent { eventBuilt, detailsBuilt }
+enum ResolverCallbackDiagnosticWorkEvent { eventBuilt, detailsBuilt }
 
 // The adapter deliberately keeps every InteractionDiagnosticsSink delegation
-// visible at this boundary; splitting the deletion-only test observer out would
+// visible at this boundary; splitting the callback-failure test observer out would
 // obscure the direct RuntimeRoot-to-Hub diagnostic route.
 // ignore: number-of-methods
 final class RuntimeInteractionDiagnosticsAdapter
     implements InteractionDiagnosticsSink {
   const RuntimeInteractionDiagnosticsAdapter(this._hub);
 
-  static final Object _deletionResolverDiagnosticWorkZoneKey = Object();
+  static final Object _resolverCallbackDiagnosticWorkZoneKey = Object();
   final DiagnosticsHub? _hub;
 
-  /// Observes only deletion-resolver diagnostic construction under assertions.
+  /// Observes callback-failure diagnostic construction under assertions.
   @visibleForTesting
-  static T observeDeletionResolverDiagnosticWork<T>(
-    void Function(DeletionResolverDiagnosticWorkEvent event) sink,
+  static T observeResolverCallbackDiagnosticWork<T>(
+    void Function(ResolverCallbackDiagnosticWorkEvent event) sink,
     T Function() operation,
   ) => runZoned(
     operation,
-    zoneValues: {_deletionResolverDiagnosticWorkZoneKey: sink},
+    zoneValues: {_resolverCallbackDiagnosticWorkZoneKey: sink},
   );
 
-  static bool _recordDeletionResolverDiagnosticWork(
-    DeletionResolverDiagnosticWorkEvent event,
+  static bool _recordResolverCallbackDiagnosticWork(
+    ResolverCallbackDiagnosticWorkEvent event,
   ) {
-    final sink = Zone.current[_deletionResolverDiagnosticWorkZoneKey];
-    if (sink is void Function(DeletionResolverDiagnosticWorkEvent)) {
+    final sink = Zone.current[_resolverCallbackDiagnosticWorkZoneKey];
+    if (sink is void Function(ResolverCallbackDiagnosticWorkEvent)) {
       sink(event);
     }
     return true;
@@ -130,33 +130,39 @@ final class RuntimeInteractionDiagnosticsAdapter
   }
 
   @override
-  void recordDeletionResolverFailed({
+  void recordResolverCallbackFailed({
     required String operation,
     required String errorKind,
-  }) => _hub?.record(_deletionResolverFailureEvent(operation, errorKind));
+  }) {
+    try {
+      _hub?.record(_resolverCallbackFailureEvent(operation, errorKind));
+    } on Object {
+      // Callback containment must survive a diagnostics implementation fault.
+    }
+  }
 
-  DiagnosticEvent _deletionResolverFailureEvent(
+  DiagnosticEvent _resolverCallbackFailureEvent(
     String operation,
     String errorKind,
   ) {
     assert(
-      _recordDeletionResolverDiagnosticWork(
-        DeletionResolverDiagnosticWorkEvent.eventBuilt,
+      _recordResolverCallbackDiagnosticWork(
+        ResolverCallbackDiagnosticWorkEvent.eventBuilt,
       ),
-      'deletion resolver diagnostic work observation failed',
+      'resolver callback diagnostic work observation failed',
     );
     return DiagnosticEvent(
       code: const DiagnosticCode.interaction(
-        InteractionDiagnosticCode.deletionResolverFailed,
+        InteractionDiagnosticCode.resolverCallbackFailed,
       ),
       severity: DiagnosticSeverity.warning,
       source: DiagnosticSource.interaction,
       details: () {
         assert(
-          _recordDeletionResolverDiagnosticWork(
-            DeletionResolverDiagnosticWorkEvent.detailsBuilt,
+          _recordResolverCallbackDiagnosticWork(
+            ResolverCallbackDiagnosticWorkEvent.detailsBuilt,
           ),
-          'deletion resolver diagnostic work observation failed',
+          'resolver callback diagnostic work observation failed',
         );
         return {'operation': operation, 'errorKind': errorKind};
       },

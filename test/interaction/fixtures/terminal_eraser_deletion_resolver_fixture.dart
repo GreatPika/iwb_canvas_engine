@@ -317,9 +317,9 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
   expect(events, [
+    'selection',
     'resolver-return',
     'store',
-    'selection',
     'cleanup',
     'state',
     'action',
@@ -551,7 +551,7 @@ void _terminalCancelAndThrowAreContained() {
       expect(
         root.diagnosticRecords.single.code,
         const DiagnosticCode.interaction(
-          InteractionDiagnosticCode.deletionResolverFailed,
+          InteractionDiagnosticCode.resolverCallbackFailed,
         ),
       );
       expect(root.diagnosticRecords.single.details, {
@@ -764,9 +764,9 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
     expect(root.interactionEngine.activeSession, isNull);
     _expectCleanupTraceHasNoDisplacedWork(cleanupTrace);
     expect(events, [
+      'selection',
       'resolver-return',
       'store',
-      'selection',
       'cleanup',
       'state',
       'action',

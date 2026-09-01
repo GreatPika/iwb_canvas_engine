@@ -562,7 +562,7 @@ edges:
       sensitiveThrowOwner: codec.schema_v1
       sensitiveThrowRoutes:
         - recordSchemaV1FailureDiagnostic
-  - id: runtime.deletion_resolver_failure.reports_to_diagnostics
+  - id: runtime.resolver_callback_failure.reports_to_diagnostics
     from: runtime.root
     to: diagnostics.hub
     kind: diagnostic_route
@@ -571,11 +571,12 @@ edges:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - RuntimeRoot contains synchronous deletion-resolver exceptions and routes exactly one bounded operation/error-kind diagnostic through the existing adapter without public diagnostic exposure.
+      - RuntimeRoot contains synchronous deletion and pointer-Move resolver exceptions and routes one bounded operation/error-kind diagnostic through the existing adapter without public diagnostic exposure.
     actual:
       delegationMembers:
         - RuntimeRoot._resolveDeletion
-        - RuntimeInteractionDiagnosticsAdapter.recordDeletionResolverFailed
+        - RuntimeRoot._resolveSelectedMoveDelta
+        - RuntimeInteractionDiagnosticsAdapter.recordResolverCallbackFailed
       delegationTargets:
         - DiagnosticsHub
   - id: interaction.engine.reliability_events.report_to_diagnostics
@@ -1526,7 +1527,7 @@ sourceCoverage:
       - diagnostics.hub
       - codec.schema_v1.failures.report_to_diagnostics
       - interaction.engine.reliability_events.report_to_diagnostics
-      - runtime.deletion_resolver_failure.reports_to_diagnostics
+      - runtime.resolver_callback_failure.reports_to_diagnostics
   - sectionId: section_22_guardrails_machine_checks
     disposition: graph_obligation
     graphIds:

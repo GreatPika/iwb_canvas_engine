@@ -1474,8 +1474,9 @@ Permanent artifact admission:
       refactors without prescribing their representations.
 - `test/interaction/move_machine_test.dart` proves selected-move admission,
   preview, resolver request shape, commit, cancel, stale/invalid terminal,
-  zero-delta/no-movable cleanup, resolver/edit failure cleanup, transform math,
-  exact resolver rejection type/message and thrown identity, direct
+  zero-delta/no-movable cleanup, contained resolver/edit failure cleanup,
+  transform math, rejected public mutation/disposal and a valid Move decision
+  after a caught guard rejection, direct
   no-resolver zero-guard preparation versus configured guard-release-before-
   preparation, rejected guard-release/no-preparation branches, post-success
   cleanup, and closed-apply/cleanup/common-delivery traces whose real

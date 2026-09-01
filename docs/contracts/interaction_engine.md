@@ -304,8 +304,13 @@ cleanup-policy owner: it does not invoke a resolver, Store/EditKernel, frame,
 state, action, or observer callback in that gap. A selected-move resolver is
 also RuntimeRoot-owned: no configured callback or guard runs for the direct
 finite non-zero path, while a configured finite acceptance completes its guard
-before preparation; cancel, zero, invalid, thrown, and reentrant branches
-never open preparation.
+before preparation. Cancel, invalid final value, or contained callback failure
+never opens preparation. Resolver callbacks may read runtime state and perform
+host-local work, but public mutation, ID generation, disposal, and nested
+resolver entry reject before changing their owners; an application that catches
+that rejection may still return a valid current Move decision. An unhandled
+callback failure performs resolver-error cleanup, emits only bounded callback
+diagnostics when enabled, and leaves document, selection, and actions unchanged.
 
 Common delivery remains RuntimeRoot composition, not an InteractionEngine
 route: under one post-commit guard it performs spatial, resource/session

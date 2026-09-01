@@ -181,6 +181,14 @@ final class _DeletionResolution {
   final bool didThrow;
 }
 
+final class _ContainedMoveResolverFailure implements Exception {
+  const _ContainedMoveResolverFailure();
+}
+
+Never _throwContainedMoveResolverFailure() {
+  throw const _ContainedMoveResolverFailure();
+}
+
 // Common delivery has public callback seams for resource, frame, state, action,
 // and observer facts. This assert-only event supplies only their semantic
 // ordering and guard boundaries; sealed-collection work is observed at its
@@ -1117,7 +1125,9 @@ final class RuntimeRoot
   _DeletionResolution _resolveDeletion(CanvasDeletionCommitRequest request) {
     try {
       return _DeletionResolution(
-        runResolverCallback(() => config.deletionCommitResolver(request)),
+        _runGuardedResolverCallback(
+          () => config.deletionCommitResolver(request),
+        ),
       );
       // ResolverCallbackRejection is the guard's explicit, contained callback
       // outcome; treating it as an ordinary Error would duplicate diagnostics.
@@ -1130,9 +1140,9 @@ final class RuntimeRoot
     } on Object catch (error) {
       RuntimeInteractionDiagnosticsAdapter(
         _diagnostics,
-      ).recordDeletionResolverFailed(
+      ).recordResolverCallbackFailed(
         operation: request.operation.name,
-        errorKind: _deletionResolverErrorKind(error),
+        errorKind: _resolverCallbackErrorKind(error),
       );
       return const _DeletionResolution(
         CanvasDeletionDecision.cancel,
@@ -1141,7 +1151,7 @@ final class RuntimeRoot
     }
   }
 
-  String _deletionResolverErrorKind(Object error) {
+  String _resolverCallbackErrorKind(Object error) {
     if (error is Error) {
       return 'error';
     }
@@ -1950,6 +1960,10 @@ final class RuntimeRoot
   @override
   T runResolverCallback<T>(T Function() callback) {
     _ensureNotDisposed();
+    return _runGuardedResolverCallback(callback);
+  }
+
+  T _runGuardedResolverCallback<T>(T Function() callback) {
     if (_isRunningResolverCallback) {
       throw ResolverCallbackRejection(
         'Nested resource resolver callbacks are not supported.',
@@ -2848,7 +2862,9 @@ final class RuntimeRoot
   // Selected move commit flow.
   // Keep the terminal lifecycle adjacent so the closed-result, cleanup, and
   // common-delivery boundary cannot drift apart for this route.
-  // ignore: source-lines-of-code
+  // Keeping this terminal lifecycle together makes its cleanup and delivery
+  // relation safer to audit than splitting the outcome handling by metric.
+  // ignore: source-lines-of-code, halstead-volume
   void _deliverSelectedMoveCommit(
     SelectedMoveCommitIntent intent, {
     required int? timestampHintMs,
@@ -2859,6 +2875,17 @@ final class RuntimeRoot
       resolvedDelta = resolver == null
           ? intent.proposedDelta
           : _resolveSelectedMoveDelta(intent: intent, resolver: resolver);
+      // ResolverCallbackRejection is the callback guard's contained terminal
+      // outcome and must retain its original failure identity here.
+      // ignore: avoid_catching_errors
+    } on ResolverCallbackRejection {
+      _cleanupSelectedMove(PointerCleanupReason.resolverError);
+
+      return;
+    } on _ContainedMoveResolverFailure {
+      _cleanupSelectedMove(PointerCleanupReason.resolverError);
+
+      return;
     } on Object {
       _cleanupSelectedMove(PointerCleanupReason.resolverError);
       rethrow;
@@ -2910,17 +2937,31 @@ final class RuntimeRoot
     required SelectedMoveCommitIntent intent,
     required CanvasMoveCommitResolver resolver,
   }) {
-    final resolution = runResolverCallback(
-      () => resolver(
-        CanvasMoveCommitRequest(
-          documentSummary: intent.documentSummary,
-          movedElements: intent.movedElements,
-          proposedDelta: intent.proposedDelta,
-          selectionBoundsWorld: intent.selectionBoundsWorld,
+    final CanvasMoveResolution resolution;
+    try {
+      resolution = _runGuardedResolverCallback(
+        () => resolver(
+          CanvasMoveCommitRequest(
+            documentSummary: intent.documentSummary,
+            movedElements: intent.movedElements,
+            proposedDelta: intent.proposedDelta,
+            selectionBoundsWorld: intent.selectionBoundsWorld,
+          ),
         ),
-      ),
-    );
-
+      );
+      // The public guard has already emitted its bounded rejection diagnostic.
+      // ignore: avoid_catching_errors
+    } on ResolverCallbackRejection {
+      rethrow;
+    } on Object catch (error) {
+      RuntimeInteractionDiagnosticsAdapter(
+        _diagnostics,
+      ).recordResolverCallbackFailed(
+        operation: 'move',
+        errorKind: _resolverCallbackErrorKind(error),
+      );
+      _throwContainedMoveResolverFailure();
+    }
     return switch (resolution) {
       CanvasMoveCommit(:final delta) => _finiteResolvedDelta(delta),
       CanvasMoveCancel() => null,

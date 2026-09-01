@@ -590,7 +590,7 @@ final class _RecordingInteractionDiagnosticsSink
       _discardDiagnosticEvent();
 
   @override
-  void recordDeletionResolverFailed({
+  void recordResolverCallbackFailed({
     required String operation,
     required String errorKind,
   }) => _discardDiagnosticEvent();

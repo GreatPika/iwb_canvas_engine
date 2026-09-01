@@ -29,7 +29,7 @@ abstract interface class InteractionDiagnosticsSink {
 
   void recordResolverReentrantMutationRejected({required String operation});
 
-  void recordDeletionResolverFailed({
+  void recordResolverCallbackFailed({
     required String operation,
     required String errorKind,
   });
@@ -80,7 +80,7 @@ final class NoopInteractionDiagnosticsSink
       _discardDiagnosticEvent();
 
   @override
-  void recordDeletionResolverFailed({
+  void recordResolverCallbackFailed({
     required String operation,
     required String errorKind,
   }) => _discardDiagnosticEvent();

@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/move_machine.dart';
@@ -1531,7 +1532,7 @@ void _testGroupInteriorResolverCancelDoesNotCommit() {
 }
 
 void _testSelectedMoveResolverErrorCleansPreview() {
-  test('selected move resolver error cleans preview and rethrows', () {
+  test('selected move resolver error cleans preview without application', () {
     final scenario = _noCommitScenario(
       resolver: (_) => throw StateError('resolver failed'),
     );
@@ -1539,12 +1540,10 @@ void _testSelectedMoveResolverErrorCleansPreview() {
     root.selection.setSelection([CanvasElementId('a')]);
     _startSelectedMove(root);
 
-    expect(
-      () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
-      ),
-      throwsStateError,
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );
+    expect(scenario.root.diagnosticRecords, isEmpty);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
     _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
@@ -1552,7 +1551,7 @@ void _testSelectedMoveResolverErrorCleansPreview() {
 
 void _testGroupInteriorResolverErrorCleansPreview() {
   test(
-    'selected group interior resolver error cleans preview and rethrows',
+    'selected group interior resolver error cleans preview without application',
     () {
       final scenario = _noCommitScenario(
         resolver: (_) => throw StateError('resolver failed'),
@@ -1561,12 +1560,10 @@ void _testGroupInteriorResolverErrorCleansPreview() {
       root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
       _startGroupInteriorSelectedMove(root);
 
-      expect(
-        () => root.handlePointer(
-          _sample(CanvasPointerLifecyclePhase.up, _groupMoveEnd),
-        ),
-        throwsStateError,
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _groupMoveEnd),
       );
+      expect(scenario.root.diagnosticRecords, isEmpty);
       _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
     },
   );
@@ -1792,36 +1789,38 @@ void _expectNextAcceptedMoveStartsTimestampCursor(_NoCommitScenario scenario) {
 }
 
 void _testSelectedMoveResolverReentrancy() {
-  test('resolver reentrant public mutation throws without runtime effects', () {
-    late RuntimeRoot root;
-    root = _runtimeRoot(
-      resolver: (_) {
-        root.selection.clearSelection();
+  test(
+    'resolver reentrant public mutation is contained without runtime effects',
+    () {
+      late RuntimeRoot root;
+      root = _runtimeRoot(
+        resolver: (_) {
+          root.selection.clearSelection();
 
-        return const CanvasMoveCommit(delta: Offset(1, 1));
-      },
-    );
-    addTearDown(root.dispose);
-    root.selection.setSelection([CanvasElementId('a')]);
+          return const CanvasMoveCommit(delta: Offset(1, 1));
+        },
+      );
+      addTearDown(root.dispose);
+      root.selection.setSelection([CanvasElementId('a')]);
 
-    root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
-    root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
-    );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
+      );
 
-    expect(
-      () => root.handlePointer(
+      root.handlePointer(
         _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
-      ),
-      throwsStateError,
-    );
-    expect(root.preview, isA<CanvasNoPreview>());
-    expect(_rect(root, 'a').transform, CanvasTransform.identity);
-  });
+      );
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(_rect(root, 'a').transform, CanvasTransform.identity);
+    },
+  );
 }
 
 void _testSelectedMoveResolverDisposeReentrancy() {
-  test('resolver reentrant dispose throws without runtime effects', () {
+  test('resolver reentrant dispose is contained without runtime effects', () {
     late RuntimeRoot root;
     root = _runtimeRoot(
       resolver: (_) {
@@ -1834,11 +1833,8 @@ void _testSelectedMoveResolverDisposeReentrancy() {
     root.selection.setSelection([CanvasElementId('a')]);
     _startSelectedMove(root);
 
-    expect(
-      () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
-      ),
-      throwsStateError,
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );
     expect(root.preview, isA<CanvasNoPreview>());
     expect(_rect(root, 'a').transform, CanvasTransform.identity);
@@ -1846,14 +1842,13 @@ void _testSelectedMoveResolverDisposeReentrancy() {
   });
 }
 
-// Exact public errors, diagnostics, snapshots, and guard release are one
-// failure contract; splitting them would hide the required relation.
+// Contained callback outcomes, diagnostics, snapshots, and guard release are
+// one failure contract; splitting them would hide the required relation.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testSelectedMoveResolverFailureFidelity() {
   test(
-    'selected move resolver preserves rejection and thrown-error fidelity',
+    'selected move resolver contains failures and preserves valid decisions',
     () {
-      final sentinel = StateError('move resolver sentinel');
       late RuntimeRoot root;
       var branch = 0;
       root = RuntimeRoot.test(
@@ -1864,8 +1859,8 @@ void _testSelectedMoveResolverFailureFidelity() {
             return switch (branch) {
               0 => root.runResolverCallback(() => const CanvasMoveCancel()),
               1 => _rejectPublicMutationFromResolver(root),
-              2 => throw sentinel,
-              _ => const CanvasMoveCommit(delta: Offset(2, 0)),
+              2 => throw StateError('move resolver sentinel'),
+              _ => _acceptMoveAfterCaughtMutation(root),
             };
           },
         ),
@@ -1882,36 +1877,37 @@ void _testSelectedMoveResolverFailureFidelity() {
       root.selection.setSelection([CanvasElementId('a')]);
 
       _startSelectedMove(root);
-      final nested = _captureResolverFailureWithoutPreparation(root);
-      expect(nested.runtimeType, ResolverCallbackRejection);
-      expect(
-        nested.message,
-        'Nested resource resolver callbacks are not supported.',
-      );
+      _deliverContainedResolverFailureWithoutPreparation(root);
       _expectResolverFailureSnapshot(root, actions);
 
       branch = 1;
       _startSelectedMove(root);
-      final mutation = _captureResolverFailureWithoutPreparation(root);
-      expect(mutation.runtimeType, ResolverCallbackRejection);
-      expect(
-        mutation.message,
-        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
+      final cleanupReasons = <PointerCleanupReason>[];
+      InteractionEngine.observeCleanup(
+        cleanupReasons.add,
+        () => _deliverContainedResolverFailureWithoutPreparation(root),
       );
-      expect(
-        root.diagnosticRecords.map((record) => record.code),
-        contains(
-          const DiagnosticCode.interaction(
-            InteractionDiagnosticCode.resolverReentrantMutationRejected,
-          ),
+      expect(cleanupReasons, [PointerCleanupReason.resolverError]);
+      expect(root.diagnosticRecords.map((record) => record.code), [
+        const DiagnosticCode.interaction(
+          InteractionDiagnosticCode.resolverReentrantMutationRejected,
         ),
-      );
+      ]);
       _expectResolverFailureSnapshot(root, actions);
 
       branch = 2;
       _startSelectedMove(root);
-      final thrown = _captureResolverFailureWithoutPreparation(root);
-      expect(identical(thrown, sentinel), isTrue);
+      _deliverContainedResolverFailureWithoutPreparation(root);
+      expect(
+        root.diagnosticRecords.last.code,
+        const DiagnosticCode.interaction(
+          InteractionDiagnosticCode.resolverCallbackFailed,
+        ),
+      );
+      expect(root.diagnosticRecords.last.details, {
+        'operation': 'move',
+        'errorKind': 'error',
+      });
       _expectResolverFailureSnapshot(root, actions);
 
       branch = 3;
@@ -2030,10 +2026,20 @@ CanvasMoveResolution _rejectPublicMutationFromResolver(RuntimeRoot root) {
   return const CanvasMoveCancel();
 }
 
-StateError _captureResolverFailureWithoutPreparation(RuntimeRoot root) {
+CanvasMoveResolution _acceptMoveAfterCaughtMutation(RuntimeRoot root) {
+  try {
+    root.generateElementId();
+  }
+  // ignore: avoid_catching_errors, reason: The public callback guard deliberately signals rejection as StateError.
+  on ResolverCallbackRejection {
+    // A host can handle the rejected mutation and return its existing decision.
+  }
+  return const CanvasMoveCommit(delta: Offset(2, 0));
+}
+
+void _deliverContainedResolverFailureWithoutPreparation(RuntimeRoot root) {
   final preparationEvents = <StoreSparseCandidateEvent>[];
   final routeEvents = <RuntimeRouteTemporalEvent>[];
-  StateError? failure;
   RuntimeRoot.observeRouteTemporalEvents(
     routeEvents.add,
     () => CommittedDocument.observeSparseCandidateEvents(
@@ -2043,14 +2049,9 @@ StateError _captureResolverFailureWithoutPreparation(RuntimeRoot root) {
         }
       },
       () {
-        try {
-          root.handlePointer(
-            _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
-          );
-        } on Object catch (error) {
-          expect(error, isA<StateError>());
-          failure = error as StateError;
-        }
+        root.handlePointer(
+          _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+        );
       },
     ),
   );
@@ -2059,9 +2060,6 @@ StateError _captureResolverFailureWithoutPreparation(RuntimeRoot root) {
     RuntimeRouteTemporalEventKind.resolverGuardEntered,
     RuntimeRouteTemporalEventKind.resolverGuardReleased,
   ]);
-
-  return failure ??
-      (throw StateError('Expected selected move resolver failure.'));
 }
 
 void _expectResolverFailureSnapshot(
