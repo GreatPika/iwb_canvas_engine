@@ -51,7 +51,7 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
     final projectedEntries = projected.entries;
     final deletableEntries = <DeletionEntryFacts>[];
     for (final entry in projectedEntries) {
-      if (entry.element.isDeletable) {
+      if (entry.layerId != null && entry.element.isDeletable) {
         deletableEntries.add(entry);
       }
     }

@@ -62,27 +62,53 @@ stateDiagram-v2
     TerminalGate --> TerminalDecision: finite same-token terminal facts
 
     state TerminalDecision <<choice>>
-    TerminalDecision --> CleanupOnly: terminal intent is no-op, zero selected-move delta, or empty movable set
-    TerminalDecision --> ResolverDecision: qualified selected move, draw, or eraser terminal intent
+    TerminalDecision --> CleanupOnly: terminal intent is no-op, selected-move conflict, zero selected-move delta, or empty movable set
+    TerminalDecision --> MarqueeCommit: qualified marquee terminal intent / direct resolver-exempt route
+    TerminalDecision --> MoveResolverBasis: qualified selected move / immutable participant basis and proposed delta
+    TerminalDecision --> NonMovePreparation: qualified draw or eraser terminal intent
+
+    state "Resolver-exempt marquee commit" as MarqueeCommit
+    note right of MarqueeCommit
+      Marquee selection prepares and consumes its exact selection commit
+      directly. Its terminal route does not invoke CanvasCommitResolver.
+    end note
+    MarqueeCommit --> EditKernelCommit: prepare exact selection commit and consume
+
+    state "Non-Move exact preparation" as NonMovePreparation
+    note right of NonMovePreparation
+      Draw and eraser construct the exact prepared edit and sealed action
+      before resolver invocation.
+    end note
+    NonMovePreparation --> ResolverDecision: send prepared non-Move request
+
+    state "Move resolver basis" as MoveResolverBasis
+    note right of MoveResolverBasis
+      Move sends only its immutable participant basis and proposed delta to the
+      resolver. It does not prepare the exact transform edit before acceptance.
+    end note
+    MoveResolverBasis --> ResolverDecision: send CanvasMoveCommitRequest
 
     state "Unified commit resolver decision" as ResolverDecision
     note right of ResolverDecision
-      RuntimeRoot completes each route's existing preparation, then sends one
-      immutable CanvasCommitRequest under the mutation guard. Draw/Delete/Erase
-      use generic acceptance; Move uses a finite non-zero replacement delta.
+      RuntimeRoot sends one immutable CanvasCommitRequest under the mutation
+      guard. Non-Move routes arrive with exact preparation already complete;
+      Move arrives with its immutable basis and requires a finite non-zero
+      replacement delta before exact preparation.
       A returned lease is aborted once whenever installation will not occur.
     end note
     ResolverDecision --> CleanupOnly: CanvasCommitCancel or non-applicable acceptance
-    ResolverDecision --> ResolverErrorCleanup: resolver exception
-    ResolverDecision --> CommitIntent: compatible acceptance
+    ResolverDecision --> ResolverErrorCleanup: resolver callback or guard failure
+    ResolverDecision --> CommitIntent: compatible non-Move acceptance
+    ResolverDecision --> MoveExactPreparation: compatible Move acceptance with final delta
 
     state "Resolver error cleanup" as ResolverErrorCleanup
     note right of ResolverErrorCleanup
-      Resolver exceptions clear the selected-move preview/session,
-      then rethrow through the pointer handling boundary as a
-      runtime-safe error. They are not cancel/no-op outcomes.
+      Resolver callback and guard failures are contained by RuntimeRoot.
+      They clear the active route through normal cleanup, apply no edit,
+      and return a non-application outcome without rethrowing through
+      the pointer handling boundary.
     end note
-    ResolverErrorCleanup --> CleanupCoordinator: typed cleanup request and rethrow after cleanup
+    ResolverErrorCleanup --> CleanupCoordinator: typed cleanup request and contained non-application
 
     state "Commit intent" as CommitIntent
     note right of CommitIntent
@@ -93,6 +119,13 @@ stateDiagram-v2
     end note
 
     CommitIntent --> EditKernelCommit: RuntimeRoot consumes prepared interaction edit
+
+    state "Accepted Move exact preparation" as MoveExactPreparation
+    note right of MoveExactPreparation
+      Only after accepted final delta does Move prepare its exact transform,
+      projection, layout data, and action sealing for consumption.
+    end note
+    MoveExactPreparation --> EditKernelCommit: consume prepared Move edit
 
     state "EditKernel commit outcome" as EditKernelCommit
     note right of EditKernelCommit
@@ -152,7 +185,8 @@ stateDiagram-v2
 
     state "Public state/effects after close" as PublicSignals
     PublicSignals --> [*]: publish queued CanvasRuntimeState and repaint effects; action only after successful commit
-    PublicSignals --> RuntimeSafeError: resolver error exits after cleanup effects
+
+    EditKernelCommit --> RuntimeSafeError: uncontained preparation or accepted-consume error after cleanup
 
     state "Runtime-safe error boundary" as RuntimeSafeError
     RuntimeSafeError --> [*]

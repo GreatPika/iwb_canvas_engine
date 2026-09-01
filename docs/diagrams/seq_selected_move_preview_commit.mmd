@@ -131,12 +131,23 @@ sequenceDiagram
     SelectionFacts-->>ReadPort: selected ids
     ReadPort->>Store: verify captured participant identity/revision/bounds only
     Store-->>ReadPort: retained basis is current or conflicted
-    ReadPort-->>IE: terminal conflict fact; request inputs remain captured
+    ReadPort-->>IE: current terminal facts or conflict
 
-    Runtime->>Resolver: resolve CanvasMoveCommitRequest under runtime guard
-    Resolver-->>Runtime: CanvasMoveCommitAccept(delta, lease) or CanvasCommitCancel
+    alt selection revision conflict (without valid provisional replacement), epoch mismatch, unavailable document changes, or stale participant basis
+      IE->>Cleanup: typed cleanup request for selected move session
+        Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
+      IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Preview->>Frame: request main-scene repaint cleanup
+      Note over Resolver,EK: Conflict is cleanup-only: no resolver request, edit, committed state change, or action event.
+      IE-->>Tools: finish contained non-application
+    else current terminal basis
+      Runtime->>Resolver: resolve CanvasMoveCommitRequest under runtime guard
+      Resolver-->>Runtime: CanvasMoveCommitAccept(delta, lease) or CanvasCommitCancel
 
-    alt CanvasCommitCancel returned
+      alt CanvasCommitCancel returned
       IE->>Cleanup: typed cleanup request for selected move session
         Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
@@ -227,6 +238,7 @@ sequenceDiagram
         Signals-->>Surface: repaint main scene without preview delta
         Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, committed main repaint, and moveSelection action unchanged.
         Note over Runtime,Signals: Active preview cleanup publishes only preview state.
+      end
       end
     end
   end

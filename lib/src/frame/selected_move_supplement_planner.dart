@@ -133,10 +133,13 @@ final class SelectedMoveSupplementPlanner {
   }
 
   Set<CanvasElementId> _movableSelectedIds(CapturedMainFrame frame) {
-    final capturedIds = frame.snapshot.inputs.selectedMoveParticipantIds;
-    final selectedIds = capturedIds.isEmpty
-        ? frame.snapshot.selection.selectedElementIds
-        : capturedIds;
+    final capturedIds = frame.snapshot.inputs.selectedMoveParticipantIdSet;
+    final legacyCapturedIds = frame.snapshot.inputs.selectedMoveParticipantIds;
+    final selectedIds = capturedIds.isNotEmpty
+        ? capturedIds
+        : legacyCapturedIds.isNotEmpty
+        ? legacyCapturedIds.toSet()
+        : frame.snapshot.selection.selectedElementIds;
     final suppressedIds = _suppressedTextEditIds(frame);
 
     return {

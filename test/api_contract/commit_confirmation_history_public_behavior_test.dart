@@ -3,17 +3,19 @@ import 'package:test/test.dart';
 import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
-  test('public consumer replays committed confirmation facts for Undo and Redo',
-      () async {
-    await expectLater(
-      runFlutterConsumerTest(
-        packageName: 'iwb_canvas_engine_commit_confirmation_history',
-        testFileName: 'commit_confirmation_history_test.dart',
-        testSource: _consumerSource,
-      ),
-      completes,
-    );
-  });
+  test(
+    'public consumer replays committed confirmation facts for Undo and Redo',
+    () async {
+      await expectLater(
+        runFlutterConsumerTest(
+          packageName: 'iwb_canvas_engine_commit_confirmation_history',
+          testFileName: 'commit_confirmation_history_test.dart',
+          testSource: _consumerSource,
+        ),
+        completes,
+      );
+    },
+  );
 }
 
 // This is intentionally one external consumer source: it owns the cross-route
@@ -22,6 +24,7 @@ const _consumerSource = r'''
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
@@ -107,30 +110,33 @@ final class _Host implements CanvasCommitLease {
       CanvasElementId('transform-me'),
       CanvasElementId('selection-drop'),
     ]);
-    final baseline = runtime.readDocument();
-    final baselineSelection = runtime.selection.selectedElementIds;
-    final snapshots = <_ReplaySnapshot>[
-      _ReplaySnapshot(baseline, baselineSelection),
-    ];
+    final oracle = _ExpectedReplayOracle()..seed();
 
     _draw();
-    snapshots.add(_snapshot());
+    oracle.draw(history.records.last.request as CanvasDrawCommitRequest);
     cancelNextDelete = true;
     expect(runtime.commands.removeElement(CanvasElementId('cancel-me')), isFalse);
     // The cancellation record is intentionally absent because no lease commits.
     expect(history.records, hasLength(1));
-    snapshots.addAll(_delete());
+    _delete(CanvasElementId('selection-drop'));
+    oracle.delete(CanvasElementId('selection-drop'));
+    _delete(CanvasElementId('delete-me'));
+    oracle.delete(CanvasElementId('delete-me'));
+    _delete(CanvasElementId('background-delete'));
+    oracle.delete(CanvasElementId('background-delete'));
+    _delete(CanvasElementId('delete-line'));
+    oracle.delete(CanvasElementId('delete-line'));
     _erase();
-    snapshots.add(_snapshot());
+    oracle.delete(CanvasElementId('erase-me'));
     _abortMove();
     _move();
-    snapshots.add(_snapshot());
+    oracle.transform(CanvasTransform.translation(const Offset(37, 27)));
     _rotate();
-    snapshots.add(_snapshot());
+    oracle.transform(_expectedRotateTransform);
     _reflect();
-    snapshots.add(_snapshot());
+    oracle.transform(_expectedReflectTransform);
     await _textEdit();
-    snapshots.add(_snapshot());
+    oracle.textEdit();
     await Future<void>.delayed(Duration.zero);
 
     expect(history.records.map((record) => record.request.runtimeType), [
@@ -148,17 +154,18 @@ final class _Host implements CanvasCommitLease {
     expect(abortedCalls, 1);
     expect(resolverCalls, 12);
     expect(actions, hasLength(10));
-    expect(snapshots, hasLength(history.records.length + 1));
+    expect(oracle.snapshots, hasLength(history.records.length + 1));
+    expect(_text(runtime).revision, _textFrom(oracle.snapshots.last.document).revision);
 
-    final accepted = snapshots.last.document;
-    final acceptedSelection = snapshots.last.selection;
+    final accepted = oracle.snapshots.last.document;
+    final acceptedSelection = oracle.snapshots.last.selection;
     final actionsBeforeReplay = actions.length;
     final resolverCallsBeforeReplay = resolverCalls;
     _mutateTextAfterRecording();
     _recording = false;
     var documentRevision = runtime.state.value.revisions.document;
     var selectionRevision = runtime.state.value.revisions.selection;
-    var snapshotIndex = snapshots.length - 1;
+    var snapshotIndex = oracle.snapshots.length - 1;
     while (history.canUndo) {
       final selectionBeforeStep = runtime.selection.selectedElementIds;
       final textRevisionBeforeStep = _text(runtime).revision;
@@ -178,7 +185,7 @@ final class _Host implements CanvasCommitLease {
       }
       documentRevision = revisions.document;
       selectionRevision = revisions.selection;
-      _expectSnapshot(runtime, snapshots[--snapshotIndex]);
+      _expectSnapshot(runtime, oracle.snapshots[--snapshotIndex]);
     }
 
     while (history.canRedo) {
@@ -200,17 +207,20 @@ final class _Host implements CanvasCommitLease {
       }
       documentRevision = revisions.document;
       selectionRevision = revisions.selection;
-      _expectSnapshot(runtime, snapshots[++snapshotIndex]);
+      _expectSnapshot(runtime, oracle.snapshots[++snapshotIndex]);
     }
-    expect(snapshotIndex, snapshots.length - 1);
+    expect(snapshotIndex, oracle.snapshots.length - 1);
     _expectDocumentContent(runtime.readDocument(), accepted);
     expect(runtime.selection.selectedElementIds, acceptedSelection);
     expect(actions, hasLength(actionsBeforeReplay));
     expect(resolverCalls, resolverCallsBeforeReplay);
     _expectText(_text(runtime), _textFrom(accepted));
+    oracle.dispose();
   }
 
-  void _seed() {
+  void _seed() => _seedRuntime(runtime);
+
+  static void _seedRuntime(CanvasRuntime runtime) {
     runtime.edits.edit((edit) {
       edit.replaceDraftDocument(
         CanvasDocument(
@@ -302,15 +312,8 @@ final class _Host implements CanvasCommitLease {
     _drag(runtime.tools, Offset.zero, const Offset(8, 4));
   }
 
-  List<_ReplaySnapshot> _delete() {
-    expect(runtime.commands.removeElement(CanvasElementId('selection-drop')), isTrue);
-    final selectionDeleted = _snapshot();
-    expect(runtime.commands.removeElement(CanvasElementId('delete-me')), isTrue);
-    final contentDeleted = _snapshot();
-    expect(runtime.commands.removeElement(CanvasElementId('background-delete')), isTrue);
-    final backgroundDeleted = _snapshot();
-    expect(runtime.commands.removeElement(CanvasElementId('delete-line')), isTrue);
-    return [selectionDeleted, contentDeleted, backgroundDeleted, _snapshot()];
+  void _delete(CanvasElementId id) {
+    expect(runtime.commands.removeElement(id), isTrue);
   }
 
   void _erase() {
@@ -393,6 +396,152 @@ final class _Host implements CanvasCommitLease {
     await _actions.cancel();
     runtime.dispose();
   }
+}
+
+// This separate public runtime is an external oracle, never an input to
+// history. Its operations are test-authored expected outcomes, not replay.
+final class _ExpectedReplayOracle {
+  _ExpectedReplayOracle()
+      : runtime = CanvasRuntime(
+          config: CanvasRuntimeConfig(
+            commitResolver: (_) => throw StateError('oracle is edit-only'),
+          ),
+        );
+
+  final CanvasRuntime runtime;
+  final List<_ReplaySnapshot> snapshots = <_ReplaySnapshot>[];
+
+  void seed() {
+    _Host._seedRuntime(runtime);
+    runtime.selection.setSelection([
+      CanvasElementId('transform-me'),
+      CanvasElementId('selection-drop'),
+    ]);
+    _capture();
+  }
+
+  void draw(CanvasDrawCommitRequest request) {
+    final entry = request.entry;
+    runtime.edits.edit((edit) {
+      final expected = CanvasStrokeElement(
+        id: entry.element.id,
+        points: const [Offset.zero, Offset(8, 4)],
+        thickness: 3,
+        color: const Color(0xFF000000),
+      );
+      if (entry.layerId case final layerId?) {
+        edit.addElement(expected, layerId: layerId, index: entry.elementIndex);
+      } else {
+        edit.addBackgroundElement(expected, index: entry.elementIndex);
+      }
+    });
+    _capture();
+  }
+
+  void delete(CanvasElementId id) {
+    runtime.edits.edit((edit) {
+      edit.removeElement(id);
+      edit.setSelection([CanvasElementId('transform-me')]);
+    });
+    _capture();
+  }
+
+  void transform(CanvasTransform transform) {
+    runtime.edits.edit((edit) {
+      edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('transform-me'),
+          transform: CanvasFieldSet(transform),
+        ),
+      );
+      edit.setSelection([CanvasElementId('transform-me')]);
+    });
+    _capture();
+  }
+
+  void textEdit() {
+    const text = 'after with a longer compensated layout';
+    runtime.edits.edit((edit) {
+      edit.updateElement(
+        CanvasTextElementUpdate(
+          id: CanvasElementId('text'),
+          transform: CanvasFieldSet(_expectedTextTransform(text)),
+          opacity: const CanvasFieldSet(0.7),
+          hitPadding: const CanvasFieldSet(2),
+          isVisible: const CanvasFieldSet(true),
+          isSelectable: const CanvasFieldSet(true),
+          isLocked: const CanvasFieldSet(false),
+          isDeletable: const CanvasFieldSet(true),
+          isTransformable: const CanvasFieldSet(true),
+          metadata: CanvasFieldSet(CanvasMetadata.fromMap({'version': 'before'})),
+          text: const CanvasFieldSet(text),
+          fontSize: const CanvasFieldSet(18),
+          color: const CanvasFieldSet(Color(0xFF102030)),
+          align: const CanvasFieldSet(TextAlign.right),
+          textDirection: const CanvasFieldSet(TextDirection.ltr),
+          isBold: const CanvasFieldSet(true),
+          isItalic: const CanvasFieldSet(true),
+          isUnderline: const CanvasFieldSet(true),
+          fontFamily: const CanvasFieldClear(),
+          maxWidth: const CanvasFieldClear(),
+          lineHeight: const CanvasFieldClear(),
+        ),
+      );
+      edit.setSelection([CanvasElementId('transform-me')]);
+    });
+    _capture();
+  }
+
+  void _capture() {
+    snapshots.add(
+      _ReplaySnapshot(runtime.readDocument(), runtime.selection.selectedElementIds),
+    );
+  }
+
+  void dispose() => runtime.dispose();
+}
+
+CanvasTransform _aroundExpectedPivot(CanvasTransform transform, Offset pivot) =>
+    CanvasTransform.translation(
+      pivot,
+    ).multiply(transform).multiply(CanvasTransform.translation(-pivot));
+
+final _expectedRotateTransform = _aroundExpectedPivot(
+  CanvasTransform.rotationDegrees(90),
+  const Offset(37, 27),
+).multiply(CanvasTransform.translation(const Offset(37, 27)));
+
+final _expectedReflectTransform = _aroundExpectedPivot(
+  CanvasTransform.scale(-1, 1),
+  const Offset(37, 27),
+).multiply(_expectedRotateTransform);
+
+CanvasTransform _expectedTextTransform(String nextText) {
+  final before = _expectedTextSize('before');
+  final after = _expectedTextSize(nextText);
+  return CanvasTransform.translation(
+    Offset(90 + (before.width - after.width) / 2, (after.height - before.height) / 2),
+  );
+}
+
+Size _expectedTextSize(String text) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(
+        color: const Color(0xFF102030),
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
+        decoration: TextDecoration.underline,
+      ),
+    ),
+    textAlign: TextAlign.right,
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final size = painter.size;
+  painter.dispose();
+  return size;
 }
 
 final class _History {
@@ -572,11 +721,6 @@ CanvasPointerSample _sample(CanvasPointerLifecyclePhase phase, Offset position) 
     );
 
 CanvasTextElement _text(CanvasRuntime runtime) => _textFrom(runtime.readDocument());
-
-_ReplaySnapshot _snapshot() => _ReplaySnapshot(
-      _Host._active.runtime.readDocument(),
-      _Host._active.runtime.selection.selectedElementIds,
-    );
 
 void _expectSnapshot(CanvasRuntime runtime, _ReplaySnapshot expected) {
   _expectDocumentContent(runtime.readDocument(), expected.document);

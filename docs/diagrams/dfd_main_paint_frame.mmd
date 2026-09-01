@@ -30,6 +30,7 @@ flowchart LR
 
   subgraph Interaction["InteractionEngine"]
     PreviewSnapshot["CanvasSelectedMovePreview snapshot\ndelta if active"]
+    MoveParticipants["Immutable active Move basis\nselectedMoveParticipantIds + Set\ncaptured at gesture admission"]
   end
 
   subgraph Spatial["SpatialKernel"]
@@ -48,7 +49,7 @@ flowchart LR
   subgraph Frame["FrameEngine facade and frame-private collaborators"]
     RepaintSignal["Main repaint request"]
     Capture["FrameCaptureService\nmain frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, selection,\nselectionStyle,\nview camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, ordinary selection,\nselectedMoveParticipantIds + Set,\nselectionStyle, view camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
     OrdinaryPaintRecordCache["OrdinaryPaintRecordCache\nordinary committed records only\nno background/grid, view camera,\nselectedMoveDelta, previewDelta,\nor style-only facts in key/value"]
     OrdinaryPlan["Ordinary committed paint plan\nper-frame admitted record stream"]
     OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\neffective world viewport"]
@@ -91,6 +92,8 @@ flowchart LR
   SelectionFacts -->|"selectionRevision and selected ids"| CapturedFrame
   Capture -->|"read CanvasSelectedMovePreview once"| PreviewSnapshot
   PreviewSnapshot -->|"delta or none"| CapturedFrame
+  Capture -->|"read captured active Move basis once"| MoveParticipants
+  MoveParticipants -->|"immutable participant ids and set"| CapturedFrame
 
   CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"| OrdinaryPaintRecordCache
   OrdinaryPaintRecordCache -->|"cache hit: admitted committed record"| OrdinaryPlan
@@ -108,9 +111,9 @@ flowchart LR
   OrdinaryPlan -->|"store ordinary records only"| OrdinaryPaintRecordCache
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
-  CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
-  CapturedFrame -->|"selection ids, selectionRevision,\nboundsRevision, selectionStyle,\ndevicePixelRatio, and selected-move active flag"| SelectionDecoration
-  CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
+  CapturedFrame -->|"captured Move participant ids/set and preview delta"| FilterOrdinary
+  CapturedFrame -->|"ordinary current selection ids, selectionRevision,\nboundsRevision, selectionStyle,\ndevicePixelRatio, and selected-move active flag"| SelectionDecoration
+  CapturedFrame -->|"captured Move participant ids/set\nand selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations and order tokens"| SupplementStage
   SupplementStage -->|"shifted selected handles"| SupplementRecordBuilder

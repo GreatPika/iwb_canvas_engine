@@ -121,7 +121,152 @@ void main() {
       );
     },
   );
+  _testSelectedMoveReusesReverseOrderedCandidateFacts();
+  _testSelectedMoveDirectFallbackBoundsParticipantProjectionWork();
   _testSelectedMoveTerminalResortsCurrentHandles();
+}
+
+// This one flow ties candidate work to the ordered start facts it returns.
+// ignore: halstead-volume, source-lines-of-code
+void _testSelectedMoveReusesReverseOrderedCandidateFacts() {
+  test(
+    'selected move reuses reverse-ordered candidate facts for full coverage',
+    () {
+      final lower = _frameRectFacts('lower', Offset.zero, 0);
+      final middle = _frameRectFacts('middle', Offset.zero, 1);
+      final upper = _frameRectFacts('upper', Offset.zero, 2);
+      final frame = _CountingFrameFactsPort([lower, middle, upper]);
+      final adapter = RuntimeInteractionReadAdapter(
+        frame: frame,
+        documentSummary: () => const CanvasDocumentSummary(
+          elementCount: 3,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+        selection: _SelectionFactsFixture([lower.id, middle.id, upper.id]),
+        spatial: SpatialKernel()..rebuild(frame),
+        controllerEpoch: () => 0,
+        deletionEntryProjection: const _NoDeletionEntryProjection(),
+      );
+
+      frame.resetAccessCounts();
+      final projectionWork = <RuntimeSelectedMoveOrderingWorkEvent, int>{};
+      final facts =
+          RuntimeInteractionReadAdapter.observeSelectedMoveOrderingWork(
+            (event) => projectionWork.update(
+              event,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            ),
+            () => adapter.selectedMoveStartFacts(
+              const SelectedMoveStartReadRequest(worldPosition: Offset.zero),
+            ),
+          );
+
+      expect(facts.movableParticipants.map((item) => item.element.id), [
+        lower.id,
+        middle.id,
+        upper.id,
+      ]);
+      expect(
+        projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+            .participantCandidateCompared],
+        3,
+      );
+      expect(
+        projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+            .participantDirectlyResolved],
+        isNull,
+      );
+      expect(frame.resolveElementCalls, 14);
+    },
+  );
+}
+
+// The selected and unrelated-candidate setup must remain together to prove
+// direct fallback work stays below the former participant-by-candidate scan.
+// ignore: halstead-volume, source-lines-of-code
+void _testSelectedMoveDirectFallbackBoundsParticipantProjectionWork() {
+  test(
+    'selected move directly resolves participants outside hit candidates',
+    () {
+      final selectedLower = _frameRectFacts(
+        'selected-lower',
+        const Offset(-10000, 0),
+        0,
+      );
+      final selectedUpper = _frameRectFacts(
+        'selected-upper',
+        const Offset(-11000, 0),
+        1,
+      );
+      final frame = _CountingFrameFactsPort([
+        selectedLower,
+        selectedUpper,
+        for (var index = 0; index < 3; index += 1)
+          _frameRectFacts(
+            'locked-candidate-$index',
+            Offset.zero,
+            2 + index,
+            isLocked: true,
+          ),
+      ]);
+      final adapter = RuntimeInteractionReadAdapter(
+        frame: frame,
+        documentSummary: () => const CanvasDocumentSummary(
+          elementCount: 5,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+        selection: _SelectionFactsFixture([selectedLower.id, selectedUpper.id]),
+        spatial: SpatialKernel()..rebuild(frame),
+        controllerEpoch: () => 0,
+        deletionEntryProjection: const _NoDeletionEntryProjection(),
+      );
+
+      final projectionWork = <RuntimeSelectedMoveOrderingWorkEvent, int>{};
+      final facts =
+          RuntimeInteractionReadAdapter.observeSelectedMoveOrderingWork(
+            (event) => projectionWork.update(
+              event,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            ),
+            () => adapter.selectedMoveStartFacts(
+              const SelectedMoveStartReadRequest(worldPosition: Offset.zero),
+            ),
+          );
+
+      final observedProjectionWork =
+          (projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+                  .participantCandidateCompared] ??
+              0) +
+          (projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+                  .participantDirectlyResolved] ??
+              0);
+      expect(facts.movableParticipants.map((item) => item.element.id), [
+        selectedLower.id,
+        selectedUpper.id,
+      ]);
+      expect(facts.query.candidateCount, 3);
+      expect(
+        projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+            .participantCandidateCompared],
+        isNull,
+      );
+      expect(
+        projectionWork[RuntimeSelectedMoveOrderingWorkEvent
+            .participantDirectlyResolved],
+        facts.movableParticipants.length,
+      );
+      expect(
+        observedProjectionWork,
+        lessThanOrEqualTo(
+          facts.movableParticipants.length + facts.query.candidateCount,
+        ),
+      );
+    },
+  );
 }
 
 // This keeps session capture, structural reorder, and terminal assertions in
@@ -196,7 +341,12 @@ final class _NoDeletionEntryProjection implements DeletionEntryProjectionPort {
   ) => const DeletionEntryProjection.empty();
 }
 
-FrameElementFacts _frameRectFacts(String id, Offset offset, int orderToken) {
+FrameElementFacts _frameRectFacts(
+  String id,
+  Offset offset,
+  int orderToken, {
+  bool isLocked = false,
+}) {
   return FrameElementFacts(
     id: CanvasElementId(id),
     kind: CanvasElementKind.rect,
@@ -209,7 +359,7 @@ FrameElementFacts _frameRectFacts(String id, Offset offset, int orderToken) {
     hitPadding: 0,
     isVisible: true,
     isSelectable: true,
-    isLocked: false,
+    isLocked: isLocked,
     isDeletable: true,
     isTransformable: true,
     metadata: const CanvasMetadata.empty(),

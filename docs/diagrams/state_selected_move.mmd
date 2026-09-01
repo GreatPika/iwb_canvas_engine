@@ -53,13 +53,14 @@ stateDiagram-v2
     state "Terminal gate" as TerminalGate
     note right of TerminalGate
       Terminal commit requires the active token, session id,
-      controllerEpoch, finite proposed delta, and current movable
-      ids to still match the selected move session.
+      finite proposed delta, current selection revision (unless the
+      provisional replacement remains valid), controllerEpoch,
+      available document changes, and current immutable participant basis.
     end note
 
-    TerminalGate --> PreResolverCleanup: "stale token, controllerEpoch mismatch, invalid terminal, or non-finite delta"
+    TerminalGate --> PreResolverCleanup: "stale token, selection/basis conflict, controllerEpoch mismatch, unavailable document changes, invalid terminal, or non-finite delta"
     TerminalGate --> NoOpTerminal: "zero delta or empty movable set"
-    TerminalGate --> ResolverGate: "non-zero finite delta and non-empty movable set"
+    TerminalGate --> ResolverGate: "non-zero finite delta, non-empty current basis, and current terminal facts"
 
     state "No-op terminal" as NoOpTerminal
     note left of NoOpTerminal
@@ -79,26 +80,26 @@ stateDiagram-v2
     end note
 
     ResolverGate --> ResolverCleanup: "CanvasCommitCancel"
-    ResolverGate --> ResolverErrorCleanup: "resolver throws"
+    ResolverGate --> ResolverErrorCleanup: "resolver callback or guard failure"
     ResolverGate --> ResolverCleanup: "incompatible accept or invalid Move delta / abort returned lease"
     ResolverGate --> CommitIntent: "finite non-zero CanvasMoveCommitAccept delta"
 
     state "Resolver error cleanup" as ResolverErrorCleanup
     note right of ResolverErrorCleanup
-      Resolver exceptions clear
-      selected-move preview/session, then leave through the
-      pointer handling boundary as runtime-safe errors.
-      They are not cancel/no-op outcomes.
+      Resolver callback and guard failures are contained by RuntimeRoot.
+      They clear selected-move preview/session through normal cleanup,
+      apply no edit, and return a non-application outcome without
+      rethrowing through the pointer handling boundary.
     end note
-    ResolverErrorCleanup --> CleanupCoordinator: "typed cleanup request and rethrow"
+    ResolverErrorCleanup --> CleanupCoordinator: "typed cleanup request and contained non-application"
 
     state "Selected move commit intent" as CommitIntent
     note right of CommitIntent
-      InteractionEngine holds only a commit intent.
-      It does not mutate DocumentStoreKernel directly.
+      The accepted final delta is now the only input to exact Move
+      preparation. InteractionEngine never mutates DocumentStoreKernel directly.
     end note
 
-    CommitIntent --> EditKernelOutcome: "prepare selected Move transform and consume after compatible acceptance"
+    CommitIntent --> EditKernelOutcome: "prepare exact selected Move transform/action after acceptance, then consume"
 
     state "EditKernel commit outcome" as EditKernelOutcome
     note right of EditKernelOutcome
@@ -164,6 +165,7 @@ stateDiagram-v2
   PreResolverCleanup --> CleanupCoordinator: "typed cleanup request"
   ResolverCleanup --> CleanupCoordinator: "typed cleanup request after resolver cancel"
   EditFailureCleanup --> CleanupCoordinator: "typed cleanup request after edit failure"
+  EditFailureCleanup --> RuntimeSafeError: "rethrow original edit preparation or consume error after cleanup"
   DisposeCleanup --> CleanupCoordinator: "typed cleanup request before stream close"
 
   state "PointerToolCleanupCoordinator" as CleanupCoordinator
@@ -188,7 +190,6 @@ stateDiagram-v2
 
   MainSceneCleanup --> Idle: "cleanup published no action or committed document mutation"
   MainSceneCleanup --> Disposed: "dispose cleanup published before stream close"
-  MainSceneCleanup --> RuntimeSafeError: "resolver error exits after cleanup"
   MainSceneCleanup --> PublicSignals: "successful commit effects after cleanup"
   ActivePreview --> Idle: "terminal cleanup complete"
 

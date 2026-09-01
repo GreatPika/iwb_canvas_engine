@@ -135,6 +135,16 @@ final class InteractionEngine {
     return session.selectedMoveBasis?.participantIds ?? const [];
   }
 
+  /// Set membership for the active main-scene Move preview.
+  Set<CanvasElementId> get activeSelectedMoveParticipantIdSet {
+    final session = _activeSession;
+    if (session == null || session.kind != PointerSessionKind.moveModePointer) {
+      return const {};
+    }
+
+    return session.selectedMoveBasis?.participantIdSet ?? const {};
+  }
+
   /// Cancels only a selected move whose captured participants were changed by
   /// an already accepted document result. The cleanup's guarded provisional
   /// selection restoration cannot overwrite a newer external selection.
@@ -148,7 +158,8 @@ final class InteractionEngine {
       return InteractionCleanupOutcome.noChange;
     }
     final participantIds =
-        session.selectedMoveBasis?.participantIds ?? const <CanvasElementId>[];
+        session.selectedMoveBasis?.participantIdSet ??
+        const <CanvasElementId>{};
     final participantChanged =
         documentReplaced || touchedIds.any(participantIds.contains);
     if (!participantChanged && !selectionChanged) {

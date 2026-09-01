@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
@@ -58,21 +59,290 @@ void main() {
     return expectLater(_verifyUnifiedDrawCommitRequests(), completes);
   });
 
+  test(
+    'lease callbacks retain resolver exclusions during terminal delivery',
+    () {
+      return expectLater(_verifyLeaseCallbackGuardPrecedence(), completes);
+    },
+  );
+
   test('cancelled draw discards its candidate and remains action silent', () {
     return expectLater(_verifyCancelledDrawCommit(), completes);
   });
 }
 
+Future<void> _verifyLeaseCallbackGuardPrecedence() async {
+  final scenario = _caughtLeaseScenario();
+  final root = scenario.root;
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  _drawPencil(root);
+  _drawMarker(root);
+  await Future<void>.delayed(Duration.zero);
+
+  _expectCaughtLeaseCallbackOutcome(
+    root: root,
+    actions: actions,
+    committedLease: scenario.committedLease,
+    abortedLease: scenario.abortedLease,
+  );
+  _expectUnhandledLeaseCallbackRejections();
+}
+
+_CaughtLeaseScenario _caughtLeaseScenario() {
+  late RuntimeRoot root;
+  final committedLease = _DrawLease();
+  final abortedLease = _DrawLease();
+  var resolverCalls = 0;
+  root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(),
+    config: CanvasRuntimeConfig(
+      diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+      commitResolver: (_) {
+        resolverCalls += 1;
+        return resolverCalls == 1
+            ? CanvasCommitAccept(lease: committedLease)
+            : CanvasMoveCommitAccept(
+                delta: const Offset(1, 0),
+                lease: abortedLease,
+              );
+      },
+    ),
+  );
+  committedLease.onCommitted = () => _catchLeaseReentrantOperations(root);
+  abortedLease.onAborted = () => _catchLeaseReentrantOperations(root);
+
+  return (
+    root: root,
+    committedLease: committedLease,
+    abortedLease: abortedLease,
+  );
+}
+
+void _expectCaughtLeaseCallbackOutcome({
+  required RuntimeRoot root,
+  required List<CanvasActionCommitted> actions,
+  required _DrawLease committedLease,
+  required _DrawLease abortedLease,
+}) {
+  expect(actions, hasLength(1));
+  expect(committedLease.committedCalls, 1);
+  expect(committedLease.abortedCalls, 0);
+  expect(abortedLease.committedCalls, 0);
+  expect(abortedLease.abortedCalls, 1);
+  expect(root.isDisposed, isFalse);
+  expect(root.readDocument().layers.single.elements, hasLength(1));
+  expect(root.diagnosticRecords.map((record) => record.details), [
+    {'operation': 'runtimeMutation'},
+    {'operation': 'runtimeMutation'},
+    {'operation': 'dispose'},
+    {'operation': 'nestedResolverCallback'},
+    {'operation': 'runtimeMutation'},
+    {'operation': 'runtimeMutation'},
+    {'operation': 'dispose'},
+    {'operation': 'nestedResolverCallback'},
+  ]);
+}
+
+void _expectUnhandledLeaseCallbackRejections() {
+  for (final terminal in _LeaseTerminal.values) {
+    for (final operation in _leaseReentrantOperations) {
+      _expectUnhandledLeaseCallbackRejection(terminal, operation);
+    }
+  }
+}
+
+void _expectUnhandledLeaseCallbackRejection(
+  _LeaseTerminal terminal,
+  _LeaseReentrantOperation operation,
+) {
+  late RuntimeRoot root;
+  final lease = _DrawLease();
+  root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(),
+    config: CanvasRuntimeConfig(
+      diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+      commitResolver: (_) => _leaseResolution(terminal, lease),
+    ),
+  );
+  _configureUnhandledLeaseCallback(terminal, lease, root, operation);
+
+  _drawPencil(root);
+
+  _expectUnhandledLeaseCallbackOutcome(root, lease, terminal, operation);
+  root.dispose();
+}
+
+CanvasCommitResolution _leaseResolution(
+  _LeaseTerminal terminal,
+  _DrawLease lease,
+) => switch (terminal) {
+  _LeaseTerminal.committed => CanvasCommitAccept(lease: lease),
+  _LeaseTerminal.aborted => CanvasMoveCommitAccept(
+    delta: const Offset(1, 0),
+    lease: lease,
+  ),
+};
+
+void _configureUnhandledLeaseCallback(
+  _LeaseTerminal terminal,
+  _DrawLease lease,
+  RuntimeRoot root,
+  _LeaseReentrantOperation operation,
+) {
+  switch (terminal) {
+    case _LeaseTerminal.committed:
+      lease.onCommitted = () => operation.invoke(root);
+    case _LeaseTerminal.aborted:
+      lease.onAborted = () => operation.invoke(root);
+  }
+}
+
+void _expectUnhandledLeaseCallbackOutcome(
+  RuntimeRoot root,
+  _DrawLease lease,
+  _LeaseTerminal terminal,
+  _LeaseReentrantOperation operation,
+) {
+  expect(
+    root.isDisposed,
+    isFalse,
+    reason: '${terminal.name}/${operation.name}',
+  );
+  expect(root.diagnosticRecords.single.details, {
+    'operation': operation.diagnosticOperation,
+  });
+  switch (terminal) {
+    case _LeaseTerminal.committed:
+      expect(lease.committedCalls, 1);
+      expect(lease.abortedCalls, 0);
+      expect(root.readDocument().layers.single.elements, hasLength(1));
+    case _LeaseTerminal.aborted:
+      expect(lease.committedCalls, 0);
+      expect(lease.abortedCalls, 1);
+      expect(root.readDocument().layers, isEmpty);
+  }
+}
+
+void _catchLeaseReentrantOperations(RuntimeRoot root) {
+  final operations = [
+    for (final operation in _leaseReentrantOperations)
+      () => operation.invoke(root),
+  ];
+  for (final operation in operations) {
+    try {
+      operation();
+    }
+    // ignore: avoid_catching_errors, reason: The callback guard must permit a host to contain one rejected call.
+    on ResolverCallbackRejection {
+      continue;
+    }
+    fail('Expected lease callback operation to be rejected.');
+  }
+}
+
+enum _LeaseTerminal { committed, aborted }
+
+typedef _CaughtLeaseScenario = ({
+  RuntimeRoot root,
+  _DrawLease committedLease,
+  _DrawLease abortedLease,
+});
+
+final _leaseReentrantOperations = <_LeaseReentrantOperation>[
+  _LeaseReentrantOperation('id', 'runtimeMutation', (root) {
+    root.generateElementId();
+  }),
+  _LeaseReentrantOperation('mutation', 'runtimeMutation', (root) {
+    root.selection.clearSelection();
+  }),
+  _LeaseReentrantOperation('dispose', 'dispose', (root) {
+    root.dispose();
+  }),
+  _LeaseReentrantOperation('nestedResolver', 'nestedResolverCallback', (root) {
+    root.runResolverCallback(() => const CanvasCommitCancel());
+  }),
+];
+
+final class _LeaseReentrantOperation {
+  const _LeaseReentrantOperation(
+    this.name,
+    this.diagnosticOperation,
+    this.invoke,
+  );
+
+  final String name;
+  final String diagnosticOperation;
+  final void Function(RuntimeRoot root) invoke;
+}
+
+// Keeping the five route variants together avoids duplicate resolver setup and
+// preserves the required parity between their retained public facts.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _verifyUnifiedDrawCommitRequests() async {
   final requests = <CanvasDrawCommitRequest>[];
   final leases = <_DrawLease>[];
   final committedSnapshots = <({int documentRevision, int actionCount})>[];
   final actions = <CanvasActionCommitted>[];
+  var resolverCalls = 0;
+  const expectedContexts = [
+    _DrawRequestContext(
+      summary: CanvasDocumentSummary(
+        elementCount: 0,
+        layerCount: 0,
+        resourceCount: 0,
+      ),
+      documentRevision: 0,
+      selectedElementIdsBefore: [],
+    ),
+    _DrawRequestContext(
+      summary: CanvasDocumentSummary(
+        elementCount: 1,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 1,
+      selectedElementIdsBefore: [],
+    ),
+    _DrawRequestContext(
+      summary: CanvasDocumentSummary(
+        elementCount: 2,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 2,
+      selectedElementIdsBefore: [],
+    ),
+    _DrawRequestContext(
+      summary: CanvasDocumentSummary(
+        elementCount: 3,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 3,
+      selectedElementIdsBefore: [],
+    ),
+    _DrawRequestContext(
+      summary: CanvasDocumentSummary(
+        elementCount: 4,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 4,
+      selectedElementIdsBefore: [],
+    ),
+  ];
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: CanvasRuntimeConfig(
       commitResolver: (request) {
+        resolverCalls += 1;
         final draw = request as CanvasDrawCommitRequest;
         requests.add(draw);
         final lease = _DrawLease(
@@ -94,58 +364,253 @@ Future<void> _verifyUnifiedDrawCommitRequests() async {
     root.dispose();
   });
 
+  _expectDrawRuntimeContext(root, expectedContexts[0]);
   _drawPencil(root);
+  _expectDrawRuntimeContext(root, expectedContexts[1]);
   _drawMarker(root);
-  _drawLine(root);
+  _expectDrawRuntimeContext(root, expectedContexts[2]);
+  _drawFirstPointerDragLine(root);
+  _expectCleanDrawDelivery(root);
+  expect(requests, hasLength(3));
+  expect(resolverCalls, 3);
+  expect(leases, hasLength(3));
+  expect(leases[2].committedCalls, 1);
+  expect(leases[2].abortedCalls, 0);
+  _expectDrawRuntimeContext(root, expectedContexts[3]);
+  _drawLine(root, firstTapTimestampMs: 13, endpointTimestampMs: 14);
+  _expectDrawRuntimeContext(root, expectedContexts[4]);
   _drawDotLine(root);
   await Future<void>.delayed(Duration.zero);
 
-  expect(requests, hasLength(4));
-  _expectDrawRequest(
-    requests[0],
-    elementType: CanvasStrokeElement,
-    elementId: CanvasElementId('e0'),
-    tool: CanvasDrawTool.pencil,
-    elementIndex: 0,
-    createsLayer: true,
-  );
-  _expectDrawRequest(
-    requests[1],
-    elementType: CanvasStrokeElement,
-    elementId: CanvasElementId('e1'),
-    tool: CanvasDrawTool.marker,
-    elementIndex: 1,
-    createsLayer: false,
-  );
-  _expectDrawRequest(
-    requests[2],
-    elementType: CanvasLineElement,
+  _expectRetainedDrawRequests(requests);
+  expect(resolverCalls, 5);
+  expect(actions, hasLength(5));
+  final installedDocument = root.readDocument();
+  _expectPencil(installedDocument, actions[0]);
+  _expectMarker(installedDocument, actions[1]);
+  _expectDrawLineAction(
+    installedDocument,
+    actions[2],
     elementId: CanvasElementId('e2'),
-    tool: CanvasDrawTool.line,
-    elementIndex: 2,
-    createsLayer: false,
+    timestampMs: 12,
+    start: const Offset(10, 20),
+    end: const Offset(14, 25),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
   );
-  _expectDrawRequest(
-    requests[3],
-    elementType: CanvasLineElement,
+  _expectDrawLineAction(
+    installedDocument,
+    actions[3],
     elementId: CanvasElementId('e3'),
-    tool: CanvasDrawTool.line,
-    elementIndex: 3,
-    createsLayer: false,
+    timestampMs: 14,
+    start: const Offset(1, 2),
+    end: const Offset(3, 4),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
   );
-  final dotLine = requests[3].entry.element as CanvasLineElement;
-  expect(dotLine.start, dotLine.end);
+  _expectDrawLineAction(
+    installedDocument,
+    actions[4],
+    elementId: CanvasElementId('e4'),
+    timestampMs: 16,
+    start: const Offset(5, 6),
+    end: const Offset(5, 6),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
+  );
   expect(committedSnapshots, [
     (documentRevision: 1, actionCount: 0),
     (documentRevision: 2, actionCount: 1),
     (documentRevision: 3, actionCount: 2),
     (documentRevision: 4, actionCount: 3),
+    (documentRevision: 5, actionCount: 4),
   ]);
   expect(leases.every((lease) => lease.committedCalls == 1), isTrue);
   expect(leases.every((lease) => lease.abortedCalls == 0), isTrue);
+
+  root.edits.edit((edit) {
+    edit.addElement(
+      CanvasRectElement(
+        id: CanvasElementId('after-request-mutation'),
+        size: const Size(1, 1),
+      ),
+      layerId: CanvasLayerId('default-layer'),
+    );
+  });
+  root.selection.setSelection([CanvasElementId('after-request-mutation')]);
+  _expectRetainedDrawRequests(requests);
+  for (var index = 0; index < requests.length; index += 1) {
+    _expectDrawRequestContext(requests[index], expectedContexts[index]);
+    expect(
+      () => requests[index].selectedElementIdsBefore.add(
+        CanvasElementId('unexpected'),
+      ),
+      throwsUnsupportedError,
+    );
+  }
 }
 
-void _expectDrawRequest(
+// The complete literal matrix is clearer than splitting one retained-request
+// contract into route-specific helpers just to lower metrics.
+// ignore: halstead-volume, source-lines-of-code
+void _expectRetainedDrawRequests(List<CanvasDrawCommitRequest> requests) {
+  expect(requests, hasLength(5));
+  _expectStrokeDrawRequest(
+    requests[0],
+    elementId: CanvasElementId('e0'),
+    tool: CanvasDrawTool.pencil,
+    elementIndex: 0,
+    createsLayer: true,
+    points: const [Offset.zero, Offset(2, 3), Offset(4, 5)],
+    color: const Color(0xFF112233),
+    thickness: 3,
+    opacity: 1,
+  );
+  _expectStrokeDrawRequest(
+    requests[1],
+    elementId: CanvasElementId('e1'),
+    tool: CanvasDrawTool.marker,
+    elementIndex: 1,
+    createsLayer: false,
+    points: const [Offset.zero, Offset(1, 1)],
+    color: const Color(0xFF445566),
+    thickness: 12,
+    opacity: 0.4,
+  );
+  _expectLineDrawRequest(
+    requests[2],
+    elementId: CanvasElementId('e2'),
+    tool: CanvasDrawTool.line,
+    elementIndex: 2,
+    createsLayer: false,
+    start: const Offset(10, 20),
+    end: const Offset(14, 25),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
+  );
+  _expectLineDrawRequest(
+    requests[3],
+    elementId: CanvasElementId('e3'),
+    tool: CanvasDrawTool.line,
+    elementIndex: 3,
+    createsLayer: false,
+    start: const Offset(1, 2),
+    end: const Offset(3, 4),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
+  );
+  _expectLineDrawRequest(
+    requests[4],
+    elementId: CanvasElementId('e4'),
+    tool: CanvasDrawTool.line,
+    elementIndex: 4,
+    createsLayer: false,
+    start: const Offset(5, 6),
+    end: const Offset(5, 6),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
+  );
+}
+
+void _expectDrawRuntimeContext(RuntimeRoot root, _DrawRequestContext expected) {
+  final summary = root.state.value.summary;
+  expect(summary.elementCount, expected.summary.elementCount);
+  expect(summary.layerCount, expected.summary.layerCount);
+  expect(summary.resourceCount, expected.summary.resourceCount);
+  expect(root.state.value.revisions.document, expected.documentRevision);
+  expect(root.selection.selectedElementIds, expected.selectedElementIdsBefore);
+}
+
+void _expectDrawRequestContext(
+  CanvasDrawCommitRequest request,
+  _DrawRequestContext expected,
+) {
+  expect(request.documentSummary, expected.summary);
+  expect(request.documentRevision, expected.documentRevision);
+  expect(request.selectedElementIdsBefore, expected.selectedElementIdsBefore);
+}
+
+final class _DrawRequestContext {
+  const _DrawRequestContext({
+    required this.summary,
+    required this.documentRevision,
+    required this.selectedElementIdsBefore,
+  });
+
+  final CanvasDocumentSummary summary;
+  final int documentRevision;
+  final List<CanvasElementId> selectedElementIdsBefore;
+}
+
+// Named literal fields keep this public entry contract readable at each route.
+// ignore: number-of-parameters
+void _expectStrokeDrawRequest(
+  CanvasDrawCommitRequest request, {
+  required CanvasElementId elementId,
+  required CanvasDrawTool tool,
+  required int elementIndex,
+  required bool createsLayer,
+  required List<Offset> points,
+  required Color color,
+  required double thickness,
+  required double opacity,
+}) {
+  _expectDrawRequestEnvelope(
+    request,
+    elementType: CanvasStrokeElement,
+    elementId: elementId,
+    tool: tool,
+    elementIndex: elementIndex,
+    createsLayer: createsLayer,
+  );
+  final stroke = request.entry.element as CanvasStrokeElement;
+  expect(stroke.kind, CanvasElementKind.stroke);
+  expect(stroke.points, points);
+  expect(stroke.color, color);
+  expect(stroke.thickness, thickness);
+  expect(stroke.opacity, opacity);
+}
+
+// Named literal fields keep this public entry contract readable at each route.
+// ignore: number-of-parameters
+void _expectLineDrawRequest(
+  CanvasDrawCommitRequest request, {
+  required CanvasElementId elementId,
+  required CanvasDrawTool tool,
+  required int elementIndex,
+  required bool createsLayer,
+  required Offset start,
+  required Offset end,
+  required Color color,
+  required double thickness,
+  required double opacity,
+}) {
+  _expectDrawRequestEnvelope(
+    request,
+    elementType: CanvasLineElement,
+    elementId: elementId,
+    tool: tool,
+    elementIndex: elementIndex,
+    createsLayer: createsLayer,
+  );
+  final line = request.entry.element as CanvasLineElement;
+  expect(line.kind, CanvasElementKind.line);
+  expect(line.start, start);
+  expect(line.end, end);
+  expect(line.color, color);
+  expect(line.thickness, thickness);
+  expect(line.opacity, opacity);
+}
+
+// This single envelope assertion keeps all common public element facts together.
+// ignore: number-of-parameters
+void _expectDrawRequestEnvelope(
   CanvasDrawCommitRequest request, {
   required Type elementType,
   required CanvasElementId elementId,
@@ -153,8 +618,18 @@ void _expectDrawRequest(
   required int elementIndex,
   required bool createsLayer,
 }) {
-  expect(request.entry.element.runtimeType, elementType);
-  expect(request.entry.element.id, elementId);
+  final element = request.entry.element;
+  expect(element.runtimeType, elementType);
+  expect(element.id, elementId);
+  expect(element.revision, 0);
+  expect(element.transform, CanvasTransform.identity);
+  expect(element.hitPadding, 0);
+  expect(element.isVisible, isTrue);
+  expect(element.isSelectable, isTrue);
+  expect(element.isLocked, isFalse);
+  expect(element.isDeletable, isTrue);
+  expect(element.isTransformable, isTrue);
+  expect(element.metadata, const CanvasMetadata.empty());
   expect(request.entry.layerId, CanvasLayerId('default-layer'));
   expect(request.entry.elementIndex, elementIndex);
   expect(request.layerIndex, 0);
@@ -452,7 +927,30 @@ void _drawMarker(RuntimeRoot root) {
   );
 }
 
-void _drawLine(RuntimeRoot root) {
+void _drawFirstPointerDragLine(RuntimeRoot root) {
+  root.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.line,
+      color: const Color(0xFF778899),
+      lineThickness: 4,
+    ),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(10, 20)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(12, 22)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(14, 25), 12),
+  );
+}
+
+void _drawLine(
+  RuntimeRoot root, {
+  int firstTapTimestampMs = 12,
+  int endpointTimestampMs = 13,
+}) {
   root.setDrawStyle(
     CanvasDrawStyle(
       tool: CanvasDrawTool.line,
@@ -464,13 +962,21 @@ void _drawLine(RuntimeRoot root) {
     _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 2)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(1, 2), 12),
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(1, 2),
+      firstTapTimestampMs,
+    ),
   );
   root.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.down, const Offset(3, 4)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(3, 4), 13),
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(3, 4),
+      endpointTimestampMs,
+    ),
   );
 }
 
@@ -486,13 +992,13 @@ void _drawDotLine(RuntimeRoot root) {
     _pointer(CanvasPointerLifecyclePhase.down, const Offset(5, 6)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6)),
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6), 15),
   );
   root.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.down, const Offset(5, 6)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6)),
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6), 16),
   );
 }
 
@@ -531,21 +1037,48 @@ void _expectMarker(CanvasDocument document, CanvasActionCommitted action) {
 }
 
 void _expectLine(CanvasDocument document, CanvasActionCommitted action) {
+  _expectDrawLineAction(
+    document,
+    action,
+    elementId: CanvasElementId('e2'),
+    timestampMs: 13,
+    start: const Offset(1, 2),
+    end: const Offset(3, 4),
+    color: const Color(0xFF778899),
+    thickness: 4,
+    opacity: 1,
+  );
+}
+
+// The installed action and its element share one externally visible contract.
+// ignore: number-of-parameters
+void _expectDrawLineAction(
+  CanvasDocument document,
+  CanvasActionCommitted action, {
+  required CanvasElementId elementId,
+  required int timestampMs,
+  required Offset start,
+  required Offset end,
+  required Color color,
+  required double thickness,
+  required double opacity,
+}) {
   expect(action.type, CanvasActionType.drawLine);
-  expect(action.timestampMs, 13);
+  expect(action.elementIds, [elementId]);
+  expect(action.timestampMs, timestampMs);
   final payload = action.payload as CanvasDrawLineActionPayload;
-  expect(payload.color, const Color(0xFF778899));
-  expect(payload.thickness, 4);
-  expect(payload.opacity, 1);
-  expect(payload.startWorld, const Offset(1, 2));
-  expect(payload.endWorld, const Offset(3, 4));
+  expect(payload.color, color);
+  expect(payload.thickness, thickness);
+  expect(payload.opacity, opacity);
+  expect(payload.startWorld, start);
+  expect(payload.endWorld, end);
 
   final line = _element(document, action) as CanvasLineElement;
-  expect(line.start, const Offset(1, 2));
-  expect(line.end, const Offset(3, 4));
-  expect(line.color, const Color(0xFF778899));
-  expect(line.thickness, 4);
-  expect(line.opacity, 1);
+  expect(line.start, start);
+  expect(line.end, end);
+  expect(line.color, color);
+  expect(line.thickness, thickness);
+  expect(line.opacity, opacity);
 }
 
 CanvasElement _element(CanvasDocument document, CanvasActionCommitted action) {
@@ -1253,13 +1786,15 @@ final class _DrawWorkDeliveryProbe {
 final class _DrawLease implements CanvasCommitLease {
   _DrawLease({this.onCommitted});
 
-  final void Function()? onCommitted;
+  void Function()? onCommitted;
+  void Function()? onAborted;
   int committedCalls = 0;
   int abortedCalls = 0;
 
   @override
   void aborted() {
     abortedCalls += 1;
+    onAborted?.call();
   }
 
   @override

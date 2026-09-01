@@ -21,6 +21,7 @@ final class FrameCaptureInputs {
     this.viewCameraRevision = 0,
     this.textEditSuppression,
     this.selectedMoveParticipantIds = const [],
+    this.selectedMoveParticipantIdSet = const {},
   });
 
   final Rect viewportWorldBounds;
@@ -33,6 +34,7 @@ final class FrameCaptureInputs {
   final int previewRevision;
   final TextEditPaintSuppression? textEditSuppression;
   final Iterable<CanvasElementId> selectedMoveParticipantIds;
+  final Set<CanvasElementId> selectedMoveParticipantIdSet;
 
   Rect get effectiveWorldBounds => viewportWorldBounds.shift(viewCameraOffset);
 }

@@ -12,7 +12,7 @@ flowchart LR
     PointerInput["CanvasPointerInput\nfinite samples or no-position\nterminal cleanup input"]
     Sample["CanvasPointerSample\nfinite coordinates for all phases"]
     TerminalCleanupInput["CanvasPointerTerminalCleanup\nno coordinates; up/cancel only"]
-    CommitResolver["CanvasCommitResolver\nqualified Draw/Delete/Erase/Move/Rotate/Reflect/TextEdit"]
+    CommitResolver["CanvasCommitResolver\nexactly one guarded call per qualified\nDraw/Delete/Erase/Move/Rotate/Reflect/TextEdit"]
     CommitLease["CanvasCommitLease\ncommitted or aborted once"]
     PublicSignals["Public state/effects\naction events, CanvasRuntimeState,\nmain/overlay repaint requests"]
   end
@@ -35,7 +35,8 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
-    Delivery["Interaction commit delivery\nnon-mutating Store candidate read and action descriptor staging"]
+    Delivery["Operation-local preparation\nnon-Move: exact candidate before resolver;\nMove: prepare once from accepted final delta"]
+    PreparedNonMoveRequest["Frozen non-Move request\nprepared candidate facts; no second resolver"]
     EditResult["Terminal edit result\nruntime-owned delivery outcome"]
     ClosedDeliveryCleanup["Closed-result cleanup\npublish false and effect augmentation"]
   end
@@ -108,16 +109,19 @@ flowchart LR
   CleanupByKind -->|"overlay preview cleanup"| OverlayRepaint
 
   CommitIntent -->|"no-op, stale, invalid, excluded, or cancelled\nwithout resolver"| CancelIntent
-  CommitIntent -->|"fully qualified immutable request"| CommitResolver
+  CommitIntent -->|"non-Move qualified operation"| Delivery
+  CommitIntent -->|"Move proposal and immutable captured basis\nwithout a prepared candidate"| CommitResolver
   CommitResolver -.->|"CanvasCommitCancel or callback failure"| CancelIntent
-  CommitResolver -.->|"incompatible/invalid Move accept"| CommitLease
+  CommitResolver -.->|"incompatible acceptance for any route\nor invalid accepted Move delta"| CommitLease
   CommitLease -.->|"aborted once before install"| TerminalCleanup
-  CommitIntent -->|"terminal commit intent\nno document mutation yet"| Delivery
-  Delivery -->|"prepared exact facts and action descriptor"| InteractionEdit
+  CommitResolver -->|"accepted final Move delta"| Delivery
+  Delivery -->|"one exact prepared candidate and action descriptor"| InteractionEdit
   InteractionEdit -->|"draft mutations for terminal result"| Draft
   Draft -->|"exact touched state"| Touched
   Touched -->|"compile exact effects"| Compiler
-  Compiler -->|"preflighted prepared commit payload"| CommitResolver
+  Compiler -->|"non-Move exact prepared request"| PreparedNonMoveRequest
+  PreparedNonMoveRequest -->|"one resolver call after preparation"| CommitResolver
+  Compiler -->|"accepted Move candidate only\nno second resolver"| AtomicInstall
   CommitResolver -->|"compatible accept and lease"| AtomicInstall
   AtomicInstall -->|"accepted ledger reserves route ID, replaces committed tables, and invalidates projection revision"| Committed
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect

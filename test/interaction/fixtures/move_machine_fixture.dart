@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
@@ -1120,24 +1121,72 @@ void _testRealFrameExcludesNewlyEligibleSelectedNonparticipant() {
   );
 }
 
+// One terminal route must couple live pre-route facts, canonical request facts,
+// application, and retained immutability; splitting it loses that causal proof.
+// ignore: halstead-volume
 void _testSelectedMoveCommitWithResolver() {
   test(
     'selected move terminal commits resolved delta and typed action',
     () async {
+      final liveContext = _MoveRequestContext(
+        summary: const CanvasDocumentSummary(
+          elementCount: 3,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+        documentRevision: 0,
+        selectedElementIdsBefore: [CanvasElementId('b'), CanvasElementId('a')],
+      );
+      final requestContext = _MoveRequestContext(
+        summary: liveContext.summary,
+        documentRevision: liveContext.documentRevision,
+        selectedElementIdsBefore: [CanvasElementId('a'), CanvasElementId('b')],
+      );
       final scenario = _commitScenario();
       final root = scenario.root;
       final actions = scenario.actions;
       root.selection.setSelection([CanvasElementId('b'), CanvasElementId('a')]);
+      _expectMoveRuntimeContext(root, liveContext);
 
       _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
       await Future<void>.delayed(Duration.zero);
 
       expect(scenario.resolverCalls(), 1);
+      _expectMoveRequestContext(scenario.request(), requestContext);
       _expectResolverRequest(scenario.request());
       _expectCommittedTransforms(root);
       _expectMoveAction(actions.single);
       expect(root.preview, isA<CanvasNoPreview>());
+
+      _expectRetainedMoveRequestAfterRuntimeMutation(
+        root,
+        scenario.request,
+        requestContext,
+      );
     },
+  );
+}
+
+void _expectRetainedMoveRequestAfterRuntimeMutation(
+  RuntimeRoot root,
+  CanvasMoveCommitRequest? Function() request,
+  _MoveRequestContext expected,
+) {
+  root.edits.edit(
+    (edit) => edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('locked'),
+        opacity: const CanvasFieldSet(0.5),
+      ),
+    ),
+  );
+  root.selection.setSelection([CanvasElementId('locked')]);
+  final retained = request();
+  _expectMoveRequestContext(retained, expected);
+  if (retained == null) fail('Expected retained selected move request.');
+  expect(
+    () => retained.selectedElementIdsBefore.add(CanvasElementId('x')),
+    throwsUnsupportedError,
   );
 }
 
@@ -1457,6 +1506,38 @@ void _expectResolverRequest(CanvasMoveCommitRequest? request) {
     CanvasElementId('b'),
   ]);
   expect(value.selectionBoundsWorld, const Rect.fromLTRB(-5, -5, 25, 5));
+}
+
+void _expectMoveRuntimeContext(RuntimeRoot root, _MoveRequestContext expected) {
+  final summary = root.state.value.summary;
+  expect(summary.elementCount, expected.summary.elementCount);
+  expect(summary.layerCount, expected.summary.layerCount);
+  expect(summary.resourceCount, expected.summary.resourceCount);
+  expect(root.state.value.revisions.document, expected.documentRevision);
+  expect(root.selection.selectedElementIds, expected.selectedElementIdsBefore);
+}
+
+void _expectMoveRequestContext(
+  CanvasMoveCommitRequest? request,
+  _MoveRequestContext expected,
+) {
+  final received = request;
+  if (received == null) fail('Expected selected move resolver request.');
+  expect(received.documentSummary, expected.summary);
+  expect(received.documentRevision, expected.documentRevision);
+  expect(received.selectedElementIdsBefore, expected.selectedElementIdsBefore);
+}
+
+final class _MoveRequestContext {
+  const _MoveRequestContext({
+    required this.summary,
+    required this.documentRevision,
+    required this.selectedElementIdsBefore,
+  });
+
+  final CanvasDocumentSummary summary;
+  final int documentRevision;
+  final List<CanvasElementId> selectedElementIdsBefore;
 }
 
 void _expectGroupResolverRequest(CanvasMoveCommitRequest request) {
@@ -1891,6 +1972,9 @@ void _testSelectedMoveResolverFailureFidelity() {
         const DiagnosticCode.interaction(
           InteractionDiagnosticCode.resolverReentrantMutationRejected,
         ),
+        const DiagnosticCode.interaction(
+          InteractionDiagnosticCode.resolverReentrantMutationRejected,
+        ),
       ]);
       _expectResolverFailureSnapshot(root, actions);
 
@@ -1967,18 +2051,22 @@ void _testSelectedMoveCleanupPrecedesDelivery() {
     });
 
     final events = <RuntimeRouteTemporalEvent>[];
+    CommitSealedDeliveryWork? sealedDeliveryWork;
     terminalDelivery = true;
-    RuntimeRoot.observeRouteTemporalEvents(
-      (event) {
-        events.add(event);
-        _recordRouteLifecycleTrace(
-          event,
-          RuntimeNonTextRoute.selectedMove,
-          trace,
-        );
-      },
-      () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+    CommitApplier.observeSealedDeliveryWork(
+      (work) => sealedDeliveryWork = work,
+      () => RuntimeRoot.observeRouteTemporalEvents(
+        (event) {
+          events.add(event);
+          _recordRouteLifecycleTrace(
+            event,
+            RuntimeNonTextRoute.selectedMove,
+            trace,
+          );
+        },
+        () => root.handlePointer(
+          _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+        ),
       ),
     );
 
@@ -1998,6 +2086,11 @@ void _testSelectedMoveCleanupPrecedesDelivery() {
       fail('Expected selected-move commit-effect observer delivery.');
     }
     _expectSelectedMoveMergedRepaint(deliveryEffects);
+    final sealedWork = sealedDeliveryWork;
+    if (sealedWork == null) {
+      fail('Expected assert-only sealed delivery observation.');
+    }
+    expect(sealedWork.effectElements, deliveryEffects.length * 3);
     _expectRouteLifecycle(events, RuntimeNonTextRoute.selectedMove, const [
       RuntimeRouteTemporalEventKind.preparedApplyReturned,
       RuntimeRouteTemporalEventKind.routeCleanupCompleted,

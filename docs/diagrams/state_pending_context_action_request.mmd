@@ -186,10 +186,45 @@ stateDiagram-v2
     The registry is not an app UI session and not CanvasPreviewState.
   end note
 
-  IssuedRequestLive --> ConsumedRequest: "commitTextEdit accepted no-op or changed text content request / consume request"
+  IssuedRequestLive --> ConsumedRequest: "commitTextEdit equal text / silent consume request"
+  IssuedRequestLive --> TextEditPrepare: "commitTextEdit changed current text request"
   IssuedRequestLive --> ConsumedRequest: "commitTextEdit rejects known live stale, empty-canvas, vector/non-text, missing, or kind-mismatched request / privately consume request"
   IssuedRequestLive --> ConsumedRequest: "loadDocumentFromJson success / clear live request facts"
   IssuedRequestLive --> Disposed: "runtime.dispose() / clear live request facts before later commitTextEdit throws StateError"
+
+  state "Changed TextEdit preparation" as TextEditPrepare
+  note right of TextEditPrepare
+    The live request and editor draft remain owned by the host
+    until successful installation. Preparation creates the exact
+    normalized candidate, complete before/after facts, and anchor
+    compensation once; it does not consume the request.
+  end note
+
+  TextEditPrepare --> TextEditResolver: "prepared changed request"
+  TextEditPrepare --> IssuedRequestLive: "pre-install failure / preserve live request for retry"
+
+  state "Changed TextEdit resolver" as TextEditResolver
+  note right of TextEditResolver
+    One guarded CanvasCommitResolver call decides the prepared
+    candidate. A cancel, contained callback failure, incompatible
+    result, or invalid acceptance does not consume the live request.
+  end note
+
+  TextEditResolver --> ChangedTextApplied: "accepted lease and candidate"
+  TextEditResolver --> IssuedRequestLive: "cancel, contained callback failure, or rejected acceptance / retry"
+
+  state "Changed TextEdit installed and delivered" as ChangedTextApplied
+  note right of ChangedTextApplied
+    Install consumes the matching request, then final public state,
+    lease.committed, and the one changed action are delivered in order.
+    No different or newly opened editor session is closed here.
+  end note
+
+  ChangedTextApplied --> MatchingSessionClose: "matching accepted session only, after outer delivery"
+  ChangedTextApplied --> ConsumedRequest: "no matching session"
+
+  state "Matching editor session closed" as MatchingSessionClose
+  MatchingSessionClose --> ConsumedRequest: "matching session close notification"
 
   state "Consumed or stale request id" as ConsumedRequest
   note right of ConsumedRequest

@@ -335,13 +335,22 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   ]);
 }
 
-// The public request, accepted lease, final state, and action order need one
-// pointer-route witness; internal construction events cannot prove this API.
-// ignore: halstead-volume, source-lines-of-code
+// Request facts, lease order, and retained immutability share this one real
+// terminal route; extracting them would duplicate pointer setup and callbacks.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _acceptsUnifiedEraseRequestAndLease() async {
   CanvasEraseCommitRequest? request;
   var resolverCalls = 0;
   final lease = _UnifiedEraserLease();
+  const expectedContext = _EraseRequestContext(
+    summary: CanvasDocumentSummary(
+      elementCount: 1,
+      layerCount: 1,
+      resourceCount: 0,
+    ),
+    documentRevision: 0,
+    selectedElementIdsBefore: [],
+  );
   final root = RuntimeRoot.test(
     store: DocumentStoreKernel.withCommittedDocumentForTesting(
       CommittedDocument(_document()),
@@ -354,7 +363,8 @@ Future<void> _acceptsUnifiedEraseRequestAndLease() async {
       ),
       commitResolver: (candidate) {
         resolverCalls += 1;
-        request = candidate as CanvasEraseCommitRequest;
+        final received = candidate as CanvasEraseCommitRequest;
+        request = received;
         return CanvasCommitAccept(lease: lease);
       },
     ),
@@ -371,6 +381,7 @@ Future<void> _acceptsUnifiedEraseRequestAndLease() async {
   ));
 
   root.handlePointer(_sampleAt(CanvasPointerLifecyclePhase.down, Offset.zero));
+  _expectEraseRuntimeContext(root, expectedContext);
   root.handlePointer(
     _sampleAt(CanvasPointerLifecyclePhase.up, const Offset(1, 0)),
   );
@@ -393,6 +404,65 @@ Future<void> _acceptsUnifiedEraseRequestAndLease() async {
   expect(lease.snapshots, [(revision: 1, actions: 0)]);
   expect(lease.committedCalls, 1);
   expect(lease.abortedCalls, 0);
+
+  _expectRetainedEraseContextAfterRuntimeMutation(
+    root,
+    received,
+    expectedContext,
+  );
+}
+
+void _expectRetainedEraseContextAfterRuntimeMutation(
+  RuntimeRoot root,
+  CanvasEraseCommitRequest request,
+  _EraseRequestContext expected,
+) {
+  final id = CanvasElementId('after-request-mutation');
+  root.edits.edit(
+    (edit) => edit.addElement(
+      CanvasRectElement(id: id, size: const Size(1, 1)),
+      layerId: CanvasLayerId('eraser-layer'),
+    ),
+  );
+  root.selection.setSelection([id]);
+  _expectEraseRequestContext(request, expected);
+  expect(
+    () => request.selectedElementIdsBefore.add(CanvasElementId('unexpected')),
+    throwsUnsupportedError,
+  );
+}
+
+void _expectEraseRuntimeContext(
+  RuntimeRoot root,
+  _EraseRequestContext expected,
+) {
+  final summary = root.state.value.summary;
+  expect(summary.elementCount, expected.summary.elementCount);
+  expect(summary.layerCount, expected.summary.layerCount);
+  expect(summary.resourceCount, expected.summary.resourceCount);
+  expect(root.state.value.revisions.document, expected.documentRevision);
+  expect(root.selectedElementIds, expected.selectedElementIdsBefore);
+}
+
+void _expectEraseRequestContext(
+  CanvasEraseCommitRequest request,
+  _EraseRequestContext expected,
+) {
+  expect(request.documentSummary, expected.summary);
+  expect(request.documentRevision, expected.documentRevision);
+  expect(request.selectedElementIdsBefore, expected.selectedElementIdsBefore);
+}
+
+final class _EraseRequestContext {
+  const _EraseRequestContext({
+    required this.summary,
+    required this.documentRevision,
+    required this.selectedElementIdsBefore,
+  });
+
+  final CanvasDocumentSummary summary;
+  final int documentRevision;
+  final List<CanvasElementId> selectedElementIdsBefore;
 }
 
 // This route-local witness consumes the Unit-2 filter at the real pointer

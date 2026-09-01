@@ -11,7 +11,12 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
-    InteractionCommit["Runtime-prepared interaction commit\nselected move, pencil, marker, line"]
+    SemanticRoute["Semantic Runtime interaction routes\nDraw/Delete/Erase/Move/Rotate/Reflect/TextEdit"]
+    Prepare["Operation-local preparation\nnon-Move candidate before resolver;\nMove candidate once from accepted delta"]
+    CommitResolver["One guarded CanvasCommitResolver call\nqualified semantic operation only"]
+    CommitLease["CanvasCommitLease\nexactly one committed/aborted terminal"]
+    Consume["Prepared candidate consume\nafter accepted resolver result"]
+    ServiceEdit["CanvasEdit.edit service path\nresolver/lease/action exempt"]
     ActionDescriptor["Optional high-level action descriptor\nnot available to CanvasEditPort.edit(fn)"]
     CommonDelivery["One guarded common delivery\nsealed accepted values only"]
     RootFrame["Root surface-frame notifier"]
@@ -61,10 +66,18 @@ flowchart LR
   App -->|"synchronous edit callback"| EditPort
   EditPort -->|"declared by"| PublicContracts
   PostInstallEffects -->|"typed through"| InternalContracts
-  InteractionCommit -->|"generated id, element, and edit callback"| SessionGate
-  InteractionCommit -->|"stage draw/move action after accepted install"| ActionDescriptor
+  SemanticRoute -->|"qualified non-Move intent"| Prepare
+  SemanticRoute -->|"Move proposal with captured basis"| CommitResolver
+  CommitResolver -->|"accepted final Move delta"| Prepare
+  Prepare -->|"open one callback-local preparation"| SessionGate
+  CommitResolver -->|"accepted non-Move prepared candidate"| Consume
+  Consume -->|"consume sealed candidate without reconstruction"| Install
+  Consume -->|"stage action only after semantic acceptance"| ActionDescriptor
+  CommitResolver -.->|"cancel, callback failure, incompatible/invalid accept"| Rollback
+  CommitLease -.->|"aborted once on non-application"| Rollback
+  ServiceEdit -->|"open ordinary service edit"| SessionGate
   ActionDescriptor -->|"augment commit plan only for high-level runtime commit"| Compiler
-  EditPort -->|"open edit session"| SessionGate
+  EditPort -->|"exempt CanvasEdit.edit callback"| ServiceEdit
   SessionGate -->|"committed revision snapshot"| Committed
   Committed -->|"sparse committed facts"| SparseJournal
   Committed -->|"projection only for explicit materialization"| MaterializedFallback
@@ -82,26 +95,30 @@ flowchart LR
   Touched -->|"non-empty exact invalidation inputs"| Compiler
   Compiler -->|"produces immutable payload"| Plan
   Compiler -->|"prepare sparse commit/materialized fallback before install"| Committed
-  Plan -->|"prepare Store/ID, selection ownership, and sealed delivery before assignment"| Install
+  Plan -->|"non-Move frozen request before installation"| CommitResolver
+  Plan -->|"Move candidate prepared from accepted delta"| Consume
+  Plan -->|"resolver-exempt service edit"| Install
   Install -->|"prepare equality/revision and transfer selection backing before Store bind"| SelectionEffects
   Install -->|"replace committed tables and invalidate projection revision atomically"| Committed
   Install -->|"optionally assign already-owned changed selection"| SelectionEffects
   SelectionEffects -->|"update selected ids/revision"| SelectionState
 
-  Install -->|"return sealed accepted delivery values"| CommonDelivery
+  Install -->|"sealed accepted delivery values"| CommonDelivery
   CommonDelivery -->|"apply first"| SpatialDelta
   SpatialDelta -->|"then release affected targets"| ResourceInvalidation
   ResourceInvalidation -->|"then publish"| RootFrame
   RootFrame --> BridgedFrame
   BridgedFrame --> RuntimeState
-  RuntimeState --> RuntimeAction
+  RuntimeState -->|"semantic route only: then lease.committed"| CommitLease
+  RuntimeState -->|"service edit: return action-silent"| DeliveryComplete
+  CommitLease -->|"then changed semantic action"| RuntimeAction
   RuntimeAction --> Observer
   Observer -->|"release guard"| DeliveryComplete
   DeliveryComplete -->|"return after guarded delivery"| EditResult
   Install -->|"publish typed effect scope"| PostInstallEffects
   RootFrame -->|"dispatch repaint intent"| RepaintBus
-  RuntimeAction -->|"dispatch staged high-level action after state"| ActionEvents
-  EditPort -.->|"low-level public edits stage no user action descriptor"| ActionEvents
+  RuntimeAction -->|"dispatch staged semantic action after state/lease"| ActionEvents
+  ServiceEdit -.->|"resolver, lease, and user action exempt"| ActionEvents
   RuntimeState -->|"publish after atomic install"| PublicSignals
   EditResult -->|"callback result"| App
 

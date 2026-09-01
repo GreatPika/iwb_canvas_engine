@@ -789,16 +789,24 @@ void _testSessionNoOpCommitUsesCommandPath() {
 }
 
 // A rejected session must retain the same draft and request until the host
-// accepts it; this tests the public session seam without a new text owner.
-// ignore: halstead-volume
+// accepts it; cancel, lease abort, and retry share one ordered public seam.
+// Keeping those terminal transitions together is clearer than splitting them
+// solely to reduce the metric.
+// ignore: halstead-volume, source-lines-of-code
 void _testSessionCancelPreservesDraftForRetry() {
   test('session cancel preserves the matching draft for retry', () async {
-    var accept = false;
+    var resolverAttempt = 0;
+    final abortedLease = _TextCommitLease();
     final scenario = _Scenario(
       config: CanvasRuntimeConfig(
-        commitResolver: (_) => accept
-            ? const CanvasCommitAccept(lease: testAcceptingCommitLease)
-            : const CanvasCommitCancel(),
+        commitResolver: (_) => switch (resolverAttempt++) {
+          0 => const CanvasCommitCancel(),
+          1 => CanvasMoveCommitAccept(
+            delta: const Offset(1, 0),
+            lease: abortedLease,
+          ),
+          _ => const CanvasCommitAccept(lease: testAcceptingCommitLease),
+        },
       ),
     );
     try {
@@ -807,6 +815,25 @@ void _testSessionCancelPreservesDraftForRetry() {
         scenario.root.textEditing.startFromContextAction(request),
       );
       session.updateText('session retry');
+      final geometryBeforeAbort = session.geometry;
+      final styleBeforeAbort = session.style;
+      ({
+        bool isActive,
+        bool isStale,
+        String liveText,
+        CanvasTextEditGeometry geometry,
+        CanvasTextEditStyle style,
+      })?
+      abortedSessionReads;
+      abortedLease.onAborted = () {
+        abortedSessionReads = (
+          isActive: session.isActive,
+          isStale: session.isStale,
+          liveText: session.liveText,
+          geometry: session.geometry,
+          style: session.style,
+        );
+      };
       final beforeDocument = scenario.root.readDocument();
       final beforeRevisions = scenario.root.state.value.revisions;
       final beforeSelection = scenario.root.selectedElementIds;
@@ -815,14 +842,25 @@ void _testSessionCancelPreservesDraftForRetry() {
       expect(scenario.root.readDocument(), same(beforeDocument));
       expect(scenario.root.state.value.revisions, beforeRevisions);
       expect(scenario.root.selectedElementIds, beforeSelection);
+      expect(session.commit(timestampMs: 46), isFalse);
+      expect(abortedLease.abortedCalls, 1);
+      expect(
+        abortedSessionReads,
+        (
+          isActive: true,
+          isStale: false,
+          liveText: 'session retry',
+          geometry: geometryBeforeAbort,
+          style: styleBeforeAbort,
+        ),
+      );
       expect(session.isActive, isTrue);
       expect(session.liveText, 'session retry');
       expect(scenario.root.textEditing.activeSession.value, same(session));
       _expectRequestFactsLive(scenario.root, request);
       expect(scenario.actions, isEmpty);
 
-      accept = true;
-      expect(session.commit(timestampMs: 46), isTrue);
+      expect(session.commit(timestampMs: 47), isTrue);
       expect(_textValue(scenario.root), 'session retry');
       expect(scenario.actions, hasLength(1));
     } finally {
@@ -1067,6 +1105,16 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
         );
         final original = _textElement(scenario.root);
         session.updateText('expanded\nunified text');
+        final geometryBeforeCommit = session.geometry;
+        final styleBeforeCommit = session.style;
+        ({
+          bool isActive,
+          bool isStale,
+          String liveText,
+          CanvasTextEditGeometry geometry,
+          CanvasTextEditStyle style,
+        })?
+        committedSessionReads;
         order.clear();
         lease.onCommitted = () {
           order.add('lease');
@@ -1074,6 +1122,13 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
             revision: scenario.root.state.value.revisions.document,
             actions: scenario.actions.length,
           ));
+          committedSessionReads = (
+            isActive: session.isActive,
+            isStale: session.isStale,
+            liveText: session.liveText,
+            geometry: session.geometry,
+            style: session.style,
+          );
         };
 
         expect(session.commit(timestampMs: 71), isTrue);
@@ -1107,6 +1162,16 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
         expect(lease.snapshots, [(revision: 1, actions: 0)]);
         expect(lease.committedCalls, 1);
         expect(lease.abortedCalls, 0);
+        expect(
+          committedSessionReads,
+          (
+            isActive: false,
+            isStale: true,
+            liveText: 'expanded\nunified text',
+            geometry: geometryBeforeCommit,
+            style: styleBeforeCommit,
+          ),
+        );
         expect(order, ['state', 'lease', 'action', 'close']);
 
         scenario.root.edits.edit((edit) {
@@ -1487,6 +1552,7 @@ final class _Scenario {
 
 final class _TextCommitLease implements CanvasCommitLease {
   void Function()? onCommitted;
+  void Function()? onAborted;
   int committedCalls = 0;
   int abortedCalls = 0;
   final List<({int revision, int actions})> snapshots = [];
@@ -1500,6 +1566,7 @@ final class _TextCommitLease implements CanvasCommitLease {
   @override
   void aborted() {
     abortedCalls += 1;
+    onAborted?.call();
   }
 }
 

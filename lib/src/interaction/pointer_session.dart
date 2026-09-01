@@ -51,6 +51,10 @@ final class SelectedMoveSessionBasis {
     participantIds = List<CanvasElementId>.unmodifiable(
       this.participants.map((participant) => participant.element.id),
     );
+    // This membership view duplicates the ordered ID view only for hot-path
+    // lookups. Both values are derived here from the same immutable
+    // participants, and Move/frame fixtures validate their captured identity.
+    participantIdSet = Set<CanvasElementId>.unmodifiable(participantIds);
     movedElements = List<CanvasElementRead>.unmodifiable(
       this.participants.map((participant) => participant.element),
     );
@@ -58,6 +62,7 @@ final class SelectedMoveSessionBasis {
 
   final List<SelectedMoveParticipantFacts> participants;
   late final List<CanvasElementId> participantIds;
+  late final Set<CanvasElementId> participantIdSet;
   late final List<CanvasElementRead> movedElements;
   final CanvasDocumentSummary documentSummary;
   final Rect selectionBoundsWorld;

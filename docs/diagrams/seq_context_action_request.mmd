@@ -212,29 +212,43 @@ sequenceDiagram
       Note over Commands,Signals: Accepted no-op consumes request without document revision, repaint, or action event.
     else changed text is valid
       Commands->>Edit: prepare text edit with exact before/after pair
-      Edit-->>Commands: single-use prepared text install
-      Commands->>Resolver: resolve CanvasTextEditCommitRequest under runtime guard
-      alt CanvasCommitCancel, callback failure, or pre-install failure
-        Commands->>Edit: discard prepared text install
-        Note over Commands,Signals: The valid request and matching draft/session remain retryable; no state, action, or close notification occurs. A returned lease is aborted once when present.
+      Edit->>Edit: project candidate, preserve text layout/anchor, and seal editText action
+      alt preparation returns no install
+        Note over Edit,Signals: No resolver or lease exists. The live request and matching app-owned text session remain retryable, with no state, action, or close notification.
         Commands-->>App: false
-      else CanvasCommitAccept with lease
-      Commands->>Edit: consume accepted install and close edit handle
-      Commands->>Registry: consume and remove request facts
-      alt request matches active text session
-        Commands->>Commands: silently clear matching active session, suppression, and owned candidate state
-        Commands->>Commands: record outer text-edit interaction revision
-      else direct live request without active session
-        Note over Commands,Signals: No active-session dismissal notification or interaction revision, while accepted changed text still reaches common delivery.
-      end
-      Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, final state
-      Commands->>Lease: committed() under runtime guard
-      Commands->>Signals: editText action, observer, then guard release
-      alt request matched active text session
-        Commands->>AppUI: notify active-session closure after guard release
-        Note over AppUI,Signals: The listener sees accepted text and the consumed request after outer delivery. It may read state, complete a separate accepted mutation, or start another session; identity-aware cleanup preserves that new session. Flutter-reported listener errors do not stop the accepted route.
-      end
-      Commands-->>App: true
+      else preparation, projection, layout, or action-sealing throws
+        Note over Edit,Signals: No resolver or lease exists. The original error propagates; the live request and matching app-owned text session remain retryable, with no state, action, or close notification.
+      else single-use prepared text install
+        Edit-->>Commands: prepared install with exact before/after pair
+        Commands->>Resolver: resolve CanvasTextEditCommitRequest under runtime guard
+        alt CanvasCommitCancel, incompatible resolution, or callback failure
+          Commands->>Edit: discard prepared text install
+          Commands->>Lease: aborted() once when a lease was returned
+          Note over Commands,Signals: Resolver callback failure is contained as false. The valid request and matching app-owned text session remain retryable; no state, action, or close notification occurs.
+          Commands-->>App: false
+        else CanvasCommitAccept with lease
+          alt accepted install consume throws
+            Commands->>Lease: aborted() once
+            Note over Edit,Signals: The original consume error propagates. The request and matching app-owned text session remain retryable; no state, action, or close notification occurs.
+          else accepted install consumed and edit closed
+            Commands->>Edit: consume accepted install and close edit handle
+            Commands->>Registry: consume and remove request facts
+            alt request matches active text session
+              Commands->>Commands: silently clear matching active session, suppression, and owned candidate state
+              Commands->>Commands: record outer text-edit interaction revision
+            else direct live request without active session
+              Note over Commands,Signals: No active-session dismissal notification or interaction revision, while accepted changed text still reaches common delivery.
+            end
+            Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, final state
+            Commands->>Lease: committed() under runtime guard
+            Commands->>Signals: editText action, observer, then guard release
+            alt request matched active text session
+              Commands->>AppUI: notify active-session closure after guard release
+              Note over AppUI,Signals: The listener sees accepted text and the consumed request after outer delivery. It may read state, complete a separate accepted mutation, or start another session; identity-aware cleanup preserves that new session. Flutter-reported listener errors do not stop the accepted route.
+            end
+            Commands-->>App: true
+          end
+        end
       end
     end
   end

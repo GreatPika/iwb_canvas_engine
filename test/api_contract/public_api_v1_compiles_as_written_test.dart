@@ -66,6 +66,124 @@ void rejectsInternalDeletionDiagnostics() {
 
   _registerForbiddenAppearanceMemberTests();
   _registerFinalEditInterfaceNegativeTests();
+  _registerRetiredConfirmationSurfaceTests();
+}
+
+typedef _RootBarrelNegativeScenario = ({
+  String description,
+  String source,
+  String expectedCode,
+  String expectedToken,
+});
+
+final _retiredConfirmationSurfaceScenarios = <_RootBarrelNegativeScenario>[
+  for (final typeName in const [
+    'CanvasMoveCommitResolver',
+    'CanvasDeletionCommitResolver',
+    'CanvasMoveResolution',
+    'CanvasMoveCommit',
+    'CanvasMoveCancel',
+    'CanvasDeletionCommitRequest',
+    'CanvasDeletionDecision',
+    'CanvasDeletionOperation',
+    'CanvasDeletionEntry',
+    'PreparedInteractionCommit',
+    'PreparedInteractionApply',
+  ])
+    (
+      description: '$typeName is unavailable from the public barrel',
+      source: _rootBarrelConsumerSource('''
+void rejectsUnavailableType($typeName unavailable) {
+  _usesValidConfigBaseline();
+  _use(unavailable);
+}
+'''),
+      expectedCode: 'UNDEFINED_CLASS',
+      expectedToken: typeName,
+    ),
+  for (final configField in const [
+    'moveCommitResolver',
+    'deletionCommitResolver',
+  ])
+    (
+      description:
+          'CanvasRuntimeConfig.$configField is unavailable from the public barrel',
+      source: _rootBarrelConsumerSource('''
+void rejectsRetiredConfigField() {
+  _usesValidConfigBaseline();
+  final config = CanvasRuntimeConfig(
+    commitResolver: _resolveCommit,
+    $configField: null,
+  );
+  _use(config);
+}
+'''),
+      expectedCode: 'UNDEFINED_NAMED_PARAMETER',
+      expectedToken: configField,
+    ),
+];
+
+void _registerRetiredConfirmationSurfaceTests() {
+  for (final scenario in _retiredConfirmationSurfaceScenarios) {
+    test(scenario.description, () async {
+      final analyze = await _analyzeConsumerSource(scenario.source);
+      final output = _processOutput(analyze);
+      final errors = _machineDiagnostics(
+        analyze.stdout.toString(),
+      ).where((diagnostic) => diagnostic.severity == 'ERROR').toList();
+
+      expect(analyze.exitCode, isNot(0), reason: output);
+      expect(errors, hasLength(1), reason: output);
+
+      final error = errors.single;
+      expect(error.code, scenario.expectedCode, reason: output);
+      expect(
+        _diagnosticToken(scenario.source, error),
+        scenario.expectedToken,
+        reason: output,
+      );
+    });
+  }
+}
+
+String _rootBarrelConsumerSource(String body) {
+  return '''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+const _commitLease = _NoopCommitLease();
+
+CanvasCommitResolution _resolveCommit(CanvasCommitRequest request) =>
+    const CanvasCommitAccept(lease: _commitLease);
+
+void _usesValidConfigBaseline() {
+  final config = CanvasRuntimeConfig(commitResolver: _resolveCommit);
+  _use(config);
+}
+
+void _use(Object? value) {}
+
+final class _NoopCommitLease implements CanvasCommitLease {
+  const _NoopCommitLease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
+}
+
+$body
+''';
+}
+
+String _diagnosticToken(String source, _AnalyzerMachineDiagnostic diagnostic) {
+  return String.fromCharCodes(
+    source
+        .split('\n')[diagnostic.line - 1]
+        .codeUnits
+        .skip(diagnostic.column - 1)
+        .take(diagnostic.length),
+  );
 }
 
 void _registerForbiddenAppearanceMemberTests() {

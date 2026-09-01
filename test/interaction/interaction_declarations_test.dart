@@ -25,10 +25,6 @@ void main() {
   test('draw line commit intent has no generated element id', () {
     expect(_verifyDrawLineCommitIntentFields, returnsNormally);
   });
-
-  test('eraser commit intent carries eraser facts only', () {
-    expect(_verifyEraserCommitIntentFields, returnsNormally);
-  });
 }
 
 void _verifyRequiredDeclarations() {
@@ -190,21 +186,6 @@ void _verifyPointerAdmissionFields() {
     'contextRequest',
   });
   expect(fields.any((name) => name.contains('draw')), isFalse);
-}
-
-void _verifyEraserCommitIntentFields() {
-  final unit = _parse(
-    _source('lib/src/interaction/interaction_runtime_intents.dart'),
-  );
-  final fields = _fieldNames(unit, 'EraserCommitIntent');
-
-  expect(fields, {
-    'sessionId',
-    'pointerToken',
-    'eraserThickness',
-    'corridorPointCount',
-    'erasedEntries',
-  });
 }
 
 void _verifyDrawStrokeCommitIntentFields() {

@@ -35,6 +35,8 @@ enum RuntimeEraserEntryRouteWorkKind {
 enum RuntimeSelectedMoveOrderingWorkEvent {
   canonicalOrderComparison,
   sortStarted,
+  participantCandidateCompared,
+  participantDirectlyResolved,
 }
 
 @visibleForTesting
@@ -176,7 +178,15 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       ids: context.selection.selectedElementIds,
     );
     final selectedIds = _idsForHandles(selectedHandles);
-    final movableIds = _movableIdsFromHandles(selectedHandles);
+    final movableIds = <CanvasElementId>[];
+    final capturedMoveHandles = <FrameElementHandle>[];
+    for (final handle in selectedHandles) {
+      if (_isMovable(handle)) {
+        movableIds.add(handle.id);
+        capturedMoveHandles.add(handle);
+      }
+    }
+    final orderedMovableIds = List<CanvasElementId>.unmodifiable(movableIds);
     final query = _spatial.queryHit(
       SpatialQueryWindow(
         boundsWorld: _pointQueryWindow(request.worldPosition),
@@ -196,12 +206,10 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         ? null
         : interactionFactsForId(candidates, hit.id);
     final unselectedMovableHitId = _movableHitId(hitFacts);
-    final capturedMoveHandles = <FrameElementHandle>[
-      for (final handle in selectedHandles)
-        if (movableIds.contains(handle.id)) handle,
-    ];
     if (unselectedMovableHitId != null &&
-        !selectedIds.contains(unselectedMovableHitId)) {
+        !context.selection.selectedElementIds.contains(
+          unselectedMovableHitId,
+        )) {
       final handle = _frame.elementHandleForId(
         context.structuralRevision,
         unselectedMovableHitId,
@@ -245,13 +253,15 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
     return SelectedMoveStartFacts(
       selectedIds: selectedIds,
-      movableSelectedIds: movableIds,
+      movableSelectedIds: orderedMovableIds,
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
       movableParticipants: moveParticipants,
       documentSummary: _documentSummary(),
       selectionBoundsWorld: _participantBounds(moveParticipants),
-      hitSelectedMovable: hit != null && movableIds.contains(hit.id),
+      hitSelectedMovable:
+          unselectedMovableHitId != null &&
+          context.selection.selectedElementIds.contains(unselectedMovableHitId),
       topmostMovableHitId: unselectedMovableHitId,
       topmostHitId: hit?.id,
       topmostHitOrderToken: hit?.orderToken,
@@ -881,21 +891,107 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     ]);
   }
 
+  // Exact reuse and direct fallback share one participant-projection boundary.
+  // splitting them would duplicate captured-identity and move-read rules.
+  // ignore: halstead-volume, source-lines-of-code
   List<SelectedMoveParticipantFacts> _selectedMoveParticipantFacts(
-    Iterable<FrameElementHandle> handles,
+    List<FrameElementHandle> handles,
     RuntimeResolvedSpatialCandidates candidates,
   ) {
-    return List.unmodifiable([
-      for (final handle in handles)
-        if (interactionFactsForId(candidates, handle.id) ??
-                _frame.resolveElement(handle)
-            case final facts?)
+    if (handles.length == 1) {
+      final handle = handles.first;
+      final facts =
+          interactionFactsForId(candidates, handle.id) ??
+          _frame.resolveElement(handle);
+      return facts == null
+          ? const []
+          : [
+              SelectedMoveParticipantFacts(
+                element: elementReadForMove(facts, _moveGeometryPolicy),
+                generation: facts.generation,
+              ),
+            ];
+    }
+
+    final reverseAlignedCandidateFacts = _reverseAlignedCapturedCandidateFacts(
+      handles,
+      candidates,
+    );
+    if (reverseAlignedCandidateFacts != null) {
+      return List.unmodifiable([
+        for (final facts in reverseAlignedCandidateFacts)
           SelectedMoveParticipantFacts(
             element: elementReadForMove(facts, _moveGeometryPolicy),
             generation: facts.generation,
           ),
-    ]);
+      ]);
+    }
+
+    final participants = <SelectedMoveParticipantFacts>[];
+    for (final handle in handles) {
+      assert(
+        _recordSelectedMoveOrderingWork(
+          RuntimeSelectedMoveOrderingWorkEvent.participantDirectlyResolved,
+        ),
+        'selected move ordering observation failed',
+      );
+      if (_frame.resolveElement(handle) case final facts?) {
+        participants.add(
+          SelectedMoveParticipantFacts(
+            element: elementReadForMove(facts, _moveGeometryPolicy),
+            generation: facts.generation,
+          ),
+        );
+      }
+    }
+
+    return List.unmodifiable(participants);
   }
+
+  // Move capture is document-ordered while spatial candidates are topmost
+  // first. Reuse them only when the two immutable sequences exactly reverse.
+  List<FrameElementFacts>? _reverseAlignedCapturedCandidateFacts(
+    List<FrameElementHandle> handles,
+    RuntimeResolvedSpatialCandidates candidates,
+  ) {
+    final candidateHandles = candidates.handles;
+    final candidateFacts = candidates.facts;
+    if (handles.length != candidateHandles.length ||
+        handles.length != candidateFacts.length) {
+      return null;
+    }
+
+    for (var index = 0; index < handles.length; index += 1) {
+      final handle = handles[index];
+      final candidateIndex = candidateHandles.length - index - 1;
+      final candidateHandle = candidateHandles[candidateIndex];
+      final facts = candidateFacts[candidateIndex];
+      assert(
+        _recordSelectedMoveOrderingWork(
+          RuntimeSelectedMoveOrderingWorkEvent.participantCandidateCompared,
+        ),
+        'selected move ordering observation failed',
+      );
+      if (!_candidateMatchesCapturedHandle(handle, candidateHandle, facts)) {
+        return null;
+      }
+    }
+
+    return List<FrameElementFacts>.unmodifiable(candidateFacts.reversed);
+  }
+
+  bool _candidateMatchesCapturedHandle(
+    FrameElementHandle handle,
+    FrameElementHandle candidateHandle,
+    FrameElementFacts facts,
+  ) =>
+      handle.id == candidateHandle.id &&
+      handle.structuralRevision == candidateHandle.structuralRevision &&
+      handle.generation == candidateHandle.generation &&
+      handle.orderToken == candidateHandle.orderToken &&
+      facts.id == handle.id &&
+      facts.generation == handle.generation &&
+      facts.orderToken == handle.orderToken;
 
   Rect _participantBounds(Iterable<SelectedMoveParticipantFacts> participants) {
     final iterator = participants.iterator;

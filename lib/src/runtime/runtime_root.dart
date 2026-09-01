@@ -656,6 +656,8 @@ final class RuntimeRoot
       previewRevision: _interactionEngine.previewRevision,
       selectedMoveParticipantIds:
           _interactionEngine.activeSelectedMoveParticipantIds,
+      selectedMoveParticipantIdSet:
+          _interactionEngine.activeSelectedMoveParticipantIdSet,
       viewCameraOffset: _viewCamera.offset,
       viewCameraRevision: _viewCameraRevision,
       textEditSuppression: _textEditingPort.activeFrameSuppression,
@@ -1971,14 +1973,9 @@ final class RuntimeRoot
     if (_isDisposed) {
       return;
     }
+    _ensureNoActiveResolverCallback('dispose');
     _ensureNotDeliveringCommitEffects();
     _ensureNoDocumentLoadInProgress();
-    if (_isRunningResolverCallback) {
-      _recordResolverReentrantMutationRejected('dispose');
-      throw ResolverCallbackRejection(
-        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
-      );
-    }
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
     _applyPointerCleanupSelection(cleanupOutcome);
@@ -2195,6 +2192,7 @@ final class RuntimeRoot
 
   @override
   T runResolverCallback<T>(T Function() callback) {
+    _ensureNoActiveResolverCallback('nestedResolverCallback');
     _ensureNotDisposed();
     return _runGuardedResolverCallback(callback);
   }
@@ -2227,15 +2225,20 @@ final class RuntimeRoot
 
   @override
   void ensureRuntimeMutationAllowed() {
+    _ensureNoActiveResolverCallback('runtimeMutation');
     _ensureNotDisposed();
     _ensureNoActiveEditSession();
     _ensureNoDocumentLoadInProgress();
-    if (_isRunningResolverCallback) {
-      _recordResolverReentrantMutationRejected('runtimeMutation');
-      throw ResolverCallbackRejection(
-        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
-      );
+  }
+
+  void _ensureNoActiveResolverCallback(String operation) {
+    if (!_isRunningResolverCallback) {
+      return;
     }
+    _recordResolverReentrantMutationRejected(operation);
+    throw ResolverCallbackRejection(
+      'CanvasRuntime public mutations cannot run during resolver or commit-lease callbacks.',
+    );
   }
 
   void _ensureNotDisposed() {
@@ -2758,9 +2761,7 @@ final class RuntimeRoot
     assert(() {
       // The test-only wrapper must see RuntimeRoot's real sealed collections.
       // ignore: invalid_use_of_visible_for_testing_member
-      deliveryResult = CommitApplier.observeSealedDeliveryCollections(
-        applyResult,
-      );
+      deliveryResult = CommitApplier.observeSealedDeliveryCollections(result);
       return true;
     }(), 'sealed delivery work observation failed');
     _isDeliveringCommitEffects = true;
@@ -4658,6 +4659,12 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _root.ensureRuntimeMutationAllowed();
   }
 
+  void _ensurePublicReadAllowed() {
+    if (_root.isDisposed) {
+      _root._ensureNotDisposed();
+    }
+  }
+
   bool clearAcceptedRequest(
     CanvasInteractionRequestId requestId, {
     bool publishState = true,
@@ -4735,27 +4742,27 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
         generation: guard.generation as int,
         initialText: initialText,
         liveText: () {
-          _ensurePublicOperationAllowed();
+          _ensurePublicReadAllowed();
 
           return state.liveText;
         },
         geometry: () {
-          _ensurePublicOperationAllowed();
+          _ensurePublicReadAllowed();
 
           return _geometryFor(state);
         },
         style: () {
-          _ensurePublicOperationAllowed();
+          _ensurePublicReadAllowed();
 
           return _styleFor(state.baseFacts);
         },
         isActive: () {
-          _ensurePublicOperationAllowed();
+          _ensurePublicReadAllowed();
 
           return state.active;
         },
         isStale: () {
-          _ensurePublicOperationAllowed();
+          _ensurePublicReadAllowed();
 
           return _isStale(state);
         },

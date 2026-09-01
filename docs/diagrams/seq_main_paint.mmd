@@ -17,6 +17,7 @@ sequenceDiagram
   participant Resources as ResourceKernel
   participant SelectionFacts as SelectionFactsPort
   participant Preview as CanvasPreviewState
+  participant MoveBasis as Interaction active Move basis
   participant Spatial as SpatialKernel
   participant PlanCache as OrdinaryPaintRecordCache
   participant Session as SurfaceResourceSession
@@ -40,6 +41,8 @@ sequenceDiagram
   Capture->>Capture: store captured spatialPaintResult and admitted candidate handles
   Capture->>Preview: capture CanvasSelectedMovePreview once
   Preview-->>Capture: delta or CanvasNoPreview
+  Capture->>MoveBasis: capture immutable selectedMoveParticipantIds and Set once
+  MoveBasis-->>Capture: gesture-admission participant basis or empty
   Capture-->>Frame: CapturedMainFrame
   Note over Capture: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
@@ -83,7 +86,7 @@ sequenceDiagram
     alt shifted admission rejected
       Supplement-->>Frame: ordinary records unchanged with rejected-admission reason
     else shifted admission accepted
-      Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+    Supplement->>Supplement: filter captured Move participant ids from ordinary records for this frame
       Supplement->>Supplement: selected candidate handles with id, generation, orderToken, and structuralRevision
       loop for each selected supplement candidate handle
         Supplement->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
@@ -101,7 +104,7 @@ sequenceDiagram
       Supplement-->>Frame: merged records with per-frame supplement
     end
     Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
-    Note over Ordinary,Supplement: RenderElementRecord payload dispatch uses only its sealed RenderElementRow, and no render-family mirror is cached or copied.
+    Note over Ordinary,Supplement: Supplements use the immutable gesture basis; a later live-selection member cannot join this Move frame. RenderElementRecord payload dispatch uses only its sealed RenderElementRow, and no render-family mirror is cached or copied.
   end
 
   Frame->>Background: build static background plan
@@ -113,7 +116,7 @@ sequenceDiagram
     Decoration-->>Frame: selection UI primitives
   end
   Note over Supplement: No full-scene sort and no CanvasDocument materialization.
-  Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the OrdinaryPaintRecordCache.
+  Note over Decoration,SelectionFacts: Ordinary selection decoration still uses the captured current selection. Selected Move supplements instead use the immutable gesture basis; both are per-frame concerns outside the OrdinaryPaintRecordCache.
 
   opt explicit frame caller supplies SurfaceResourceSession and records include image/vector resource ids
     ExplicitCaller->>Assets: bind assets for immutable frame output
