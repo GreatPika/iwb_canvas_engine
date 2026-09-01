@@ -8,7 +8,7 @@ Every admitted Draw, Delete, Erase, Move, Rotate, Reflect, and TextEdit operatio
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `design` | docs/planning/designs/2026-08-31-canvas-unified-commit-confirmation-protocol.md |
+| Design | `design` | docs/history/designs/2026-08-31-canvas-unified-commit-confirmation-protocol.md |
 | PLAN | none | none |
 | Other | `s-001` | user request |
 | Other | `s-002` | /Users/blackpika/.codex/attachments/03c044b6-f7d7-4bb8-991e-9b07810d641b/pasted-text.txt |

@@ -19,7 +19,7 @@ outcome: R-001
 | S-002 | other | `/Users/blackpika/.codex/attachments/03c044b6-f7d7-4bb8-991e-9b07810d641b/pasted-text.txt` | Complete supplied specification, including exact public protocol names and failure ordering. |
 | S-003 | research | `docs/history/research/2026-08-31-canvas-unified-commit-confirmation-protocol.md` | Historical route investigation, checked against current owners; not future behavioral authority. |
 | S-004 | repository | `AGENTS.md` | Repository lifecycle, verification, and architecture ownership rules. |
-| S-005 | repository | `docs/planning/README.md` | Active design and future Change Contract lifecycle. |
+| S-005 | repository | `docs/planning/README.md` | Design and Change Contract lifecycle. |
 | S-006 | repository | `lib/src/contracts/public/canvas_runtime.dart` | Current configuration, editing capabilities, and command surfaces. |
 | S-007 | repository | `lib/src/contracts/public/canvas_actions.dart` | Current Move request and action payload contracts. |
 | S-008 | repository | `lib/src/contracts/public/canvas_deletion.dart` | Current deletion projection and policy types. |
