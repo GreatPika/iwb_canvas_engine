@@ -1358,6 +1358,11 @@ final class RuntimeRoot
       _markTextEditInteractionChanged();
     }
     _deliverEditCommitResult(applyResult);
+    if (didClearTextEditSuppression) {
+      _deliverAcceptedNotifierNotification(
+        _textEditingPort.notifyActiveSessionChanged,
+      );
+    }
 
     return true;
   }
@@ -2131,13 +2136,30 @@ final class RuntimeRoot
       return;
     }
     if (continueAfterSurfaceFrameFailure) {
-      try {
-        _state.value = state;
-      } on Object {
-        // Accepted delivery continues with actions after a notifier failure.
-      }
+      _deliverAcceptedNotifierNotification(() => _state.value = state);
     } else {
       _state.value = state;
+    }
+  }
+
+  void _deliverAcceptedNotifierNotification(VoidCallback notify) {
+    final previousErrorReporter = FlutterError.onError;
+    FlutterError.onError = (details) {
+      try {
+        previousErrorReporter?.call(details);
+      } on Object {
+        // A reporter must not abort ChangeNotifier before it can finish its
+        // listener iteration and restore its own notification depth.
+      }
+    };
+    try {
+      notify();
+    } on Object {
+      // ChangeNotifier reports listener failures through FlutterError before a
+      // failing reporter escapes. An accepted operation keeps that report but
+      // must still retain its successful public result.
+    } finally {
+      FlutterError.onError = previousErrorReporter;
     }
   }
 
@@ -3944,6 +3966,9 @@ final class _RuntimeRevisionFacts {
 final class _TextEditActiveSessionNotifier extends ChangeNotifier
     implements ValueListenable<CanvasTextEditSession?> {
   CanvasTextEditSession? _value;
+  var _notificationDepth = 0;
+  var _disposePending = false;
+  var _didDispose = false;
 
   @override
   CanvasTextEditSession? get value => _value;
@@ -3953,7 +3978,7 @@ final class _TextEditActiveSessionNotifier extends ChangeNotifier
       return;
     }
     _value = next;
-    notifyListeners();
+    _dispatchListeners();
   }
 
   CanvasTextEditSession? replaceSilently(CanvasTextEditSession? next) {
@@ -3964,11 +3989,38 @@ final class _TextEditActiveSessionNotifier extends ChangeNotifier
   }
 
   void notifyLiveTextChanged() {
-    notifyListeners();
+    _dispatchListeners();
   }
 
   void notifyValueChanged() {
-    notifyListeners();
+    _dispatchListeners();
+  }
+
+  @override
+  void dispose() {
+    if (_didDispose) {
+      return;
+    }
+    if (_notificationDepth > 0) {
+      _disposePending = true;
+
+      return;
+    }
+    _disposePending = false;
+    _didDispose = true;
+    super.dispose();
+  }
+
+  void _dispatchListeners() {
+    _notificationDepth += 1;
+    try {
+      super.notifyListeners();
+    } finally {
+      _notificationDepth -= 1;
+      if (_notificationDepth == 0 && _disposePending) {
+        dispose();
+      }
+    }
   }
 }
 
@@ -4084,7 +4136,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _dismissActiveWithoutGuard();
   }
 
-  bool _dismissActiveWithoutGuard({bool publishState = true}) {
+  bool _dismissActiveWithoutGuard({
+    bool publishState = true,
+    bool notifyActiveSession = true,
+  }) {
     final state = _active;
     if (state == null) {
       _pruneExpiredCandidateStates();
@@ -4094,7 +4149,11 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     state.active = false;
     _active = null;
     _suppressionToken = null;
-    _activeSession.value = null;
+    if (notifyActiveSession) {
+      _activeSession.value = null;
+    } else {
+      _activeSession.replaceSilently(null);
+    }
     _discardCandidateState(state);
     _pruneExpiredCandidateStates();
     if (publishState) {
@@ -4144,7 +4203,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }) {
     final state = _active;
     if (state != null && state.requestId == requestId) {
-      return _dismissActiveWithoutGuard(publishState: publishState);
+      return _dismissActiveWithoutGuard(
+        publishState: publishState,
+        notifyActiveSession: publishState,
+      );
     }
     _pruneExpiredCandidateStates();
 
@@ -4363,7 +4425,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       state.liveText,
       timestampMs: timestampMs,
     );
-    if (didCommit || _isStale(state)) {
+    if (!_root.isDisposed && (didCommit || _isStale(state))) {
       _dismiss(state);
     }
 

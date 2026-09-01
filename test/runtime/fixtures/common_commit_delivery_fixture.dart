@@ -593,10 +593,7 @@ void _expectStateErrorReporterFailureIsContained() {
     FlutterError.onError = previousOnError;
     root.state.removeListener(throwingStateListener);
     unawaited(subscription.cancel());
-    // Flutter's ChangeNotifier keeps its internal notification-depth after a
-    // throwing FlutterError.onError, so disposing this test-local root would
-    // assert inside Flutter rather than exercise RuntimeRoot. The restored,
-    // unreachable root has no active subscription and is left for GC.
+    root.dispose();
   }
 }
 

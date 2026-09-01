@@ -18,11 +18,13 @@ void main() {
   _testLiveGeometryPreservesTextAlignmentAnchor();
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
-  _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery();
+  _testChangedTextListenerRunsAfterOuterDelivery();
+  _testLateCloseListenerCanDisposeRuntime();
   _testChangedTextListenerFailureReportsAndContinuesDelivery();
   _testSessionCommitDelegatesToCommandPath();
   _testCommitPreservesTextAlignmentAnchor();
   _testDirectCommandCommitClearsActiveSession();
+  _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate();
   _testSessionNoOpCommitUsesCommandPath();
   _testCandidateStateReusedAndPrunedAfterCommit();
   _testStaleCandidateStatePruned();
@@ -168,21 +170,25 @@ void _testActiveSessionPublishesLiveUpdates() {
   );
 }
 
-// The complete listener/nested/outer trace stays in one test so its required
-// causal order remains auditable instead of being hidden across setup helpers.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index
-void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
+// The complete outer/listener/nested trace stays in one test so its required
+// causal order and matching-session replacement stay auditable instead of being
+// hidden across setup helpers; splitting the branches would obscure the order.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
+void _testChangedTextListenerRunsAfterOuterDelivery() {
   test(
-    'changed-text dismissal lets a listener complete its nested mutation before outer delivery',
+    'changed-text close notifies after outer delivery and preserves a listener session',
     () async {
       final trace = <String>[];
       final actions = <CanvasActionCommitted>[];
       late final RuntimeRoot root;
       late CanvasTextEditSession outerSession;
       late CanvasInteractionRequestId requestId;
+      late CanvasContextActionRequested replacementRequest;
+      CanvasTextEditSession? replacementSession;
       var committing = false;
       var listenerIsRunning = false;
       var interactionRevisionAtListener = -1;
+      var outerInteractionRevisionAtState = -1;
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
@@ -195,6 +201,18 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
       );
       final surface = Object();
       root.attachSurface(surface);
+      root.edits.edit((edit) {
+        edit.addElement(
+          CanvasTextElement(
+            id: _replacementTextId,
+            text: 'replacement',
+            fontSize: 16,
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+            transform: CanvasTransform.translation(const Offset(200, 0)),
+          ),
+        );
+      });
       final requests = <CanvasContextActionRequested>[];
       final requestSubscription = root.contextActionRequests.listen(
         requests.add,
@@ -204,12 +222,21 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
           return;
         }
         trace.add(listenerIsRunning ? 'nested-frame' : 'outer-frame');
+        if (!listenerIsRunning) {
+          expect(root.activeTextEditSuppressionForTesting, isNull);
+          expect(root.textEditing.activeSession.value, isNull);
+          expect(_textValue(root), 'outer text');
+        }
       });
       root.state.addListener(() {
         if (!committing) {
           return;
         }
         trace.add(listenerIsRunning ? 'nested-state' : 'outer-state');
+        if (!listenerIsRunning) {
+          outerInteractionRevisionAtState =
+              root.state.value.revisions.interaction;
+        }
       });
       final actionSubscription = root.actions.listen((action) {
         if (!committing) {
@@ -218,6 +245,9 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
         actions.add(action);
         trace.add('outer-action');
       });
+      // This listener keeps the complete public close/replacement causal trace
+      // together; extracting its assertions would hide the ordering it proves.
+      // ignore: halstead-volume
       void listener() {
         if (root.textEditing.activeSession.value != null) {
           return;
@@ -227,8 +257,15 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
         expect(root.interactionEngine.requestFactsFor(requestId), isNull);
         expect(root.activeTextEditSuppressionForTesting, isNull);
         expect(outerSession.isActive, isFalse);
-        expect(trace, ['listener']);
+        expect(trace, [
+          'outer-frame',
+          'outer-state',
+          'outer-action',
+          'outer-observer',
+          'listener',
+        ]);
         interactionRevisionAtListener = root.state.value.revisions.interaction;
+        expect(interactionRevisionAtListener, outerInteractionRevisionAtState);
 
         listenerIsRunning = true;
         root.edits.edit((edit) {
@@ -240,6 +277,11 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
           );
         });
         listenerIsRunning = false;
+        listenerIsRunning = true;
+        replacementSession = _expectSession(
+          root.textEditing.startFromContextAction(replacementRequest),
+        );
+        listenerIsRunning = false;
         trace.add('listener-return');
       }
 
@@ -249,6 +291,9 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
         await Future<void>.delayed(Duration.zero);
         final request = requests.single;
         requestId = request.requestId;
+        root.handleDoubleTap(position: const Offset(200, 0), timestampMs: 2);
+        await Future<void>.delayed(Duration.zero);
+        replacementRequest = requests.last;
         final session = _expectSession(
           root.textEditing.startFromContextAction(request),
         );
@@ -260,25 +305,27 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
         committing = false;
 
         expect(trace, [
-          'listener',
-          'nested-frame',
-          'nested-state',
-          'nested-observer',
-          'listener-return',
           'outer-frame',
           'outer-state',
           'outer-action',
           'outer-observer',
+          'listener',
+          'nested-frame',
+          'nested-state',
+          'nested-observer',
+          'nested-frame',
+          'nested-state',
+          'listener-return',
         ]);
         expect(session.isActive, isFalse);
         expect(_textValue(root), 'outer text');
         expect(_containsElement(root, _listenerNestedRectId), isTrue);
-        expect(root.textEditing.activeSession.value, isNull);
+        expect(root.textEditing.activeSession.value, same(replacementSession));
         expect(
           root.interactionEngine.requestFactsFor(request.requestId),
           isNull,
         );
-        expect(root.state.value.revisions.document, 2);
+        expect(root.state.value.revisions.document, 3);
         expect(
           root.state.value.revisions.interaction,
           interactionRevisionAtListener + 1,
@@ -298,19 +345,78 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
   );
 }
 
-// The notifier-error capture and later delivery/guard probe form one failure
+// The listener owns one complete close/dispose lifecycle so the accepted
+// ordering, deferred notifier disposal, and rejected follow-up stay visible.
+// ignore: halstead-volume, source-lines-of-code
+void _testLateCloseListenerCanDisposeRuntime() {
+  test(
+    'changed-text close listener can dispose the runtime after outer delivery',
+    () async {
+      final scenario = _Scenario();
+      late CanvasTextEditSession session;
+      var closeNotifications = 0;
+      void listener() {
+        if (scenario.root.textEditing.activeSession.value != null) {
+          return;
+        }
+        closeNotifications += 1;
+        expect(_textValue(scenario.root), 'disposed from close listener');
+        expect(scenario.actions, hasLength(1));
+        expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
+        expect(session.isActive, isFalse);
+        scenario.root.dispose();
+      }
+
+      scenario.root.textEditing.activeSession.addListener(listener);
+      try {
+        final request = await scenario.issueTextRequest();
+        session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('disposed from close listener');
+
+        expect(session.commit(timestampMs: 79), isTrue);
+
+        expect(closeNotifications, 1);
+        expect(_textValue(scenario.root), 'disposed from close listener');
+        expect(scenario.actions, hasLength(1));
+        expect(scenario.root.dispose, returnsNormally);
+        expect(
+          () => scenario.root.edits.edit(
+            (edit) => edit.addElement(
+              CanvasRectElement(
+                id: CanvasElementId('disposed-close-listener-mutation'),
+                size: const Size(1, 1),
+              ),
+            ),
+          ),
+          throwsA(isA<StateError>()),
+        );
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// The notifier/reporter failure and later delivery/guard probe form one
 // containment proof; splitting them would obscure the required continuation.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
   test(
-    'changed-text listener failure reports through Flutter and does not stop delivery',
+    'changed-text listener and reporter failures do not escape an accepted commit',
     () async {
       final trace = <String>[];
       final errors = <FlutterErrorDetails>[];
       final previousErrorHandler = FlutterError.onError;
       late final RuntimeRoot root;
       var committing = false;
-      final sentinel = StateError('active-session listener failed');
+      final listenerFailure = StateError('active-session listener failed');
+      final reporterFailure = StateError('active-session reporter failed');
+      void throwingReporter(FlutterErrorDetails details) {
+        errors.add(details);
+        throw reporterFailure;
+      }
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
@@ -345,7 +451,7 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
       });
       void listener() {
         if (root.textEditing.activeSession.value == null) {
-          throw sentinel;
+          throw listenerFailure;
         }
       }
 
@@ -360,12 +466,13 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
         session.updateText('failure retained');
 
         committing = true;
-        FlutterError.onError = errors.add;
+        FlutterError.onError = throwingReporter;
         expect(session.commit(timestampMs: 78), isTrue);
         committing = false;
 
+        expect(FlutterError.onError, same(throwingReporter));
         expect(errors, hasLength(1));
-        expect(errors.single.exception, same(sentinel));
+        expect(errors.single.exception, same(listenerFailure));
         expect(trace, [
           'outer-frame',
           'outer-state',
@@ -397,8 +504,8 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
         await actionSubscription.cancel();
         await requestSubscription.cancel();
         root.detachSurface(surface);
-        root.dispose();
         FlutterError.onError = previousErrorHandler;
+        root.dispose();
       }
     },
   );
@@ -506,6 +613,54 @@ void _testDirectCommandCommitClearsActiveSession() {
       await scenario.dispose();
     }
   });
+}
+
+// One route owns the listener, revision, document, and action observations:
+// splitting them would hide that a direct commit has no close side effect.
+// ignore: halstead-volume
+void _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate() {
+  test(
+    'direct command commit without an active session does not notify close listeners',
+    () async {
+      final scenario = _Scenario();
+      var activeSessionNotifications = 0;
+      void listener() {
+        activeSessionNotifications += 1;
+      }
+
+      scenario.root.textEditing.activeSession.addListener(listener);
+      try {
+        final request = await scenario.issueTextRequest();
+        final interactionRevisionBeforeCommit =
+            scenario.root.state.value.revisions.interaction;
+
+        expect(scenario.root.textEditing.activeSession.value, isNull);
+        expect(
+          scenario.root.commands.commitTextEdit(
+            request.requestId,
+            'direct command update',
+          ),
+          isTrue,
+        );
+
+        expect(activeSessionNotifications, 0);
+        expect(
+          scenario.root.state.value.revisions.interaction,
+          interactionRevisionBeforeCommit,
+        );
+        expect(scenario.root.state.value.revisions.document, 1);
+        expect(_textValue(scenario.root), 'direct command update');
+        expect(scenario.actions, hasLength(1));
+        final payload =
+            scenario.actions.single.payload as CanvasTextEditActionPayload;
+        expect(payload.requestId, request.requestId);
+        expect(payload.nextTextLength, 'direct command update'.length);
+      } finally {
+        scenario.root.textEditing.activeSession.removeListener(listener);
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 Future<void> _expectLiveGeometryPreservesAnchorFor(TextAlign align) async {
@@ -1072,7 +1227,7 @@ String _textValue(RuntimeRoot root) {
       .single
       .elements
       .whereType<CanvasTextElement>()
-      .single;
+      .singleWhere((element) => element.id == _textId);
 
   return text.text;
 }
@@ -1137,6 +1292,7 @@ CanvasDocument _invalidReplacementDocument() {
 }
 
 final _textId = CanvasElementId('text-a');
+final _replacementTextId = CanvasElementId('replacement-text');
 final _rectId = CanvasElementId('rect-a');
 final _listenerNestedRectId = CanvasElementId('listener-nested-rect');
 final _listenerFailureRectId = CanvasElementId('listener-failure-rect');

@@ -262,13 +262,15 @@ edit rollback boundary before any accepted install.
 
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
 orchestrates the accepted result. For changed request-originated text,
-RuntimeRoot consumes the request and always enters outer common delivery. Only
-when that request matches an active text session does it synchronously clear
-the public session, permit that listener's separate accepted nested mutation to
-finish, and record the outer interaction revision before delivery. A direct
-live-request commit without an active session skips that dismissal/listener
-window and interaction revision. Flutter notifier failures are reported and do
-not roll back or suppress the accepted outer delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
+RuntimeRoot consumes the request, silently clears only a matching active session
+and its owned suppression/candidate state, and records the outer interaction
+revision before capture. It completes outer common delivery, releases its guard,
+then notifies session closure before returning. The listener may read final
+state, complete a separate accepted mutation, or start another session without
+the old closure clearing it. A direct live-request commit without an active
+session has no close notification or interaction revision. Flutter notifier
+failures are reported and do not roll back or suppress the accepted outer
+delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
 performs the route-owned `publish: false` InteractionEngine cleanup, merges its
 repaint effect, and only then enters one guarded common delivery. Its exact
 order is spatial -> resource/session release -> root frame -> bridged frame ->

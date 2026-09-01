@@ -88,7 +88,7 @@ Resource and interaction owners own their resource and interaction rows.
 | context-action double-tap request | direct `handleDoubleTap` clears pending context tap history before current-target resolution; target admission requires a candidate spatial result with no unresolved/skipped handles; InteractionRequestRegistry stores live context request target kind and guard facts; pending delivery is suppressed by load/dispose cleanup | none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` unless suppressed before scheduled delivery |
 | commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
-| commitTextEdit changed accepted | text element content through EditKernel; after successful prepare and EditKernel closure RuntimeRoot consumes/removes the live request, then starts common delivery; only a matching active text session is synchronously dismissed and records an interaction revision before that delivery | state.revisions.document and, only for a matching active session, state.revisions.interaction; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | matching-session listener window before common delivery, then main | editText; `runtime_created_timestamps_monotonic` |
+| commitTextEdit changed accepted | text element content through EditKernel; after successful prepare and EditKernel closure RuntimeRoot consumes/removes the live request, silently clears only a matching active text session and its owned suppression/candidate state, and records an interaction revision before capture; it completes guarded common delivery, releases the guard, then notifies matching-session closure before true return | state.revisions.document and, only for a matching active session, state.revisions.interaction; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main common delivery, then matching-session close notification; a listener may start another session without losing it | editText; `runtime_created_timestamps_monotonic` |
 | no-op edit, including compensating final fact no-op | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
@@ -166,16 +166,17 @@ Notes:
   projection, resource, repaint, or action effect.
 - `commitTextEdit` validates `newText` before request consumption and before
   draft mutation. Changed text commits consume the request only after successful
-  EditKernel prepare and closure, then enter common delivery. Only when the
-  request matches an active text session does RuntimeRoot synchronously clear
-  `CanvasTextEditingPort.activeSession`, record the outer interaction revision,
-  and open its listener window before that delivery. That listener observes the
-  accepted document, consumed request, and null session and may complete a
-  separate accepted nested mutation first; listener errors follow Flutter
-  notifier reporting and do not roll back or stop the outer delivery. A direct
-  live-request commit without an active session still completes common delivery;
-  rejected, failed, and equal-text branches do not enter this listener window.
-  The outer route then emits
+  EditKernel prepare and closure, silently clear only a matching active session
+  and its owned suppression/candidate state, and record the outer interaction
+  revision before frame capture. Common delivery completes and releases its
+  guard before that closure is notified. The listener observes the accepted
+  document, consumed request, and null session; it may read final state,
+  complete a separate accepted mutation, or start another session without the
+  old closure clearing it. Listener errors follow Flutter notifier reporting and
+  do not roll back or stop the outer delivery. A direct live-request commit
+  without an active session still completes common delivery but has no close
+  notification or interaction revision; rejected, failed, and equal-text
+  branches do not enter this listener window. The outer route then emits
   `CanvasActionType.editText` with
   `CanvasTextEditActionPayload`; the payload contains text lengths and never
   raw text.

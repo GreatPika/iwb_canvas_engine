@@ -213,13 +213,16 @@ sequenceDiagram
       Edit-->>Commands: accepted install and closed edit handle
       Commands->>Registry: consume and remove request facts
       alt request matches active text session
-        Commands->>AppUI: synchronously publish activeSession = null
-        Note over AppUI,Signals: The active-session listener sees accepted text and consumed request. It may complete a separate accepted nested mutation before every outer frame/state/action/observer callback, and Flutter-reported listener errors do not stop the outer route.
+        Commands->>Commands: silently clear matching active session, suppression, and owned candidate state
         Commands->>Commands: record outer text-edit interaction revision
       else direct live request without active session
-        Note over Commands,Signals: No active-session dismissal, listener window, or interaction revision, while accepted changed text still reaches common delivery.
+        Note over Commands,Signals: No active-session dismissal notification or interaction revision, while accepted changed text still reaches common delivery.
       end
       Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, state, editText action, observer
+      alt request matched active text session
+        Commands->>AppUI: notify active-session closure after guard release
+        Note over AppUI,Signals: The listener sees accepted text and the consumed request after outer delivery. It may read state, complete a separate accepted mutation, or start another session; identity-aware cleanup preserves that new session. Flutter-reported listener errors do not stop the accepted route.
+      end
       Commands-->>App: true
     end
   end
