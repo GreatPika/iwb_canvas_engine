@@ -845,7 +845,7 @@ PerformanceScenarioActionPlan _surfaceRuntimeSwapScenario() {
   return PerformanceScenarioActionPlan(
     id: 'surface_runtime_swap',
     action: (context) async {
-      final replacement = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+      final replacement = CanvasRuntime(config: _acceptCommitRuntimeConfig());
       _loadDocument(replacement, performanceRectDocument(1000));
       context.host.swapRuntime(replacement);
       await context.pumpScenarioFrame();
@@ -866,7 +866,7 @@ PerformanceScenarioActionPlan _disposeDuringPreviewScenario() {
         pointerId: 1,
         includeTerminal: false,
       ));
-      final replacement = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+      final replacement = CanvasRuntime(config: _acceptCommitRuntimeConfig());
       _loadDocument(replacement, performanceRectDocument(1000));
       context.host.swapRuntime(replacement);
       await context.pumpScenarioFrame();
@@ -930,9 +930,7 @@ PerformanceScenarioActionPlan _firstCanvasFrameScenario() {
 Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
   PerformanceScenarioContext context,
 ) async {
-  context.host.swapRuntime(
-    CanvasRuntime(config: _acceptDeletionRuntimeConfig()),
-  );
+  context.host.swapRuntime(CanvasRuntime(config: _acceptCommitRuntimeConfig()));
   await context.pumpScenarioFrame();
   final preparedJson = performanceFixtureJson(performanceRectDocument(100000));
   return PerformancePreparedPhaseAction(
@@ -951,7 +949,7 @@ Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
 Future<PerformancePreparedPhaseAction> _prepareFirstCanvasFrame50k(
   PerformanceScenarioContext context,
 ) async {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   _loadDocument(runtime, performanceRectDocument(50000));
   context.host.swapRuntime(runtime);
   return PerformancePreparedPhaseAction(
@@ -1213,7 +1211,7 @@ CanvasCommitResolution _acceptScenarioCommit(CanvasCommitRequest request) =>
       _ => const CanvasCommitAccept(lease: _scenarioCommitLease),
     };
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: _acceptScenarioCommit);
 
 final class _ScenarioCommitLease implements CanvasCommitLease {

@@ -153,7 +153,7 @@ void main() {
         resourceCount: 1,
       ),
       documentRevision: 1,
-      selectedElementIdsBefore: const [],
+      selectedElementIdsBefore: elementIds,
       movedElements: moved,
       proposedDelta: Offset.zero,
       selectionBoundsWorld: const Rect.fromLTWH(0, 0, 1, 1),
@@ -174,6 +174,7 @@ void main() {
     expect((action.payload as CanvasClearActionPayload).removedElementIds, hasLength(1));
     expect((action.payload as CanvasClearActionPayload).removedResourceIds, hasLength(1));
     expect(request.movedElements, hasLength(1));
+    expect(request.selectedElementIdsBefore, [CanvasElementId('element-1')]);
     expect(preview.points, hasLength(1));
     expect(() => action.elementIds.clear(), throwsUnsupportedError);
     expect(
@@ -185,6 +186,10 @@ void main() {
       throwsUnsupportedError,
     );
     expect(() => request.movedElements.clear(), throwsUnsupportedError);
+    expect(
+      () => request.selectedElementIdsBefore.clear(),
+      throwsUnsupportedError,
+    );
     expect(() => preview.points.clear(), throwsUnsupportedError);
   });
 

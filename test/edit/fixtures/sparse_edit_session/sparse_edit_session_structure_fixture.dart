@@ -529,8 +529,28 @@ CanvasDocument _emptyLayerRemovalDocument() {
   final emptyId = CanvasLayerId('empty');
   final populatedId = CanvasLayerId('populated');
   return CanvasDocument(
-    resources: [sparseImageResource('retained-resource')],
-    backgroundElements: [sparseRect('retained-background')],
+    palette: CanvasPalette(
+      penColors: const [Color(0xFF112233)],
+      backgroundColors: const [],
+      gridSizes: const [],
+    ),
+    metadata: CanvasMetadata.fromMap({'document': 'retained'}),
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('retained-resource'),
+        source: CanvasResourceSource.appKey('retained-source'),
+        contentHash: 'sha256:retained',
+        metadata: CanvasMetadata.fromMap({'resource': 'retained'}),
+      ),
+    ],
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('retained-background'),
+        size: const Size(1, 1),
+        opacity: 0.6,
+        metadata: CanvasMetadata.fromMap({'background': 'retained'}),
+      ),
+    ],
     layers: [
       CanvasLayer(id: CanvasLayerId('before')),
       CanvasLayer(id: emptyId),
@@ -538,6 +558,22 @@ CanvasDocument _emptyLayerRemovalDocument() {
       CanvasLayer(id: CanvasLayerId('after')),
     ],
   );
+}
+
+void _expectEmptyLayerEnvelope(CanvasDocument actual, CanvasDocument expected) {
+  expect(actual.palette.penColors, expected.palette.penColors);
+  expect(actual.metadata, expected.metadata);
+  final actualResource = actual.resources.single as CanvasImageResource;
+  final expectedResource = expected.resources.single as CanvasImageResource;
+  expect(actualResource.source, expectedResource.source);
+  expect(actualResource.contentHash, expectedResource.contentHash);
+  expect(actualResource.metadata, expectedResource.metadata);
+  final actualBackground =
+      actual.backgroundElements.single as CanvasRectElement;
+  final expectedBackground =
+      expected.backgroundElements.single as CanvasRectElement;
+  expect(actualBackground.opacity, expectedBackground.opacity);
+  expect(actualBackground.metadata, expectedBackground.metadata);
 }
 
 // The parity trace keeps sparse, promotion, restoration, and selection intent
@@ -554,6 +590,7 @@ void _expectSparseAndPromotedEmptyLayerRemoval(CanvasDocument document) {
   expect(sparse.revisionDelta.structural, isTrue);
   expect(sparse.revisionDelta.document, isTrue);
   final promoted = sparse.readDraftDocument();
+  _expectEmptyLayerEnvelope(promoted, document);
   expect(promoted.layers.map((layer) => layer.id), [
     CanvasLayerId('before'),
     populatedId,
@@ -577,6 +614,7 @@ void _expectSparseAndPromotedEmptyLayerRemoval(CanvasDocument document) {
   expect(restoring.commitPlan.revisionDelta.document, isTrue);
   expect(restoring.pendingSelectionEffect?.elementIds, [restoredId]);
   final restored = restoring.readDraftDocument();
+  _expectEmptyLayerEnvelope(restored, document);
   expect(restored.layers.map((layer) => layer.id), [
     CanvasLayerId('before'),
     populatedId,
@@ -598,7 +636,9 @@ void _expectMaterializedEmptyLayerRemoval(CanvasDocument document) {
   );
   expect(materialized.removeEmptyLayer(populatedId), isTrue);
   expect(materialized.removeEmptyLayer(populatedId), isFalse);
-  expect(materialized.readDocument().layers.map((layer) => layer.id), [
+  final materializedDocument = materialized.readDocument();
+  _expectEmptyLayerEnvelope(materializedDocument, document);
+  expect(materializedDocument.layers.map((layer) => layer.id), [
     CanvasLayerId('before'),
     emptyId,
     CanvasLayerId('after'),

@@ -106,14 +106,16 @@ final class _Host implements CanvasCommitLease {
   Future<void> exerciseAllFamilies() async {
     _active = this;
     _seed();
-    runtime.selection.setSelection([
+    final initialSelection = [
       CanvasElementId('transform-me'),
+      CanvasElementId('transform-line'),
       CanvasElementId('selection-drop'),
-    ]);
-    final oracle = _ExpectedReplayOracle()..seed();
+    ];
+    runtime.selection.setSelection(initialSelection);
+    final oracle = _ExpectedReplayOracle(initialSelection);
 
     _draw();
-    oracle.draw(history.records.last.request as CanvasDrawCommitRequest);
+    oracle.draw();
     cancelNextDelete = true;
     expect(runtime.commands.removeElement(CanvasElementId('cancel-me')), isFalse);
     // The cancellation record is intentionally absent because no lease commits.
@@ -155,10 +157,9 @@ final class _Host implements CanvasCommitLease {
     expect(resolverCalls, 12);
     expect(actions, hasLength(10));
     expect(oracle.snapshots, hasLength(history.records.length + 1));
-    expect(_text(runtime).revision, _textFrom(oracle.snapshots.last.document).revision);
+    expect(_text(runtime).revision, _expectedTextAfter().revision);
 
-    final accepted = oracle.snapshots.last.document;
-    final acceptedSelection = oracle.snapshots.last.selection;
+    final accepted = oracle.snapshots.last;
     final actionsBeforeReplay = actions.length;
     final resolverCallsBeforeReplay = resolverCalls;
     _mutateTextAfterRecording();
@@ -185,7 +186,10 @@ final class _Host implements CanvasCommitLease {
       }
       documentRevision = revisions.document;
       selectionRevision = revisions.selection;
-      _expectSnapshot(runtime, oracle.snapshots[--snapshotIndex]);
+      _expectSnapshot(
+        runtime,
+        oracle.snapshots[--snapshotIndex],
+      );
     }
 
     while (history.canRedo) {
@@ -207,100 +211,21 @@ final class _Host implements CanvasCommitLease {
       }
       documentRevision = revisions.document;
       selectionRevision = revisions.selection;
-      _expectSnapshot(runtime, oracle.snapshots[++snapshotIndex]);
+      _expectSnapshot(
+        runtime,
+        oracle.snapshots[++snapshotIndex],
+      );
     }
     expect(snapshotIndex, oracle.snapshots.length - 1);
-    _expectDocumentContent(runtime.readDocument(), accepted);
-    expect(runtime.selection.selectedElementIds, acceptedSelection);
+    _expectSnapshot(runtime, accepted);
     expect(actions, hasLength(actionsBeforeReplay));
     expect(resolverCalls, resolverCallsBeforeReplay);
-    _expectText(_text(runtime), _textFrom(accepted));
-    oracle.dispose();
+    _expectText(_text(runtime), _expectedTextAfter());
   }
 
-  void _seed() => _seedRuntime(runtime);
-
-  static void _seedRuntime(CanvasRuntime runtime) {
+  void _seed() {
     runtime.edits.edit((edit) {
-      edit.replaceDraftDocument(
-        CanvasDocument(
-          background: CanvasBackground(
-            color: const Color(0xFFABCDEF),
-            grid: CanvasGrid(enabled: true, cellSize: 16),
-          ),
-          palette: CanvasPalette(
-            penColors: const [Color(0xFF102030)],
-            backgroundColors: const [Color(0xFFABCDEF)],
-            gridSizes: const [16, 32],
-          ),
-          metadata: CanvasMetadata.fromMap({'document': 'host baseline'}),
-          layers: [
-            CanvasLayer(
-              id: CanvasLayerId('seed'),
-              metadata: CanvasMetadata.fromMap({'layer': 'host baseline'}),
-            ),
-          ],
-        ),
-      );
-      edit.upsertResource(
-        CanvasImageResource(
-          id: CanvasResourceId('asset'),
-          source: CanvasResourceSource.appKey('host-owned'),
-          contentHash: 'sha256:host-owned',
-          byteLength: 42,
-          mimeType: 'image/png',
-          metadata: CanvasMetadata.fromMap({'owner': 'host'}),
-        ),
-      );
-      edit.addBackgroundElement(
-        CanvasRectElement(
-          id: CanvasElementId('background'),
-          size: const Size(10, 10),
-          transform: CanvasTransform.translation(const Offset(-10, 5)),
-          opacity: 0.6,
-          hitPadding: 1,
-          isVisible: false,
-          isSelectable: false,
-          isLocked: true,
-          isDeletable: false,
-          isTransformable: false,
-          metadata: CanvasMetadata.fromMap({'background': 'retained'}),
-          fillColor: const Color(0xFF123456),
-          strokeColor: const Color(0xFF654321),
-          strokeWidth: 2,
-        ),
-      );
-      edit.addBackgroundElement(
-        _rect('background-delete', const Offset(40, 0)),
-      );
-      for (final element in [_rect('selection-drop', const Offset(-20, 0)), _rect('delete-me', const Offset(0, 0)), _line('delete-line'), _rect('erase-me', const Offset(200, 0)), _rect('cancel-me', const Offset(0, 30)), _rect('transform-me', const Offset(30, 30)), _initialText()]) {
-        edit.addElement(element, layerId: CanvasLayerId('seed'));
-      }
-      edit.updateElement(
-        CanvasTextElementUpdate(
-          id: CanvasElementId('text'),
-          transform: CanvasFieldSet(CanvasTransform.translation(const Offset(90, 0))),
-          opacity: const CanvasFieldSet(0.7),
-          hitPadding: const CanvasFieldSet(2),
-          isVisible: const CanvasFieldSet(true),
-          isSelectable: const CanvasFieldSet(true),
-          isLocked: const CanvasFieldSet(false),
-          isDeletable: const CanvasFieldSet(true),
-          isTransformable: const CanvasFieldSet(true),
-          metadata: CanvasFieldSet(CanvasMetadata.fromMap({'version': 'before'})),
-          text: const CanvasFieldSet('before'),
-          fontSize: const CanvasFieldSet(18),
-          color: const CanvasFieldSet(Color(0xFF102030)),
-          align: const CanvasFieldSet(TextAlign.right),
-          textDirection: const CanvasFieldSet(TextDirection.ltr),
-          isBold: const CanvasFieldSet(true),
-          isItalic: const CanvasFieldSet(true),
-          isUnderline: const CanvasFieldSet(true),
-          fontFamily: const CanvasFieldClear(),
-          maxWidth: const CanvasFieldClear(),
-          lineHeight: const CanvasFieldClear(),
-        ),
-      );
+      edit.replaceDraftDocument(_seedDocument());
     });
   }
 
@@ -398,107 +323,68 @@ final class _Host implements CanvasCommitLease {
   }
 }
 
-// This separate public runtime is an external oracle, never an input to
-// history. Its operations are test-authored expected outcomes, not replay.
+// This oracle is a pure DTO model: it neither invokes CanvasEdit nor consumes
+// request placement, so replay and expected state cannot share an engine bug.
 final class _ExpectedReplayOracle {
-  _ExpectedReplayOracle()
-      : runtime = CanvasRuntime(
-          config: CanvasRuntimeConfig(
-            commitResolver: (_) => throw StateError('oracle is edit-only'),
-          ),
-        );
-
-  final CanvasRuntime runtime;
-  final List<_ReplaySnapshot> snapshots = <_ReplaySnapshot>[];
-
-  void seed() {
-    _Host._seedRuntime(runtime);
-    runtime.selection.setSelection([
-      CanvasElementId('transform-me'),
-      CanvasElementId('selection-drop'),
-    ]);
+  _ExpectedReplayOracle(Iterable<CanvasElementId> selection)
+      : _selection = Set.of(selection) {
     _capture();
   }
 
-  void draw(CanvasDrawCommitRequest request) {
-    final entry = request.entry;
-    runtime.edits.edit((edit) {
-      final expected = CanvasStrokeElement(
-        id: entry.element.id,
-        points: const [Offset.zero, Offset(8, 4)],
-        thickness: 3,
-        color: const Color(0xFF000000),
-      );
-      if (entry.layerId case final layerId?) {
-        edit.addElement(expected, layerId: layerId, index: entry.elementIndex);
-      } else {
-        edit.addBackgroundElement(expected, index: entry.elementIndex);
-      }
-    });
+  final List<CanvasElementId> _layerElementIds = [
+    CanvasElementId('selection-drop'),
+    CanvasElementId('delete-me'),
+    CanvasElementId('delete-line'),
+    CanvasElementId('erase-me'),
+    CanvasElementId('cancel-me'),
+    CanvasElementId('transform-me'),
+    CanvasElementId('transform-line'),
+    CanvasElementId('text'),
+  ];
+  final List<CanvasElementId> _backgroundElementIds = [
+    CanvasElementId('background'),
+    CanvasElementId('background-delete'),
+  ];
+  final Set<CanvasElementId> _selection;
+  final List<_ReplaySnapshot> snapshots = <_ReplaySnapshot>[];
+  CanvasTransform _transform = CanvasTransform.translation(
+    const Offset(30, 30),
+  );
+  var _textEdited = false;
+
+  void draw() {
+    _layerElementIds.add(CanvasElementId('e0'));
     _capture();
   }
 
   void delete(CanvasElementId id) {
-    runtime.edits.edit((edit) {
-      edit.removeElement(id);
-      edit.setSelection([CanvasElementId('transform-me')]);
-    });
+    _layerElementIds.remove(id);
+    _backgroundElementIds.remove(id);
+    _selection.remove(id);
     _capture();
   }
 
   void transform(CanvasTransform transform) {
-    runtime.edits.edit((edit) {
-      edit.updateElement(
-        CanvasRectElementUpdate(
-          id: CanvasElementId('transform-me'),
-          transform: CanvasFieldSet(transform),
-        ),
-      );
-      edit.setSelection([CanvasElementId('transform-me')]);
-    });
+    _transform = transform;
     _capture();
   }
 
   void textEdit() {
-    const text = 'after with a longer compensated layout';
-    runtime.edits.edit((edit) {
-      edit.updateElement(
-        CanvasTextElementUpdate(
-          id: CanvasElementId('text'),
-          transform: CanvasFieldSet(_expectedTextTransform(text)),
-          opacity: const CanvasFieldSet(0.7),
-          hitPadding: const CanvasFieldSet(2),
-          isVisible: const CanvasFieldSet(true),
-          isSelectable: const CanvasFieldSet(true),
-          isLocked: const CanvasFieldSet(false),
-          isDeletable: const CanvasFieldSet(true),
-          isTransformable: const CanvasFieldSet(true),
-          metadata: CanvasFieldSet(CanvasMetadata.fromMap({'version': 'before'})),
-          text: const CanvasFieldSet(text),
-          fontSize: const CanvasFieldSet(18),
-          color: const CanvasFieldSet(Color(0xFF102030)),
-          align: const CanvasFieldSet(TextAlign.right),
-          textDirection: const CanvasFieldSet(TextDirection.ltr),
-          isBold: const CanvasFieldSet(true),
-          isItalic: const CanvasFieldSet(true),
-          isUnderline: const CanvasFieldSet(true),
-          fontFamily: const CanvasFieldClear(),
-          maxWidth: const CanvasFieldClear(),
-          lineHeight: const CanvasFieldClear(),
-        ),
-      );
-      edit.setSelection([CanvasElementId('transform-me')]);
-    });
+    _textEdited = true;
     _capture();
   }
 
   void _capture() {
     snapshots.add(
-      _ReplaySnapshot(runtime.readDocument(), runtime.selection.selectedElementIds),
+      _ReplaySnapshot(
+        layerElementIds: _layerElementIds,
+        backgroundElementIds: _backgroundElementIds,
+        selection: _selection,
+        transform: _transform,
+        textEdited: _textEdited,
+      ),
     );
   }
-
-  void dispose() => runtime.dispose();
 }
 
 CanvasTransform _aroundExpectedPivot(CanvasTransform transform, Offset pivot) =>
@@ -508,12 +394,12 @@ CanvasTransform _aroundExpectedPivot(CanvasTransform transform, Offset pivot) =>
 
 final _expectedRotateTransform = _aroundExpectedPivot(
   CanvasTransform.rotationDegrees(90),
-  const Offset(37, 27),
+  const Offset(40, 30),
 ).multiply(CanvasTransform.translation(const Offset(37, 27)));
 
 final _expectedReflectTransform = _aroundExpectedPivot(
   CanvasTransform.scale(-1, 1),
-  const Offset(37, 27),
+  const Offset(40, 30),
 ).multiply(_expectedRotateTransform);
 
 CanvasTransform _expectedTextTransform(String nextText) {
@@ -637,14 +523,23 @@ void _restoreTransforms(
   required CanvasTransform? transform,
 }) {
   for (final element in elements) {
-    edit.updateElement(
-      CanvasRectElementUpdate(
-        id: element.id,
-        transform: CanvasFieldSet(
-          transform == null ? element.transform : transform.multiply(element.transform),
-        ),
-      ),
+    final restored = CanvasFieldSet(
+      transform == null
+          ? element.transform
+          : transform.multiply(element.transform),
     );
+    switch (element.kind) {
+      case CanvasElementKind.rect:
+        edit.updateElement(
+          CanvasRectElementUpdate(id: element.id, transform: restored),
+        );
+      case CanvasElementKind.line:
+        edit.updateElement(
+          CanvasLineElementUpdate(id: element.id, transform: restored),
+        );
+      default:
+        fail('Unsupported public transform replay kind: ${element.kind}.');
+    }
   }
 }
 
@@ -688,6 +583,71 @@ CanvasRectElement _rect(String id, Offset offset) => CanvasRectElement(
       transform: CanvasTransform.translation(offset),
     );
 
+CanvasDocument _seedDocument() => CanvasDocument(
+      background: CanvasBackground(
+        color: const Color(0xFFABCDEF),
+        grid: CanvasGrid(enabled: true, cellSize: 16),
+      ),
+      palette: CanvasPalette(
+        penColors: const [Color(0xFF102030)],
+        backgroundColors: const [Color(0xFFABCDEF)],
+        gridSizes: const [16, 32],
+      ),
+      resources: [
+        CanvasImageResource(
+          id: CanvasResourceId('asset'),
+          source: CanvasResourceSource.appKey('host-owned'),
+          contentHash: 'sha256:host-owned',
+          byteLength: 42,
+          mimeType: 'image/png',
+          metadata: CanvasMetadata.fromMap({'owner': 'host'}),
+        ),
+      ],
+      backgroundElements: [
+        CanvasRectElement(
+          id: CanvasElementId('background'),
+          size: const Size(10, 10),
+          transform: CanvasTransform.translation(const Offset(-10, 5)),
+          opacity: 0.6,
+          hitPadding: 1,
+          isVisible: false,
+          isSelectable: false,
+          isLocked: true,
+          isDeletable: false,
+          isTransformable: false,
+          metadata: CanvasMetadata.fromMap({'background': 'retained'}),
+          fillColor: const Color(0xFF123456),
+          strokeColor: const Color(0xFF654321),
+          strokeWidth: 2,
+        ),
+        _rect('background-delete', const Offset(40, 0)),
+      ],
+      metadata: CanvasMetadata.fromMap({'document': 'host baseline'}),
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('seed'),
+          metadata: CanvasMetadata.fromMap({'layer': 'host baseline'}),
+          elements: [
+            _rect('selection-drop', const Offset(-20, 0)),
+            _rect('delete-me', Offset.zero),
+            _line('delete-line'),
+            _rect('erase-me', const Offset(200, 0)),
+            _rect('cancel-me', const Offset(0, 30)),
+            _rect('transform-me', const Offset(30, 30)),
+            CanvasLineElement(
+              id: CanvasElementId('transform-line'),
+              start: const Offset(1, 1),
+              end: const Offset(11, 11),
+              thickness: 2,
+              color: const Color(0xFF778899),
+              transform: CanvasTransform.translation(const Offset(30, 30)),
+            ),
+            _expectedTextBefore(),
+          ],
+        ),
+      ],
+    );
+
 CanvasLineElement _line(String id) => CanvasLineElement(
       id: CanvasElementId(id),
       start: const Offset(4, 4),
@@ -696,15 +656,42 @@ CanvasLineElement _line(String id) => CanvasLineElement(
       color: const Color(0xFF445566),
     );
 
-CanvasTextElement _initialText() => CanvasTextElement(
+CanvasTextElement _expectedTextBefore() => CanvasTextElement(
       id: CanvasElementId('text'),
-      text: 'initial',
-      color: const Color(0xFF112233),
+      revision: 1,
+      transform: CanvasTransform.translation(const Offset(90, 0)),
+      opacity: 0.7,
+      hitPadding: 2,
+      metadata: CanvasMetadata.fromMap({'version': 'before'}),
+      text: 'before',
+      fontSize: 18,
+      color: const Color(0xFF102030),
+      align: TextAlign.right,
       textDirection: TextDirection.ltr,
-      fontFamily: 'initial-family',
-      maxWidth: 40,
-      lineHeight: 1.4,
+      isBold: true,
+      isItalic: true,
+      isUnderline: true,
     );
+
+CanvasTextElement _expectedTextAfter() {
+  const text = 'after with a longer compensated layout';
+  return CanvasTextElement(
+    id: CanvasElementId('text'),
+    revision: 2,
+    transform: _expectedTextTransform(text),
+    opacity: 0.7,
+    hitPadding: 2,
+    metadata: CanvasMetadata.fromMap({'version': 'before'}),
+    text: text,
+    fontSize: 18,
+    color: const Color(0xFF102030),
+    align: TextAlign.right,
+    textDirection: TextDirection.ltr,
+    isBold: true,
+    isItalic: true,
+    isUnderline: true,
+  );
+}
 
 void _drag(CanvasToolPort tools, Offset start, Offset end) {
   tools.handlePointer(_sample(CanvasPointerLifecyclePhase.down, start));
@@ -722,18 +709,72 @@ CanvasPointerSample _sample(CanvasPointerLifecyclePhase phase, Offset position) 
 
 CanvasTextElement _text(CanvasRuntime runtime) => _textFrom(runtime.readDocument());
 
-void _expectSnapshot(CanvasRuntime runtime, _ReplaySnapshot expected) {
-  _expectDocumentContent(runtime.readDocument(), expected.document);
+void _expectSnapshot(
+  CanvasRuntime runtime,
+  _ReplaySnapshot expected,
+) {
+  final document = runtime.readDocument();
+  final seed = _seedDocument();
+  _expectDocumentEnvelope(
+    document,
+    seed,
+    backgroundElementIds: expected.backgroundElementIds,
+  );
+  expect(document.layers.map((layer) => layer.id), [CanvasLayerId('seed')]);
+  final layer = document.layers.single;
+  expect(layer.metadata, CanvasMetadata.fromMap({'layer': 'host baseline'}));
+  expect(layer.elements.map((element) => element.id), expected.layerElementIds);
+  final seedElements = {
+    for (final element in seed.layers.single.elements) element.id: element,
+  };
+  for (final actual in layer.elements) {
+    final expectedElement = switch (actual.id.value) {
+      'e0' => CanvasStrokeElement(
+          id: CanvasElementId('e0'),
+          points: const [Offset.zero, Offset(8, 4)],
+          thickness: 3,
+          color: const Color(0xFF000000),
+        ),
+      'text' => expected.textEdited
+          ? _expectedTextAfter()
+          : _expectedTextBefore(),
+      _ => seedElements[actual.id]!,
+    };
+    final expectedTransform = switch (actual.id.value) {
+      'transform-me' || 'transform-line' => expected.transform,
+      _ => expectedElement.transform,
+    };
+    expect(actual.runtimeType, expectedElement.runtimeType);
+    _expectCommonElement(
+      actual,
+      expectedElement,
+      expectedTransform: expectedTransform,
+    );
+    _expectElementContent(actual, expectedElement);
+    if (actual is CanvasTextElement && expectedElement is CanvasTextElement) {
+      _expectText(actual, expectedElement);
+    }
+  }
   expect(runtime.selection.selectedElementIds, expected.selection);
 }
 
 final class _ReplaySnapshot {
-  _ReplaySnapshot(CanvasDocument document, Iterable<CanvasElementId> selection)
-      : document = document,
+  _ReplaySnapshot({
+    required Iterable<CanvasElementId> layerElementIds,
+    required Iterable<CanvasElementId> backgroundElementIds,
+    required Iterable<CanvasElementId> selection,
+    required this.transform,
+    required this.textEdited,
+  })  : layerElementIds = List<CanvasElementId>.unmodifiable(layerElementIds),
+        backgroundElementIds =
+            List<CanvasElementId>.unmodifiable(backgroundElementIds),
         selection = Set<CanvasElementId>.unmodifiable(selection);
 
-  final CanvasDocument document;
+  final List<CanvasElementId> layerElementIds;
+  final List<CanvasElementId> backgroundElementIds;
   final Set<CanvasElementId> selection;
+  final CanvasTransform transform;
+  final bool textEdited;
 }
 
 bool _sameIds(Set<CanvasElementId> left, Set<CanvasElementId> right) =>
@@ -744,7 +785,11 @@ CanvasTextElement _textFrom(CanvasDocument document) => document.layers
     .whereType<CanvasTextElement>()
     .singleWhere((element) => element.id == CanvasElementId('text'));
 
-void _expectDocumentContent(CanvasDocument actual, CanvasDocument expected) {
+void _expectDocumentEnvelope(
+  CanvasDocument actual,
+  CanvasDocument expected, {
+  Iterable<CanvasElementId>? backgroundElementIds,
+}) {
   expect(actual.camera, expected.camera);
   expect(actual.background, expected.background);
   expect(actual.palette.penColors, expected.palette.penColors);
@@ -755,30 +800,24 @@ void _expectDocumentContent(CanvasDocument actual, CanvasDocument expected) {
   for (var index = 0; index < expected.resources.length; index += 1) {
     _expectResource(actual.resources[index], expected.resources[index]);
   }
-  expect(actual.backgroundElements.map((element) => element.id), expected.backgroundElements.map((element) => element.id));
-  for (var index = 0; index < expected.backgroundElements.length; index += 1) {
+  final expectedBackgroundElements = backgroundElementIds == null
+      ? expected.backgroundElements
+      : [
+          for (final id in backgroundElementIds)
+            expected.backgroundElements.singleWhere(
+              (element) => element.id == id,
+            ),
+        ];
+  expect(
+    actual.backgroundElements.map((element) => element.id),
+    expectedBackgroundElements.map((element) => element.id),
+  );
+  for (var index = 0; index < expectedBackgroundElements.length; index += 1) {
     final actualElement = actual.backgroundElements[index];
-    final expectedElement = expected.backgroundElements[index];
+    final expectedElement = expectedBackgroundElements[index];
     expect(actualElement.runtimeType, expectedElement.runtimeType);
     _expectCommonElement(actualElement, expectedElement);
     _expectElementContent(actualElement, expectedElement);
-  }
-  expect(actual.layers.map((layer) => layer.id), expected.layers.map((layer) => layer.id));
-  for (var index = 0; index < expected.layers.length; index += 1) {
-    final actualLayer = actual.layers[index];
-    final expectedLayer = expected.layers[index];
-    expect(actualLayer.metadata, expectedLayer.metadata);
-    expect(actualLayer.elements.map((element) => element.id), expectedLayer.elements.map((element) => element.id));
-    for (var elementIndex = 0; elementIndex < expectedLayer.elements.length; elementIndex += 1) {
-      final actualElement = actualLayer.elements[elementIndex];
-      final expectedElement = expectedLayer.elements[elementIndex];
-      expect(actualElement.runtimeType, expectedElement.runtimeType);
-      _expectCommonElement(actualElement, expectedElement);
-      _expectElementContent(actualElement, expectedElement);
-      if (actualElement is CanvasTextElement && expectedElement is CanvasTextElement) {
-        _expectText(actualElement, expectedElement);
-      }
-    }
   }
 }
 
@@ -794,9 +833,13 @@ void _expectResource(CanvasResource actual, CanvasResource expected) {
   }
 }
 
-void _expectCommonElement(CanvasElement actual, CanvasElement expected) {
+void _expectCommonElement(
+  CanvasElement actual,
+  CanvasElement expected, {
+  CanvasTransform? expectedTransform,
+}) {
   expect(actual.id, expected.id);
-  expect(actual.transform, expected.transform);
+  expect(actual.transform, expectedTransform ?? expected.transform);
   expect(actual.opacity, expected.opacity);
   expect(actual.hitPadding, expected.hitPadding);
   expect(actual.isVisible, expected.isVisible);
@@ -917,18 +960,32 @@ Future<void> _exerciseDrawLayerProvenance() async {
 }
 
 void _expectDrawHostRetainedState(CanvasRuntime runtime) {
-  final document = runtime.readDocument();
-  expect(document.resources, hasLength(1));
-  final resource = document.resources.single as CanvasImageResource;
-  expect(resource.source, CanvasResourceSource.appKey('provenance-asset'));
-  expect(resource.metadata, CanvasMetadata.fromMap({'owner': 'provenance'}));
-  expect(document.background.color, const Color(0xFF336699));
-  expect(document.background.grid, CanvasGrid(enabled: true, cellSize: 20));
-  expect(document.backgroundElements.map((element) => element.id), [CanvasElementId('provenance-background')]);
-  final background = document.backgroundElements.single as CanvasRectElement;
-  expect(background.transform, CanvasTransform.translation(const Offset(-5, 8)));
-  expect(background.size, const Size(7, 9));
+  _expectDocumentEnvelope(
+    runtime.readDocument(),
+    _drawHostBaseline(),
+  );
 }
+
+CanvasDocument _drawHostBaseline() => CanvasDocument(
+      background: CanvasBackground(
+        color: const Color(0xFF336699),
+        grid: CanvasGrid(enabled: true, cellSize: 20),
+      ),
+      resources: [
+        CanvasImageResource(
+          id: CanvasResourceId('provenance-resource'),
+          source: CanvasResourceSource.appKey('provenance-asset'),
+          metadata: CanvasMetadata.fromMap({'owner': 'provenance'}),
+        ),
+      ],
+      backgroundElements: [
+        CanvasRectElement(
+          id: CanvasElementId('provenance-background'),
+          size: const Size(7, 9),
+          transform: CanvasTransform.translation(const Offset(-5, 8)),
+        ),
+      ],
+    );
 
 void _expectDrawReplay(
   CanvasRuntime runtime,
@@ -955,22 +1012,7 @@ final class _DrawHost implements CanvasCommitLease {
         ) {
     _active = this;
     runtime.edits.edit((edit) {
-      edit.setBackgroundColor(const Color(0xFF336699));
-      edit.setGrid(CanvasGrid(enabled: true, cellSize: 20));
-      edit.upsertResource(
-        CanvasImageResource(
-          id: CanvasResourceId('provenance-resource'),
-          source: CanvasResourceSource.appKey('provenance-asset'),
-          metadata: CanvasMetadata.fromMap({'owner': 'provenance'}),
-        ),
-      );
-      edit.addBackgroundElement(
-        CanvasRectElement(
-          id: CanvasElementId('provenance-background'),
-          size: const Size(7, 9),
-          transform: CanvasTransform.translation(const Offset(-5, 8)),
-        ),
-      );
+      edit.replaceDraftDocument(_drawHostBaseline());
     });
   }
 

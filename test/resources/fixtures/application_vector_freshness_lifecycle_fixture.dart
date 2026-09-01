@@ -529,7 +529,7 @@ final class _ExternalConsumerSurface extends StatelessWidget {
 }
 
 CanvasRuntime _runtimeForVector(String resourceId) {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(
       CanvasDocument(
@@ -592,5 +592,5 @@ Future<Color> _paintPixel(WidgetTester tester, Key key) async {
   return color;
 }
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: acceptCommit);

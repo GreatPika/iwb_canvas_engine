@@ -192,7 +192,7 @@ void _registerSurfaceRenderingResolverTest() {
   testWidgets('CanvasSurface asks resolver for the sample-cat descriptor', (
     tester,
   ) async {
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     runtime.edits.loadDocumentFromJson(
       encodeCanvasDocumentToJson(_sampleImageDocument()),
     );
@@ -352,7 +352,7 @@ CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
       _ => const CanvasCommitAccept(lease: _commitLease),
     };
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: _acceptCommit);
 
 final class _CommitLease implements CanvasCommitLease {

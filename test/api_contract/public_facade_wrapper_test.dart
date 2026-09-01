@@ -21,7 +21,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() {
   return CanvasRuntimeConfig(
     commitResolver: _acceptCommit,
   );
@@ -61,7 +61,7 @@ void main() {
         ),
       ],
     );
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(source));
 
     expect(runtime.state.value.summary.elementCount, 1);

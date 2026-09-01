@@ -92,7 +92,13 @@ void _acceptedMoveOverflowAbortsLease() {
   final before = runtime.state.value;
   expect(
     () => runtime.selection.moveSelection(const Offset(1, 0)),
-    throwsA(isA<Object>()),
+    throwsA(
+      isA<CanvasDataException>().having(
+        (error) => error.code,
+        'code',
+        CanvasDataErrorCode.fieldMustBeInRange,
+      ),
+    ),
   );
   expect(calls, 1);
   expect(lease.abortedCalls, 1);
@@ -281,21 +287,25 @@ Future<void> _unifiedTransformRequestsRetainFactsAndLeaseOrder() async {
       CanvasTransformOperation.rotateClockwise,
       (selection) => selection.rotateSelectionClockwise(timestampMs: 31),
       CanvasTransform.rotationDegrees(90),
+      31,
     ),
     _TransformRequestCase.rotate(
       CanvasTransformOperation.rotateCounterClockwise,
       (selection) => selection.rotateSelectionCounterClockwise(timestampMs: 32),
       CanvasTransform.rotationDegrees(-90),
+      32,
     ),
     _TransformRequestCase.reflect(
       CanvasTransformOperation.flipVertical,
       (selection) => selection.flipSelectionVertical(timestampMs: 33),
       CanvasTransform.scale(1, -1),
+      33,
     ),
     _TransformRequestCase.reflect(
       CanvasTransformOperation.flipHorizontal,
       (selection) => selection.flipSelectionHorizontal(timestampMs: 34),
       CanvasTransform.scale(-1, 1),
+      34,
     ),
   ];
 
@@ -357,6 +367,16 @@ Future<void> _unifiedTransformRequestsRetainFactsAndLeaseOrder() async {
         throwsUnsupportedError,
       );
       _expectTransformRequest(testCase, received);
+      final expectedTransform = _aroundPivot(
+        testCase.localTransform,
+        Offset.zero,
+      );
+      for (var index = 0; index < _movableSelectedIds.length; index += 1) {
+        _expectTransformClose(
+          _element(runtime, _movableSelectedIds[index].value).transform,
+          expectedTransform.multiply(_movableInitialTransforms[index]),
+        );
+      }
       expect(orderingWork, hasLength(5));
       expect(
         orderingWork,
@@ -365,6 +385,15 @@ Future<void> _unifiedTransformRequestsRetainFactsAndLeaseOrder() async {
         ),
       );
       expect(actions, hasLength(1));
+      _expectTransformAction(
+        actions.single,
+        type: CanvasActionType.transformSelection,
+        ids: _movableSelectedIds,
+        operation: testCase.operation,
+        transform: expectedTransform,
+        pivotWorld: Offset.zero,
+        timestampMs: testCase.timestampMs,
+      );
       expect(
         preparedWork.where(
           (event) => event == PreparedInteractionApplyWorkEvent.prepared,
@@ -419,12 +448,16 @@ Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
   try {
     cancelled.selection.selectAll(onlySelectable: false);
     final before = cancelled.state.value;
+    final beforeDocument = cancelled.readDocument();
+    final beforeSelection = cancelled.selection.selectedElementIds;
     CommitApplier.observePreparedInteractionWork(
       cancelledPreparedWork.add,
       cancelled.selection.rotateSelectionClockwise,
     );
     await Future<void>.delayed(Duration.zero);
     expect(cancelled.state.value, before);
+    expect(cancelled.readDocument(), same(beforeDocument));
+    expect(cancelled.selection.selectedElementIds, beforeSelection);
     expect(cancelledActions, isEmpty);
     expect(
       cancelledPreparedWork.where(
@@ -438,6 +471,7 @@ Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
       ),
       isEmpty,
     );
+    expect(cancelled.generateElementId(), CanvasElementId('e0'));
   } finally {
     await cancelledSubscription.cancel();
     cancelled.dispose();
@@ -454,10 +488,15 @@ Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
   try {
     failing.selection.selectAll(onlySelectable: false);
     final before = failing.state.value;
+    final beforeDocument = failing.readDocument();
+    final beforeSelection = failing.selection.selectedElementIds;
     failing.selection.rotateSelectionCounterClockwise();
     await Future<void>.delayed(Duration.zero);
     expect(failing.state.value, before);
+    expect(failing.readDocument(), same(beforeDocument));
+    expect(failing.selection.selectedElementIds, beforeSelection);
     expect(failingActions, isEmpty);
+    expect(failing.generateElementId(), CanvasElementId('e0'));
   } finally {
     await failingSubscription.cancel();
     failing.dispose();
@@ -478,12 +517,17 @@ Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
   try {
     incompatible.selection.selectAll(onlySelectable: false);
     final before = incompatible.state.value;
+    final beforeDocument = incompatible.readDocument();
+    final beforeSelection = incompatible.selection.selectedElementIds;
     incompatible.selection.flipSelectionVertical();
     await Future<void>.delayed(Duration.zero);
     expect(incompatible.state.value, before);
+    expect(incompatible.readDocument(), same(beforeDocument));
+    expect(incompatible.selection.selectedElementIds, beforeSelection);
     expect(incompatibleActions, isEmpty);
     expect(lease.abortedCalls, 1);
     expect(lease.committedCalls, 0);
+    expect(incompatible.generateElementId(), CanvasElementId('e0'));
   } finally {
     await incompatibleSubscription.cancel();
     incompatible.dispose();
@@ -539,6 +583,14 @@ final _movableSelectedIds = [
   CanvasElementId('not-deletable-a'),
 ];
 
+final _movableInitialTransforms = [
+  CanvasTransform.identity,
+  CanvasTransform.translation(const Offset(10, 0)),
+  CanvasTransform.identity,
+  CanvasTransform.translation(const Offset(-10, 0)),
+  CanvasTransform.identity,
+];
+
 // Keeping the complete immutable payload together makes a failed public
 // confirmation easier to diagnose than duplicated partial assertions.
 // ignore: halstead-volume, source-lines-of-code
@@ -583,14 +635,12 @@ void _expectTransformRequest(
     affected.affectedElements.map((element) => element.id),
     _movableSelectedIds,
   );
-  _expectTransformClose(
-    affected.affectedElements[0].transform,
-    CanvasTransform.identity,
-  );
-  _expectTransformClose(
-    affected.affectedElements[1].transform,
-    CanvasTransform.translation(const Offset(10, 0)),
-  );
+  for (var index = 0; index < _movableInitialTransforms.length; index += 1) {
+    _expectTransformClose(
+      affected.affectedElements[index].transform,
+      _movableInitialTransforms[index],
+    );
+  }
   expect(() => affected.affectedElements.clear(), throwsUnsupportedError);
 }
 
@@ -600,34 +650,40 @@ final class _TransformRequestCase {
     required this.invoke,
     required this.localTransform,
     required this.isRotation,
+    required this.timestampMs,
   });
 
   factory _TransformRequestCase.rotate(
     CanvasTransformOperation operation,
     void Function(CanvasSelectionPort selection) invoke,
     CanvasTransform localTransform,
+    int timestampMs,
   ) => _TransformRequestCase._(
     operation: operation,
     invoke: invoke,
     localTransform: localTransform,
     isRotation: true,
+    timestampMs: timestampMs,
   );
 
   factory _TransformRequestCase.reflect(
     CanvasTransformOperation operation,
     void Function(CanvasSelectionPort selection) invoke,
     CanvasTransform localTransform,
+    int timestampMs,
   ) => _TransformRequestCase._(
     operation: operation,
     invoke: invoke,
     localTransform: localTransform,
     isRotation: false,
+    timestampMs: timestampMs,
   );
 
   final CanvasTransformOperation operation;
   final void Function(CanvasSelectionPort selection) invoke;
   final CanvasTransform localTransform;
   final bool isRotation;
+  final int timestampMs;
 }
 
 final class _TransformLease implements CanvasCommitLease {

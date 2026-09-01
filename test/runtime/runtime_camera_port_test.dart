@@ -21,7 +21,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() {
   return CanvasRuntimeConfig(
     commitResolver: _acceptCommit,
   );
@@ -49,7 +49,7 @@ final class _CommitLease implements CanvasCommitLease {
 void main() {
   test('camera starts from document and updates only view camera revision', () {
     final persistedCamera = CanvasCamera(offset: const Offset(4, 8));
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     runtime.edits.loadDocumentFromJson(
       encodeCanvasDocumentToJson(CanvasDocument(camera: persistedCamera)),
     );
@@ -84,7 +84,7 @@ void main() {
   });
 
   test('camera rejects invalid offsets with CanvasDataException', () {
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
 
     expect(
       () => runtime.camera.setOffset(const Offset(double.nan, 0)),

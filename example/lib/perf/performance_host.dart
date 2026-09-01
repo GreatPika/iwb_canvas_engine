@@ -14,7 +14,7 @@ final class PerformanceHostController extends ChangeNotifier {
     CanvasRuntime? runtime,
     PerformanceHostResourceResolver? resourceResolver,
   }) : _runtime =
-           runtime ?? CanvasRuntime(config: _acceptDeletionRuntimeConfig()),
+           runtime ?? CanvasRuntime(config: _acceptCommitRuntimeConfig()),
        resourceResolver = resourceResolver ?? PerformanceHostResourceResolver();
 
   CanvasRuntime _runtime;
@@ -168,7 +168,7 @@ CanvasCommitResolution _acceptPerformanceCommit(CanvasCommitRequest request) =>
       _ => const CanvasCommitAccept(lease: _performanceCommitLease),
     };
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: _acceptPerformanceCommit);
 
 final class _PerformanceCommitLease implements CanvasCommitLease {

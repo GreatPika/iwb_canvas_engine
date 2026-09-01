@@ -540,6 +540,7 @@ void _expectFrameBridgeFailureIsContained() {
 
     expect(result.didClearContent, isTrue);
     expect(root.readDocument().layers.single.elements, isEmpty);
+    _expectClearedPublicState(root);
     expect(events, ['frame-bridge', 'state', 'action', 'observer']);
     expect(root.generateElementId(), CanvasElementId('e0'));
   } finally {
@@ -582,6 +583,7 @@ void _expectStateErrorReporterFailureIsContained() {
 
     expect(result.didClearContent, isTrue);
     expect(root.readDocument().layers.single.elements, isEmpty);
+    _expectClearedPublicState(root);
     expect(events, [
       'state-listener',
       'state-error-reporter',
@@ -595,6 +597,19 @@ void _expectStateErrorReporterFailureIsContained() {
     unawaited(subscription.cancel());
     root.dispose();
   }
+}
+
+void _expectClearedPublicState(RuntimeRoot root) {
+  expect(
+    root.state.value.summary,
+    const CanvasRuntimeSummary(
+      elementCount: 0,
+      layerCount: 1,
+      resourceCount: 0,
+      selectedCount: 0,
+    ),
+  );
+  expect(root.state.value.revisions.document, 1);
 }
 
 // This scenario intentionally names every guarded public mutation entry point

@@ -22,7 +22,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() {
   return CanvasRuntimeConfig(
     commitResolver: _acceptCommit,
   );
@@ -212,7 +212,7 @@ void main() {
   });
 
   test('runtime JSON load rejects aggregate metadata before install', () {
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     try {
       runtime.edits.loadDocumentFromJson(
         encodeCanvasDocumentToJson(
@@ -507,7 +507,7 @@ CanvasDocument _loadDocumentFromObject(Map<String, Object?> json) {
 }
 
 CanvasDocument _loadDocumentFromJson(String json) {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   try {
     runtime.edits.loadDocumentFromJson(json);
 

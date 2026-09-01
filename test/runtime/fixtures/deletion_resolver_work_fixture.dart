@@ -451,6 +451,8 @@ void _expectNonemptyConstruction(
     route == _DeletionRoute.selection ? targetCount : 0,
   );
   if (outcome == _ResolverOutcome.accept) {
+    expect(result.projectionEventsAfterResolver, 0);
+    expect(result.entryRouteEventsAfterResolver, 0);
     expect(result.sealedDeliveryWork, (
       preparations: 1,
       effectLengthReads: 1,

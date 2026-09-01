@@ -381,6 +381,17 @@ PreparedInteractionApply _prepareTerminalInteraction(
         revisionDelta: _terminalMaterializedDelta,
         selectedIds: selectedIds,
       );
+    case _TerminalInteractionForm.materializedStore:
+      final prepared = owners.store.prepareMaterializedCommit(
+        _terminalMaterializedDocument(owners.store),
+        _terminalMaterializedDelta,
+      );
+      document = AcceptedMaterializedStoreDocument(commit: prepared);
+      selectedIds = {CanvasElementId('e0')};
+      plan = _terminalPlan(
+        revisionDelta: prepared.revisionDelta,
+        selectedIds: selectedIds,
+      );
     case _TerminalInteractionForm.replacement:
       document = AcceptedMaterializedDocument(
         document: _terminalReplacementDocument(),
@@ -567,6 +578,7 @@ void _expectTerminalConsume(
 
 enum _TerminalInteractionForm {
   materialized,
+  materializedStore,
   replacement,
   sparse,
   selectionOnly,
@@ -612,13 +624,14 @@ final class _TerminalExpected {
   // ignore: halstead-volume, source-lines-of-code, reason: The finite form map keeps independent literal expected owner facts beside its terminal cases.
   factory _TerminalExpected.forForm(_TerminalInteractionForm form) =>
       switch (form) {
-        _TerminalInteractionForm.materialized => _TerminalExpected(
+        _TerminalInteractionForm.materialized ||
+        _TerminalInteractionForm.materializedStore => _TerminalExpected(
           documentChanged: true,
           selection: {CanvasElementId('e0')},
           nextElementId: CanvasElementId('e1'),
           nextLayerId: CanvasLayerId('l1'),
           nextResourceId: CanvasResourceId('r1'),
-          gridChanged: true,
+          gridChanged: form == _TerminalInteractionForm.materialized,
           elementId: CanvasElementId('e0'),
           layerId: CanvasLayerId('l0'),
           resourceId: CanvasResourceId('r0'),

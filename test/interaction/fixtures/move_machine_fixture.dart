@@ -1026,6 +1026,7 @@ void _testUnrelatedAndNoOpEditsPreserveCapturedMoveBasis() {
       ]);
       expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
       expect(_rect(root, 'b').transform.translation, const Offset(20, 0));
+      expect(_rect(root, 'b').opacity, 0.5);
     },
   );
 }
@@ -1064,6 +1065,7 @@ void _testMixedEditNoOpSelectionPreservesCapturedMoveBasis() {
 
       expect(scenario.resolverCalls(), 1);
       expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
+      expect(_rect(root, 'b').opacity, 0.5);
     },
   );
 }
@@ -1127,6 +1129,7 @@ void _testRealFrameExcludesNewlyEligibleSelectedNonparticipant() {
       ]);
       expect(_rect(root, 'a').transform.translation, _selectedMoveDragEnd);
       expect(_rect(root, 'locked').transform.translation, const Offset(40, 0));
+      expect(_rect(root, 'locked').isLocked, isFalse);
     },
   );
 }
@@ -1398,12 +1401,26 @@ void _testSelectedMoveResolverPrecedesPreparation() {
             },
           ),
         );
-        expect(trace.take(4), [
-          'guard-enter',
-          'resolver-enter',
-          'resolver-exit',
-          'guard-release',
-        ]);
+        expect(
+          trace,
+          anyOf(<Matcher>[
+            equals([
+              'guard-enter',
+              'resolver-enter',
+              'resolver-exit',
+              'guard-release',
+            ]),
+            equals([
+              'guard-enter',
+              'resolver-enter',
+              'resolver-exit',
+              'guard-release',
+              'guard-enter',
+              'guard-release',
+            ]),
+          ]),
+        );
+        expect(trace, isNot(contains('prepare-open')));
         _expectResolverGuardEvents(routeEvents, [
           RuntimeRouteTemporalEventKind.resolverGuardEntered,
           RuntimeRouteTemporalEventKind.resolverGuardReleased,

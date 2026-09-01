@@ -17,7 +17,7 @@ void _registerValidationFixtureTest() {
     for (final entry in fixtures.entries) {
       final document = entry.value;
       final json = performanceFixtureJson(document);
-      final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+      final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
       addTearDown(runtime.dispose);
 
       expect(performanceElementCount(document), 100000, reason: entry.key);
@@ -34,7 +34,7 @@ void _registerBatchFixtureTest() {
   test('batch performance fixtures express their declared workload', () {
     final eraserDocument = performanceEraserDeletionBatchDocument();
     final contextDocument = performanceContextRequestBatchDocument();
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     addTearDown(runtime.dispose);
 
     expect(
@@ -62,7 +62,7 @@ CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
       _ => const CanvasCommitAccept(lease: _commitLease),
     };
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: _acceptCommit);
 
 final class _CommitLease implements CanvasCommitLease {

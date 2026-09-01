@@ -82,7 +82,6 @@ Future<void> _verifyLeaseCallbackGuardPrecedence() async {
     await subscription.cancel();
     root.dispose();
   });
-
   _drawPencil(root);
   _drawMarker(root);
   await Future<void>.delayed(Duration.zero);
@@ -782,15 +781,20 @@ Future<void> _verifyCancelledDrawCommit() async {
     await subscription.cancel();
     root.dispose();
   });
+  final beforeDocument = root.readDocument();
+  final beforeSelection = root.selectedElementIds;
 
   _drawPencil(root);
   await Future<void>.delayed(Duration.zero);
 
   expect(request, isNotNull);
+  expect(root.readDocument(), same(beforeDocument));
+  expect(root.selectedElementIds, beforeSelection);
   expect(root.state.value.summary.elementCount, 0);
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
   expect(actions, isEmpty);
+  expect(root.generateElementId(), CanvasElementId('e0'));
 }
 
 // Each draw variant must share the same real callback observations; splitting

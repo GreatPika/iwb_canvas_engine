@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
@@ -844,16 +844,13 @@ void _testSessionCancelPreservesDraftForRetry() {
       expect(scenario.root.selectedElementIds, beforeSelection);
       expect(session.commit(timestampMs: 46), isFalse);
       expect(abortedLease.abortedCalls, 1);
-      expect(
-        abortedSessionReads,
-        (
-          isActive: true,
-          isStale: false,
-          liveText: 'session retry',
-          geometry: geometryBeforeAbort,
-          style: styleBeforeAbort,
-        ),
-      );
+      expect(abortedSessionReads, (
+        isActive: true,
+        isStale: false,
+        liveText: 'session retry',
+        geometry: geometryBeforeAbort,
+        style: styleBeforeAbort,
+      ));
       expect(session.isActive, isTrue);
       expect(session.liveText, 'session retry');
       expect(scenario.root.textEditing.activeSession.value, same(session));
@@ -1011,11 +1008,17 @@ void _testPreparedTextFactsAreExactBeforeInstall() {
         final beforeDocument = scenario.root.readDocument();
         final beforeRevisions = scenario.root.state.value.revisions;
         final beforeSelection = scenario.root.selectedElementIds;
-        final before = _textElement(scenario.root);
         final projected = <StoreAffectedElementProjection>[];
         final sparseTouchedReads = <(String? subject, String? side)>[];
         final layoutEvents = <(String, Color)>[];
-        session.updateText('expanded\nprepared text');
+        const nextText = 'expanded\nprepared text';
+        final expectedBefore = _richTextElement();
+        final expectedAfter = _richTextElement(
+          text: nextText,
+          revision: 8,
+          transform: _expectedRichTextTransform(nextText),
+        );
+        session.updateText(nextText);
 
         final didCommit = CommittedDocument.observeSparseCandidateEvents(
           (event) {
@@ -1047,9 +1050,10 @@ void _testPreparedTextFactsAreExactBeforeInstall() {
         final facts = projected.single;
         final projectedBefore = _asTextElement(facts.before);
         final projectedAfter = _asTextElement(facts.after);
-        _expectCompleteTextElement(projectedBefore, before);
+        _expectCompleteTextElement(projectedBefore, expectedBefore);
         final installed = _textElement(scenario.root);
-        _expectCompleteTextElement(projectedAfter, installed);
+        _expectCompleteTextElement(projectedAfter, expectedAfter);
+        _expectCompleteTextElement(installed, expectedAfter);
         expect(projectedBefore.id, _textId);
         expect(projectedAfter.id, _textId);
         expect(projectedAfter.revision, projectedBefore.revision + 1);
@@ -1062,9 +1066,7 @@ void _testPreparedTextFactsAreExactBeforeInstall() {
             scenario.actions.single.payload as CanvasTextEditActionPayload;
         expect(action.previousTextLength, projectedBefore.text.length);
         expect(action.nextTextLength, projectedAfter.text.length);
-        expect(layoutEvents, [
-          ('expanded\nprepared text', const Color(0xB3221144)),
-        ]);
+        expect(layoutEvents, [(nextText, const Color(0xB3221144))]);
       } finally {
         await scenario.dispose();
       }
@@ -1104,7 +1106,14 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
           scenario.root.textEditing.startFromContextAction(contextRequest),
         );
         final original = _textElement(scenario.root);
-        session.updateText('expanded\nunified text');
+        const nextText = 'expanded\nunified text';
+        final expectedBefore = _richTextElement();
+        final expectedAfter = _richTextElement(
+          text: nextText,
+          revision: 8,
+          transform: _expectedRichTextTransform(nextText),
+        );
+        session.updateText(nextText);
         final geometryBeforeCommit = session.geometry;
         final styleBeforeCommit = session.style;
         ({
@@ -1150,8 +1159,10 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
           throwsUnsupportedError,
         );
         final committed = _textElement(scenario.root);
-        _expectCompleteTextElement(received.before, original);
-        _expectCompleteTextElement(received.after, committed);
+        _expectCompleteTextElement(received.before, expectedBefore);
+        _expectCompleteTextElement(received.after, expectedAfter);
+        _expectCompleteTextElement(original, expectedBefore);
+        _expectCompleteTextElement(committed, expectedAfter);
         expect(received.before.text, 'hello');
         expect(received.after.text, 'expanded\nunified text');
         expect(received.after.revision, received.before.revision + 1);
@@ -1162,16 +1173,13 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
         expect(lease.snapshots, [(revision: 1, actions: 0)]);
         expect(lease.committedCalls, 1);
         expect(lease.abortedCalls, 0);
-        expect(
-          committedSessionReads,
-          (
-            isActive: false,
-            isStale: true,
-            liveText: 'expanded\nunified text',
-            geometry: geometryBeforeCommit,
-            style: styleBeforeCommit,
-          ),
-        );
+        expect(committedSessionReads, (
+          isActive: false,
+          isStale: true,
+          liveText: nextText,
+          geometry: geometryBeforeCommit,
+          style: styleBeforeCommit,
+        ));
         expect(order, ['state', 'lease', 'action', 'close']);
 
         scenario.root.edits.edit((edit) {
@@ -1182,10 +1190,10 @@ void _testUnifiedSessionCommitRequestAndLeaseOrder() {
             ),
           );
         });
-        expect(received.after.text, 'expanded\nunified text');
+        expect(received.after.text, nextText);
         expect(received.before.text, 'hello');
-        _expectCompleteTextElement(received.after, committed);
-        _expectCompleteTextElement(received.before, original);
+        _expectCompleteTextElement(received.after, expectedAfter);
+        _expectCompleteTextElement(received.before, expectedBefore);
       } finally {
         scenario.root.state.removeListener(onState);
         scenario.root.textEditing.activeSession.removeListener(onActiveSession);
@@ -1668,33 +1676,7 @@ CanvasDocument _richTextDocument() {
       CanvasLayer(
         id: CanvasLayerId('layer-a'),
         elements: [
-          CanvasTextElement(
-            id: _textId,
-            text: 'hello',
-            revision: 7,
-            fontSize: 18,
-            color: const Color(0xFF221144),
-            align: TextAlign.right,
-            textDirection: TextDirection.rtl,
-            isBold: true,
-            isItalic: true,
-            isUnderline: true,
-            fontFamily: 'Inter',
-            maxWidth: null,
-            lineHeight: 1.25,
-            transform: CanvasTransform.translation(const Offset(0, 15)),
-            opacity: 0.7,
-            hitPadding: 3,
-            isVisible: true,
-            isSelectable: true,
-            isLocked: false,
-            isDeletable: false,
-            isTransformable: false,
-            metadata: CanvasMetadata.fromMap({
-              'label': 'rich',
-              'nullable': null,
-            }),
-          ),
+          _richTextElement(),
           CanvasRectElement(
             id: _rectId,
             size: const Size(20, 20),
@@ -1704,6 +1686,64 @@ CanvasDocument _richTextDocument() {
       ),
     ],
   );
+}
+
+CanvasTextElement _richTextElement({
+  String text = 'hello',
+  int revision = 7,
+  CanvasTransform? transform,
+}) => CanvasTextElement(
+  id: _textId,
+  text: text,
+  revision: revision,
+  fontSize: 18,
+  color: const Color(0xFF221144),
+  align: TextAlign.right,
+  textDirection: TextDirection.rtl,
+  isBold: true,
+  isItalic: true,
+  isUnderline: true,
+  fontFamily: 'Inter',
+  lineHeight: 1.25,
+  transform: transform ?? CanvasTransform.translation(const Offset(0, 15)),
+  opacity: 0.7,
+  hitPadding: 3,
+  isDeletable: false,
+  isTransformable: false,
+  metadata: CanvasMetadata.fromMap({'label': 'rich', 'nullable': null}),
+);
+
+CanvasTransform _expectedRichTextTransform(String nextText) {
+  final before = _expectedRichTextSize('hello');
+  final after = _expectedRichTextSize(nextText);
+  return CanvasTransform.translation(
+    Offset(
+      (before.width - after.width) / 2,
+      15 + (after.height - before.height) / 2,
+    ),
+  );
+}
+
+Size _expectedRichTextSize(String text) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Color(0xFF221144),
+        fontSize: 18,
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
+        decoration: TextDecoration.underline,
+        height: 1.25,
+      ),
+    ),
+    textAlign: TextAlign.right,
+    textDirection: TextDirection.rtl,
+  )..layout();
+  final size = painter.size;
+  painter.dispose();
+  return size;
 }
 
 CanvasDocument _invalidReplacementDocument() {

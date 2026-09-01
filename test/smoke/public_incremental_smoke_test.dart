@@ -35,7 +35,7 @@ CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
       _ => const CanvasCommitAccept(lease: _commitLease),
     };
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() =>
     const CanvasRuntimeConfig(commitResolver: _acceptCommit);
 
 final class _CommitLease implements CanvasCommitLease {
@@ -50,7 +50,7 @@ final class _CommitLease implements CanvasCommitLease {
 
 void main() {
   testWidgets('schema v1 document reaches runtime state and selection', (tester) async {
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
     runtime.edits.loadDocumentFromJson(jsonEncode(_smallSchemaV1Document()));
     final resolver = _NoopResolver();
     addTearDown(runtime.dispose);
@@ -765,7 +765,7 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
 }
 
 Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   final actions = <CanvasActionCommitted>[];
   final actionSubscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -883,7 +883,7 @@ Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
 Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_eraserContextRequestDocument()),
   );
@@ -967,7 +967,7 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
 Future<void> _exercisePublicCustomTextEditingOverlay(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_eraserContextRequestDocument(
       cameraOffset: const Offset(5, 3),
@@ -1034,7 +1034,7 @@ Future<void> _exercisePublicCustomTextEditingOverlay(
 Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   WidgetTester tester,
 ) async {
-  final resourceFreeRuntime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final resourceFreeRuntime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   resourceFreeRuntime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_surfaceShapeDocument()),
   );
@@ -1050,7 +1050,7 @@ Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   expect(_paintHosts(), findsOneWidget);
   expect(resourceFreeResolver.calls, 0);
 
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_surfaceImageDocument()),
   );

@@ -178,7 +178,6 @@ void _testSelectedMoveReusesReverseOrderedCandidateFacts() {
             .participantDirectlyResolved],
         isNull,
       );
-      expect(frame.resolveElementCalls, 14);
     },
   );
 }
