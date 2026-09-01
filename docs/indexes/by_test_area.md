@@ -71,6 +71,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 
+## test.api_contract.commit_confirmation_history_public_behavior
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
 ## test.api_contract.dto_immutability
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`

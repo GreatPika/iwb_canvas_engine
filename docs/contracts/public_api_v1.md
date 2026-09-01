@@ -18,6 +18,7 @@ Required tests:
 - `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.public_api_no_unapproved_placeholders`
+- `test.api_contract.commit_confirmation_history_public_behavior`
 - `test.guardrails.public_api_declaration_checks`
 - `test.guardrails.public_api_import_cycles`
 - `test.api.canvas_transform`

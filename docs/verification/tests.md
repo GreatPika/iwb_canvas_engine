@@ -18,6 +18,7 @@ Required tests:
 - `test.api_contract.public_exports_complete`
 - `test.api_contract.api_facades_do_not_export_internal`
 - `test.api_contract.public_api_no_unapproved_placeholders`
+- `test.api_contract.commit_confirmation_history_public_behavior`
 - `test.guardrails.public_api_declaration_checks`
 - `test.guardrails.public_api_import_cycles`
 - `test.api.canvas_transform`
@@ -174,6 +175,7 @@ Required tests:
 - `test/api_contract/public_exports_complete_test.dart`
 - `test/api_contract/api_facades_do_not_export_internal_test.dart`
 - `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
+- `test/api_contract/commit_confirmation_history_public_behavior_test.dart`
 - `test/api_contract/public_readable_union_variants_test.dart`
 - `test/api_contract/preview_state_sealed_union_test.dart`
 - `test/api/canvas_transform_test.dart`
@@ -219,8 +221,10 @@ Unified confirmation evidence is intentionally split by public seam: the
 external compile owner independently rejects omitted `CanvasRuntime.config` and
 `commitResolver`; route fixtures exercise Draw, Delete, Erase, Move, Rotate,
 Reflect, and Text Edit; the runtime work fixture owns prepared/install/cleanup
-cardinality; and the diagnostics fixture owns the bounded resolver/lease-failure
-record. The maintained example is a separate package verification step:
+cardinality; the diagnostics fixture owns the bounded resolver/lease-failure
+record; and `test/api_contract/commit_confirmation_history_public_behavior_test.dart`
+owns the external public-only host Undo/Redo replay of committed request facts.
+The maintained example is a separate package verification step:
 
 ```bash
 cd example && flutter analyze
