@@ -12,7 +12,7 @@ final class DeletionEntryFacts {
   });
 
   final CanvasElement element;
-  final CanvasLayerId layerId;
+  final CanvasLayerId? layerId;
   final int elementIndex;
   final int orderToken;
 

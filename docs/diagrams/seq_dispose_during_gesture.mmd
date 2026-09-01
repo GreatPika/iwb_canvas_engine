@@ -19,7 +19,7 @@ sequenceDiagram
   participant Session as SurfaceResourceSession
   participant Cache as ResourceAssetCache
   participant Resolver as CanvasResourceResolver
-  participant MoveResolver as CanvasMoveCommitResolver
+  participant CommitResolver as CanvasCommitResolver
   participant EK as EditKernel
   participant Actions as CanvasActionCommitted stream
   participant ContextRequests as CanvasContextActionRequested stream
@@ -39,7 +39,7 @@ sequenceDiagram
     Runtime->>Tools: stop accepting current public pointer routing
     Tools->>IE: interrupt active pointer because runtime is disposing
     IE->>IE: classify active session as dispose cancellation
-    Note over IE,MoveResolver: Move commit resolver is not called when dispose cancels a gesture.
+    Note over IE,CommitResolver: Unified commit resolver is not called when dispose cancels a gesture.
 
     alt active preview is selected move
       IE->>Cleanup: typed cleanup request for dispose selected move cleanup

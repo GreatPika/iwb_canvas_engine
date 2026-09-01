@@ -88,13 +88,16 @@ stateDiagram-v2
 
   state "EditKernel outcome" as EditKernelOutcome
   note right of EditKernelOutcome
-    Atomic install is the only commit boundary. Rollback,
+    RuntimeRoot prepares the exact line entry and resolves one
+    CanvasDrawCommitRequest before installation. Cancel, callback/pre-install
+    failure, or non-applicable acceptance discards it and aborts a returned
+    lease once. Atomic install is the only document commit boundary. Rollback,
     rejected Future, stale handle, preflight failure, or exception
     leaves committed document revisions, spatial index,
     projection cache, main repaint, and drawLine action unchanged.
   end note
 
-  EditKernelOutcome --> SuccessfulCommit: atomic install accepted
+  EditKernelOutcome --> SuccessfulCommit: CanvasCommitAccept and atomic install accepted
   EditKernelOutcome --> CleanupOnly: rollback, rejection, preflight failure, or exception
 
   state "Successful commit installed" as SuccessfulCommit
@@ -114,7 +117,7 @@ stateDiagram-v2
     RuntimeRoot enters one guard after cleanup and delivers spatial,
     resource/session release, root/bridged frame, one
     CanvasRuntimeState with document and preview revisions,
-    drawLine, then a non-empty observer.
+    accepted lease commitment, drawLine, then a non-empty observer.
   end note
   PublishCommitSignals --> Idle: signals published
 
@@ -158,7 +161,7 @@ stateDiagram-v2
 
   note left of CommitIntent
     Negative invariants:
-    no selected-move resolver;
+    no selected-move transform preparation;
     no selected-move main-scene preview;
     no direct Store mutation;
   end note

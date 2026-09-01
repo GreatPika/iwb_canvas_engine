@@ -5,8 +5,16 @@
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
 
 final class PublicIntegrationCompileFixture {
   PublicIntegrationCompileFixture({CanvasRuntime? runtime})
@@ -198,23 +206,34 @@ final class PublicIntegrationResourceResolver
 
 CanvasRuntimeConfig _runtimeConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: _acceptDeletionCommit,
+    commitResolver: (request) {
+      if (request case CanvasMoveCommitRequest()) {
+        _use(request.documentSummary);
+        _use(request.movedElements);
+        _use(request.proposedDelta);
+        _use(request.selectionBoundsWorld);
+        return const CanvasCommitCancel();
+      }
+      return _acceptCommit(request);
+    },
     pointerPolicy: CanvasPointerPolicy(),
     initialMode: CanvasInteractionMode.move,
     initialDrawStyle: CanvasDrawStyle(),
     clearSelectionOnDrawModeEnter: true,
-    moveCommitResolver: (request) {
-      _use(request.documentSummary);
-      _use(request.movedElements);
-      _use(request.proposedDelta);
-      _use(request.selectionBoundsWorld);
-
-      return const CanvasMoveCancel();
-    },
     diagnosticPolicy: CanvasDiagnosticPolicy.verbose(),
   );
 }
 
 T _compileOnly<T>() => throw StateError('compile-only fixture value');
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+
+  @override
+  void aborted() => _use(null);
+
+  @override
+  void committed() => _use(null);
+}
 
 int _use(Object? value) => Object.hash(value, null);

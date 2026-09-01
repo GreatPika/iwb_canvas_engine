@@ -24,7 +24,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   test('direct content double tap emits one content request', () {
@@ -572,7 +572,7 @@ Future<void> _verifyPointerSampleMismatchIsPrivate() async {
 Future<void> _verifyPointerTapInsideTapSlopIsTapOnly() async {
   final scenario = _RuntimeContextRequestScenario(
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 8, dragStartSlop: 4),
     ),
   );
@@ -621,7 +621,7 @@ final class _RuntimeContextRequestScenario {
     bool selectableContent = false,
     double hitPadding = 0,
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
     ),
     CanvasDocument? initialDocument,
   }) {

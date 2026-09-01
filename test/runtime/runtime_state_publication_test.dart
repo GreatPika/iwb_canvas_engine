@@ -31,15 +31,25 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+CanvasRuntimeConfig _acceptCommitRuntimeConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+    commitResolver: (_) => const CanvasCommitAccept(lease: _NoopCommitLease()),
   );
+}
+
+final class _NoopCommitLease implements CanvasCommitLease {
+  const _NoopCommitLease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
 }
 
 void main() {
   test('state.value is readable immediately after construction', () {
-    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
 
     expect(runtime.state.value, isA<CanvasRuntimeState>());
     expect(runtime.state.value.revisions, _zeroRevisions());
@@ -175,7 +185,7 @@ CanvasDocument _document() {
 }
 
 CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+  final runtime = CanvasRuntime(config: _acceptCommitRuntimeConfig());
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;

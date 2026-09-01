@@ -571,11 +571,11 @@ edges:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - RuntimeRoot contains synchronous deletion and pointer-Move resolver exceptions and routes one bounded operation/error-kind diagnostic through the existing adapter without public diagnostic exposure.
+      - RuntimeRoot contains synchronous unified commit resolver and lease callback exceptions and routes one bounded operation/error-kind diagnostic through the existing adapter without public diagnostic exposure.
     actual:
       delegationMembers:
-        - RuntimeRoot._resolveDeletion
-        - RuntimeRoot._resolveSelectedMoveDelta
+        - RuntimeRoot._resolveCommit
+        - RuntimeRoot._invokeCommitLease
         - RuntimeInteractionDiagnosticsAdapter.recordResolverCallbackFailed
       delegationTargets:
         - DiagnosticsHub
@@ -747,8 +747,8 @@ edges:
     sourceDocs:
       - path: docs/contracts/operation_matrix.md
     evidence:
-      - RuntimeRoot._prepareEraserDeletion creates its current private deferred capability through EditKernel.prepareDeferredInteractionCommit; the existing eraser resolver later consumes or discards the common prepared apply before public state/action delivery.
-      - RuntimeRoot.commitTextEdit uses EditKernel.prepareInteractionCommit, which immediately consumes the same common prepared apply before public state/action delivery.
+      - RuntimeRoot._prepareEraserDeletion creates its current private deferred capability through EditKernel.prepareDeferredInteractionCommit; the unified resolver later consumes or discards the common prepared apply before public state/lease/action delivery.
+      - RuntimeRoot.commitTextEdit uses EditKernel preparation to retain the exact before/after pair, then unified confirmation consumes or discards the same common prepared apply before public state/lease/action delivery.
     actual:
       delegationMembers:
         - RuntimeRoot._prepareEraserDeletion

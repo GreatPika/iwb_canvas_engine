@@ -16,6 +16,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.d
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../support/flutter_consumer_test_harness.dart';
+import '../support/accept_commit.dart';
 
 void main() {
   test('dispose is idempotent and leaves final state readable', () async {
@@ -43,9 +44,7 @@ void main() {
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork() {
   final runtime = CanvasRuntime(
-    config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
-    ),
+    config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
   );
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
@@ -137,8 +136,27 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+    commitResolver: _acceptCommit,
   );
+}
+
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+  @override
+  void aborted() {}
+  @override
+  void committed() {}
 }
 
 void main() {

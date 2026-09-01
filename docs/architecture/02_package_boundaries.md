@@ -253,9 +253,10 @@ current image or vector path.
 
 `RuntimeRoot` is the sole composition boundary for sealed accepted delivery:
 it applies spatial and resource/session phases before notifying root and
-bridged frame listeners, public state, synchronous actions, and the non-empty
-effect observer. Neither `CommitApplier`, EditKernel, the surface bridge, nor
-resource/session owners may reconstruct that sequence or prepared state.
+bridged frame listeners, final public state, the accepted commit lease,
+synchronous actions, and the non-empty effect observer. Neither `CommitApplier`,
+EditKernel, the surface bridge, nor resource/session owners may reconstruct
+that sequence or prepared state.
 Recoverable frame-bridge, notifier/error-reporter, action-listener, and
 observer failures are contained by this boundary after installation: later
 public delivery attempts continue in their established order and the guard

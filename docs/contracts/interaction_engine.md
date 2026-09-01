@@ -285,38 +285,41 @@ deletion preparation and uses the centralized cleanup route.
 
 For a nonempty terminal eraser intent, RuntimeRoot receives the Unit-2 filtered
 canonical Store entries and prepares the complete sparse deletion before calling
-the required guarded resolver. That preparation includes Store validation and
-revision/ledger binding, Selection backing, revision facts, sealed delivery, and
-erase action inputs. Resolver cancel or ordinary failure discards the private
-prepared state without a document, selection, timestamp, or action change; an
-ordinary failure records only the bounded internal `{operation, errorKind}`
-diagnostic. On accept, Store installs its bound state once, Selection installs
-its already-owned backing once, and only then does RuntimeRoot ask the
-coordinator for `publish: false` cleanup. Every terminal branch, including a
-post-install state/action delivery failure, completes that cleanup before the
-fallible delivery; accepted state remains final and is never rolled back.
+the required guarded unified commit resolver with `CanvasEraseCommitRequest`.
+That preparation includes Store validation and revision/ledger binding,
+Selection backing, revision facts, sealed delivery, and erase action inputs.
+Resolver cancel or ordinary failure discards the private prepared state without
+a document, selection, timestamp, or action change; a returned incompatible or
+otherwise non-applicable lease is aborted exactly once. An ordinary failure
+records only the bounded internal `{operation, errorKind}` diagnostic. On
+accept, Store installs its bound state once, Selection installs its already-owned
+backing once, and only then does RuntimeRoot ask the coordinator for `publish:
+false` cleanup. Every terminal branch, including a post-install
+state/action delivery failure, completes that cleanup before the fallible
+delivery; accepted state remains final and is never rolled back.
 
 For an accepted non-text terminal, `RuntimeRoot` first receives the already
 closed EditKernel result, then asks InteractionEngine for cleanup with
 publication suppressed, augments the sealed delivery effects with the cleanup
 repaint, and only then enters common delivery. InteractionEngine remains the
 cleanup-policy owner: it does not invoke a resolver, Store/EditKernel, frame,
-state, action, or observer callback in that gap. A selected-move resolver is
-also RuntimeRoot-owned: no configured callback or guard runs for the direct
-finite non-zero path, while a configured finite acceptance completes its guard
-before preparation. Cancel, invalid final value, or contained callback failure
-never opens preparation. Resolver callbacks may read runtime state and perform
-host-local work, but public mutation, ID generation, disposal, and nested
-resolver entry reject before changing their owners; an application that catches
-that rejection may still return a valid current Move decision. An unhandled
-callback failure performs resolver-error cleanup, emits only bounded callback
-diagnostics when enabled, and leaves document, selection, and actions unchanged.
+state, action, or observer callback in that gap. The unified resolver is
+RuntimeRoot-owned and runs exactly once only after the route's existing facts
+are qualified; Draw, Delete, Erase, Move, Rotate, and Reflect do not have a
+direct acceptance bypass. Cancel, invalid Move value, or contained callback
+failure never installs. Resolver and lease callbacks may read runtime state and
+perform host-local work, but public mutation, ID generation, disposal, and
+nested confirmation reject before changing their owners; an application that
+catches that rejection may still return a valid current decision. An unhandled
+callback failure performs the existing resolver-error cleanup where the route
+owns cleanup, emits only bounded callback diagnostics when enabled, and leaves
+document, selection, and actions unchanged.
 
 Common delivery remains RuntimeRoot composition, not an InteractionEngine
 route: under one post-commit guard it performs spatial, resource/session
-release, root-frame, bridged-frame, public-state, synchronous-action, and
-non-empty-observer delivery in that order. Route cleanup is already complete
-before the guard opens.
+release, root-frame, bridged-frame, public-state, accepted-lease,
+synchronous-action, and non-empty-observer delivery in that order. Route cleanup
+is already complete before the guard opens.
 
 `PointerCleanupOutcome` is pointer-only and effect-only. It records previous
 preview kind, whether preview changed, whether public state is needed, repaint
@@ -471,9 +474,10 @@ When there is no live `InteractionRequestRegistry` entry, a commitTextEdit
 request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private request-consumption effects.
 The command accepts only current live context request ids whose target is a
-text content element. It consumes accepted no-op requests, consumes changed
-requests only after successful edit preparation and EditKernel closure. Changed
-text silently clears only a matching active session and its owned
+text content element. It consumes accepted no-op requests, and resolves changed
+text only after Unit-9 preparation captures the exact before/after pair. It
+consumes changed requests only after accepted installation and EditKernel
+closure. Changed text silently clears only a matching active session and its owned
 suppression/candidate state, records its interaction revision before capture,
 and enters common delivery. After that guarded delivery releases, RuntimeRoot
 notifies the session closure before returning. The listener may read final

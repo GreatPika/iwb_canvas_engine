@@ -223,7 +223,6 @@ void _verifyRealTerminalPointerRoute() {
   ]);
   expect(preparation, [
     RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
-    RuntimeDeletionRouteConstructionKind.request,
   ]);
   _expectSingleTerminalSnapshot(captureEvents, routeEvents);
   _expectSingleTerminalGeometryAndSpatialPass(

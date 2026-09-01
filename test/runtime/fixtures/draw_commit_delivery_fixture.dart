@@ -17,7 +17,9 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart'
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
-import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/id_admission.dart'
+    show IdAdmissionWorkKind, IdAdmissionWorkPhase;
+import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
@@ -51,6 +53,141 @@ void main() {
   test('draw routes clean previews before every delivery callback', () {
     return expectLater(_verifyDrawRouteDeliveryCleanup(), completes);
   });
+
+  test('draw resolver receives exact entries and settles accepted leases', () {
+    return expectLater(_verifyUnifiedDrawCommitRequests(), completes);
+  });
+
+  test('cancelled draw discards its candidate and remains action silent', () {
+    return expectLater(_verifyCancelledDrawCommit(), completes);
+  });
+}
+
+Future<void> _verifyUnifiedDrawCommitRequests() async {
+  final requests = <CanvasDrawCommitRequest>[];
+  final leases = <_DrawLease>[];
+  final committedSnapshots = <({int documentRevision, int actionCount})>[];
+  final actions = <CanvasActionCommitted>[];
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (request) {
+        final draw = request as CanvasDrawCommitRequest;
+        requests.add(draw);
+        final lease = _DrawLease(
+          onCommitted: () {
+            committedSnapshots.add((
+              documentRevision: root.state.value.revisions.document,
+              actionCount: actions.length,
+            ));
+          },
+        );
+        leases.add(lease);
+        return CanvasCommitAccept(lease: lease);
+      },
+    ),
+  );
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  _drawPencil(root);
+  _drawMarker(root);
+  _drawLine(root);
+  _drawDotLine(root);
+  await Future<void>.delayed(Duration.zero);
+
+  expect(requests, hasLength(4));
+  _expectDrawRequest(
+    requests[0],
+    elementType: CanvasStrokeElement,
+    elementId: CanvasElementId('e0'),
+    tool: CanvasDrawTool.pencil,
+    elementIndex: 0,
+    createsLayer: true,
+  );
+  _expectDrawRequest(
+    requests[1],
+    elementType: CanvasStrokeElement,
+    elementId: CanvasElementId('e1'),
+    tool: CanvasDrawTool.marker,
+    elementIndex: 1,
+    createsLayer: false,
+  );
+  _expectDrawRequest(
+    requests[2],
+    elementType: CanvasLineElement,
+    elementId: CanvasElementId('e2'),
+    tool: CanvasDrawTool.line,
+    elementIndex: 2,
+    createsLayer: false,
+  );
+  _expectDrawRequest(
+    requests[3],
+    elementType: CanvasLineElement,
+    elementId: CanvasElementId('e3'),
+    tool: CanvasDrawTool.line,
+    elementIndex: 3,
+    createsLayer: false,
+  );
+  final dotLine = requests[3].entry.element as CanvasLineElement;
+  expect(dotLine.start, dotLine.end);
+  expect(committedSnapshots, [
+    (documentRevision: 1, actionCount: 0),
+    (documentRevision: 2, actionCount: 1),
+    (documentRevision: 3, actionCount: 2),
+    (documentRevision: 4, actionCount: 3),
+  ]);
+  expect(leases.every((lease) => lease.committedCalls == 1), isTrue);
+  expect(leases.every((lease) => lease.abortedCalls == 0), isTrue);
+}
+
+void _expectDrawRequest(
+  CanvasDrawCommitRequest request, {
+  required Type elementType,
+  required CanvasElementId elementId,
+  required CanvasDrawTool tool,
+  required int elementIndex,
+  required bool createsLayer,
+}) {
+  expect(request.entry.element.runtimeType, elementType);
+  expect(request.entry.element.id, elementId);
+  expect(request.entry.layerId, CanvasLayerId('default-layer'));
+  expect(request.entry.elementIndex, elementIndex);
+  expect(request.layerIndex, 0);
+  expect(request.tool, tool);
+  expect(request.createsLayer, createsLayer);
+}
+
+Future<void> _verifyCancelledDrawCommit() async {
+  CanvasDrawCommitRequest? request;
+  final root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (candidate) {
+        request = candidate as CanvasDrawCommitRequest;
+        return const CanvasCommitCancel();
+      },
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  _drawPencil(root);
+  await Future<void>.delayed(Duration.zero);
+
+  expect(request, isNotNull);
+  expect(root.state.value.summary.elementCount, 0);
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(actions, isEmpty);
 }
 
 // Each draw variant must share the same real callback observations; splitting
@@ -131,6 +268,7 @@ Future<void> _verifyDrawRouteDeliveryCleanup() async {
     ]);
     _expectDrawRouteLifecycle(events, route.route);
     await subscription.cancel();
+    terminalDelivery = false;
     root.detachSurface(surface);
     root.dispose();
   }
@@ -333,6 +471,28 @@ void _drawLine(RuntimeRoot root) {
   );
   root.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.up, const Offset(3, 4), 13),
+  );
+}
+
+void _drawDotLine(RuntimeRoot root) {
+  root.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.line,
+      color: const Color(0xFF778899),
+      lineThickness: 4,
+    ),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(5, 6)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(5, 6)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(5, 6)),
   );
 }
 
@@ -554,15 +714,27 @@ Future<void> _verifyRuntimeRouteIdAdmissionWork() async {
 
 _RouteWorkSetup _createSupportedPrefixRuntime() {
   final delivery = _DrawWorkDeliveryProbe();
+  final requests = <CanvasDrawCommitRequest>[];
   late RuntimeRoot root;
   final resetWork = observeIdAdmissionWork(() {
     root = runtimeRootWithCommittedDocumentSeed(
       _supportedPrefixDocument(),
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          requests.add(request as CanvasDrawCommitRequest);
+          return CanvasCommitAccept(lease: _DrawLease());
+        },
+      ),
       commitEffectObserver: (effects) => delivery.observeEffects(effects),
     );
   });
 
-  return (root: root, resetWork: resetWork, delivery: delivery);
+  return (
+    root: root,
+    resetWork: resetWork,
+    delivery: delivery,
+    requests: requests,
+  );
 }
 
 void _expectSupportedPrefixReset(IdAdmissionWorkRecorder work) {
@@ -635,13 +807,37 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   }
 
   late CommitSealedDeliveryWork pencilDeliveryWork;
+  final layerWork = <LayerTableWorkEvent>[];
   final pencilWork = observeIdAdmissionWork(() {
-    CommittedDocument.observeSparseCandidateEvents(candidateEvents.add, () {
-      pencilDeliveryWork = observeDeliveryWork(() => _drawPencil(root));
+    LayerTable.observeWork(layerWork.add, () {
+      CommittedDocument.observeSparseCandidateEvents(candidateEvents.add, () {
+        pencilDeliveryWork = observeDeliveryWork(() => _drawPencil(root));
+      });
     });
   });
   _expectReadOnlyRouteCandidate(pencilWork);
   _expectAcceptedRouteAdmission(pencilWork);
+  expect(setup.requests[0].entry.layerId, CanvasLayerId('work-layer'));
+  expect(setup.requests[0].entry.elementIndex, 195905);
+  expect(setup.requests[0].createsLayer, isFalse);
+  expect(
+    layerWork.where(
+      (event) => event == LayerTableWorkEvent.placementLocationRead,
+    ),
+    hasLength(2),
+  );
+  expect(
+    layerWork.where((event) => event == LayerTableWorkEvent.placementRowVisit),
+    hasLength(1),
+  );
+  expect(
+    layerWork.where(
+      (event) =>
+          event == LayerTableWorkEvent.locationFactEntryVisit ||
+          event == LayerTableWorkEvent.fullLocationMapCopy,
+    ),
+    isEmpty,
+  );
   _expectAcceptedDrawWorkComposition(
     candidateEvents,
     deliveryEvents,
@@ -668,6 +864,8 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   });
   _expectReadOnlyRouteCandidate(lineWork);
   _expectAcceptedRouteAdmission(lineWork);
+  expect(setup.requests[1].entry.layerId, CanvasLayerId('work-layer'));
+  expect(setup.requests[1].entry.elementIndex, 195906);
   expect(root.generateElementId(), CanvasElementId('e200003'));
 
   // Three receivers per public notification prove collection work is owned by
@@ -916,15 +1114,31 @@ void _expectAcceptedRouteAdmission(IdAdmissionWorkRecorder work) {
 }
 
 CanvasDocument _supportedPrefixDocument() {
+  const unrelatedLayerCount = 4095;
   return CanvasDocument(
-    backgroundElements: List<CanvasElement>.generate(
-      200000,
-      (index) => CanvasRectElement(
-        id: CanvasElementId('e$index'),
-        size: const Size(1, 1),
+    layers: [
+      for (var index = 0; index < unrelatedLayerCount; index += 1)
+        CanvasLayer(
+          id: CanvasLayerId('unrelated-layer-$index'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('e$index'),
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      CanvasLayer(
+        id: CanvasLayerId('work-layer'),
+        elements: List<CanvasElement>.generate(
+          200000 - unrelatedLayerCount,
+          (index) => CanvasRectElement(
+            id: CanvasElementId('e${index + unrelatedLayerCount}'),
+            size: const Size(1, 1),
+          ),
+          growable: false,
+        ),
       ),
-      growable: false,
-    ),
+    ],
   );
 }
 
@@ -991,6 +1205,7 @@ typedef _RouteWorkSetup = ({
   RuntimeRoot root,
   IdAdmissionWorkRecorder resetWork,
   _DrawWorkDeliveryProbe delivery,
+  List<CanvasDrawCommitRequest> requests,
 });
 
 final class _DrawWorkDeliveryProbe {
@@ -1032,6 +1247,25 @@ final class _DrawWorkDeliveryProbe {
       callbackEvents.add('observer');
       effectBatches.add(effects);
     }
+  }
+}
+
+final class _DrawLease implements CanvasCommitLease {
+  _DrawLease({this.onCommitted});
+
+  final void Function()? onCommitted;
+  int committedCalls = 0;
+  int abortedCalls = 0;
+
+  @override
+  void aborted() {
+    abortedCalls += 1;
+  }
+
+  @override
+  void committed() {
+    committedCalls += 1;
+    onCommitted?.call();
   }
 }
 

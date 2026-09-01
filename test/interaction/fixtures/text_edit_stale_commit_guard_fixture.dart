@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/text_edit_guard_decision.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/accept_commit.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // This complete registration list is the public behavior matrix for one text
@@ -82,6 +83,10 @@ void main() {
 
   test('failed changed-text prepare returns before request consumption', () {
     return expectLater(_verifyFailedPrepareKeepsRequestLive(), completes);
+  });
+
+  test('direct text resolver rejections preserve the request for retry', () {
+    return expectLater(_verifyDirectResolverRejectionsRetry(), completes);
   });
 
   test('text validation runs before request consumption', () {
@@ -388,6 +393,82 @@ Future<void> _verifyFailedPrepareKeepsRequestLive() async {
   }
 }
 
+// The direct route keeps cancellation, contained failures, lease rejection,
+// and retry against one request so request ownership cannot silently drift.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _verifyDirectResolverRejectionsRetry() async {
+  late _Scenario scenario;
+  var mode = _TextResolverMode.cancel;
+  final incompatibleLease = _TextResolverLease();
+  final acceptedLease = _TextResolverLease();
+  scenario = _Scenario(
+    config: CanvasRuntimeConfig(
+      diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+      commitResolver: (_) {
+        switch (mode) {
+          case _TextResolverMode.cancel:
+            return const CanvasCommitCancel();
+          case _TextResolverMode.throwing:
+            throw StateError('text resolver failure');
+          case _TextResolverMode.guardRejected:
+            scenario.root.setCameraOffset(const Offset(1, 1));
+            return const CanvasCommitCancel();
+          case _TextResolverMode.incompatible:
+            return CanvasMoveCommitAccept(
+              delta: const Offset(1, 0),
+              lease: incompatibleLease,
+            );
+          case _TextResolverMode.accept:
+            return CanvasCommitAccept(lease: acceptedLease);
+        }
+      },
+    ),
+  );
+  try {
+    final requestId = await scenario.issueTextRequest();
+    final beforeDocument = scenario.root.readDocument();
+    final beforeRevisions = scenario.root.state.value.revisions;
+    final beforeSelection = scenario.root.selectedElementIds;
+
+    for (final rejectedMode in [
+      _TextResolverMode.cancel,
+      _TextResolverMode.throwing,
+      _TextResolverMode.guardRejected,
+      _TextResolverMode.incompatible,
+    ]) {
+      mode = rejectedMode;
+      expect(
+        scenario.root.commands.commitTextEdit(requestId, 'retryable'),
+        isFalse,
+      );
+      expect(scenario.root.readDocument(), same(beforeDocument));
+      expect(scenario.root.state.value.revisions, beforeRevisions);
+      expect(scenario.root.selectedElementIds, beforeSelection);
+      expect(
+        scenario.root.interactionEngine.requestFactsFor(requestId),
+        isNotNull,
+      );
+      expect(scenario.actions, isEmpty);
+    }
+    expect(incompatibleLease.abortedCalls, 1);
+    expect(incompatibleLease.committedCalls, 0);
+    expect(scenario.root.diagnosticRecords, hasLength(2));
+
+    mode = _TextResolverMode.accept;
+    expect(
+      scenario.root.commands.commitTextEdit(requestId, 'retryable'),
+      isTrue,
+    );
+    expect(_textValueOrNull(scenario.root), 'retryable');
+    expect(scenario.actions, hasLength(1));
+    expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNull);
+    expect(acceptedLease.committedCalls, 1);
+    expect(acceptedLease.abortedCalls, 0);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
 void _expectEditTextAction(
   CanvasActionCommitted action,
   CanvasInteractionRequestId requestId,
@@ -473,7 +554,14 @@ String? _textValueOrNull(RuntimeRoot root) {
 // issued request. Splitting it would hide the lifecycle proof.
 // ignore: coupling-between-object-classes
 final class _Scenario {
-  _Scenario() : this._(runtimeRootWithCommittedDocumentSeed(_document()));
+  _Scenario({CanvasRuntimeConfig? config})
+    : this._(
+        runtimeRootWithCommittedDocumentSeed(
+          _document(),
+          config:
+              config ?? const CanvasRuntimeConfig(commitResolver: acceptCommit),
+        ),
+      );
 
   _Scenario.failedTextPrepare(void Function() onPrepare)
     : this._(
@@ -556,6 +644,23 @@ final class _Scenario {
     await actionSubscription.cancel();
     await requestSubscription.cancel();
     root.dispose();
+  }
+}
+
+enum _TextResolverMode { cancel, throwing, guardRejected, incompatible, accept }
+
+final class _TextResolverLease implements CanvasCommitLease {
+  int committedCalls = 0;
+  int abortedCalls = 0;
+
+  @override
+  void committed() {
+    committedCalls += 1;
+  }
+
+  @override
+  void aborted() {
+    abortedCalls += 1;
   }
 }
 

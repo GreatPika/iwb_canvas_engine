@@ -168,6 +168,8 @@ final class EditKernel {
   PreparedInteractionCommit prepareDeferredInteractionCommit<T>(
     T Function(CanvasEdit edit) fn, {
     CommitPlan Function(CommitPlan plan)? augmentPlan,
+    AcceptedCommitPlanAugment? augmentAcceptedPlan,
+    CanvasElementId? affectedElementId,
   }) {
     _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {
@@ -182,11 +184,17 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      final accepted = _acceptedCommitFor(session);
+      final accepted = _acceptedCommitFor(
+        session,
+        affectedElementId: affectedElementId,
+      );
       if (!accepted.plan.hasChanges) {
         throw StateError('A prepared deletion requires a changed commit plan.');
       }
-      final plan = augmentPlan?.call(accepted.plan) ?? accepted.plan;
+      final plan =
+          augmentAcceptedPlan?.call(accepted.document, accepted.plan) ??
+          augmentPlan?.call(accepted.plan) ??
+          accepted.plan;
       return PreparedInteractionCommit._(
         (_prepareDeferredInteractionCommit ??
             (throw StateError('Interaction preparation is unavailable.')))(

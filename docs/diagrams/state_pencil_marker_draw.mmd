@@ -89,17 +89,19 @@ stateDiagram-v2
       directly.
     end note
 
-    CommitIntent --> EditKernelOutcome: "RuntimeRoot opens synchronous EditKernel interaction edit"
+    CommitIntent --> EditKernelOutcome: "RuntimeRoot prepares deferred interaction edit, then resolves CanvasDrawCommitRequest"
 
     state "EditKernel outcome" as EditKernelOutcome
     note right of EditKernelOutcome
       RuntimeRoot delegates the prepared add-stroke edit
-      to EditKernel. EditKernel is the only commit boundary:
-      it may install atomically or reject, roll back, or
-      throw with no public commit effects.
+      to EditKernel, then resolves its exact immutable request once.
+      CanvasCommitCancel, callback/pre-install failure, or a non-applicable
+      acceptance discards preparation (and aborts a returned lease once).
+      Compatible acceptance may install atomically; EditKernel remains the
+      only document commit boundary.
     end note
 
-    EditKernelOutcome --> CleanupAfterCommit: "commit installed"
+    EditKernelOutcome --> CleanupAfterCommit: "CanvasCommitAccept installed"
     EditKernelOutcome --> EditFailureCleanup: "rejected, rolled back, or threw"
 
     state "Cleanup after successful commit" as CleanupAfterCommit
@@ -116,7 +118,8 @@ stateDiagram-v2
       After successful commit and session cleanup,
       RuntimeRoot enters one guard and delivers spatial, resource/
       session release, root/bridged frame, CanvasRuntimeState,
-      drawPencil or drawMarker action, then a non-empty observer.
+      accepted lease commitment, drawPencil or drawMarker action,
+      then a non-empty observer.
     end note
     PublicCommitEffects --> [*]
   }
@@ -166,7 +169,7 @@ stateDiagram-v2
     Stroke preview cleanup uses overlay repaint only from
     the coordinator-owned outcome.
     It does not use selected-move main-scene preview,
-    a selected-move resolver, or a main-scene cleanup
+    selected-move transform preparation, or a main-scene cleanup
     target.
   end note
 
@@ -188,7 +191,7 @@ stateDiagram-v2
 
   note left of Drafting
     Negative invariants:
-    no selected-move resolver;
+    no selected-move transform preparation;
     no main-scene stroke preview;
     no direct Store mutation;
     no action, document state publication, or main repaint on cleanup/no-op/failure;

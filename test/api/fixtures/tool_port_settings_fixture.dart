@@ -18,7 +18,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.d
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_with_document.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
@@ -165,7 +165,7 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
   final runtime = runtimeWithDocument(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: style,
       pointerPolicy: policy,
@@ -218,7 +218,7 @@ _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
   final runtime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       clearSelectionOnDrawModeEnter: true,
     ),
   );

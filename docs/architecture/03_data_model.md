@@ -205,11 +205,12 @@ ElementHandle:
 ```
 
 Deletion entry projection is a Store-owned one-snapshot read. Given final
-candidate IDs, `DocumentStoreKernel` deduplicates them, rejects unresolved and
-background inputs, and returns immutable element references with the source
-content-layer id, original in-layer index, and existing frame order token. The
-index is derived directly from the element token and the first token in its
-already located layer row; Store sorts only a non-canonical candidate set.
+candidate IDs, `DocumentStoreKernel` deduplicates and rejects unresolved inputs;
+background inputs are accepted with a null layer id and background index. It returns immutable element references with either a source
+content-layer id and original in-layer index or a null layer id and background
+index, plus the existing frame order token. The index is derived directly from
+the element token and the first token in its already located layer or background
+row; Store sorts only a non-canonical candidate set.
 The returned facts are carried unchanged by selection deletion and terminal
 eraser routing. They do not materialize `CanvasDocument`, create a persistent
 index/cache/schema field, or add an ordering authority beside the existing
@@ -288,8 +289,9 @@ retained outside admission.
 RuntimeRoot consumes sealed accepted delivery values without rebuilding a
 document, reopening preparation, or retaining a candidate. Its one guarded
 delivery sequence is spatial, resource/session release, root frame, bridged
-frame, public state, synchronous action, and non-empty observer; callbacks see
-the installed Store/Edit facts and closed handle before final guard release.
+frame, public state, accepted commit lease, synchronous action, and non-empty
+observer; callbacks see the installed Store/Edit facts and closed handle before
+final guard release.
 
 Prepared Schema v1 import and staged document load retain one immutable
 `CanvasDocumentSummary` captured from the completed payload's element, layer,

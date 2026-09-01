@@ -88,6 +88,12 @@ void main() {
     final frame = capturedMainFrame(
       frameFacts: frameFacts,
       selectionFacts: selected,
+      selectedMoveParticipantIds: [
+        CanvasElementId('a'),
+        CanvasElementId('c'),
+        CanvasElementId('stale'),
+        CanvasElementId('offscreen'),
+      ],
       preview: const CanvasSelectedMovePreview(delta: Offset(5, 0)),
     );
     final ordinaryPlanner = OrdinaryPaintPlanner();

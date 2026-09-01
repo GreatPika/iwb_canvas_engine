@@ -18,7 +18,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.da
 import 'package:iwb_canvas_engine/src/runtime/runtime_command_facts_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/selection_transform_facts_reader.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   test(
@@ -106,7 +106,7 @@ Map<SelectionTransformOrderingWorkEvent, int>
 _canonicalSelectionTransformOrderingWork({CanvasElementId? deselectedId}) {
   final root = RuntimeRoot(
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
     ),
   );
   try {
@@ -200,7 +200,7 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
 void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
   final root = RuntimeRoot(
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
     ),
   );
   addTearDown(root.dispose);

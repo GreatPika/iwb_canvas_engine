@@ -341,8 +341,28 @@ final class _RecordingResourceResolver implements CanvasResourceResolver {
   CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(commitResolver: _acceptCommit);
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+
+  @override
+  void aborted() => _ignoreLeaseOutcome();
+
+  @override
+  void committed() => _ignoreLeaseOutcome();
+}
+
+void _ignoreLeaseOutcome() => Object.hash(null, null);

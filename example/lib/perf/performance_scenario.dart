@@ -1202,8 +1202,28 @@ CanvasPointerSample _pointer(
   );
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _scenarioCommitLease = _ScenarioCommitLease();
+
+CanvasCommitResolution _acceptScenarioCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _scenarioCommitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _scenarioCommitLease),
+    };
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(commitResolver: _acceptScenarioCommit);
+
+final class _ScenarioCommitLease implements CanvasCommitLease {
+  const _ScenarioCommitLease();
+
+  @override
+  void aborted() => _ignoreLeaseOutcome();
+
+  @override
+  void committed() => _ignoreLeaseOutcome();
+}
+
+void _ignoreLeaseOutcome() => Object.hash(null, null);

@@ -57,16 +57,19 @@ final class SelectedMoveCommitIntent {
     required this.sessionId,
     required this.pointerToken,
     required this.proposedDelta,
+    required Iterable<CanvasElementId> selectedElementIdsBefore,
     required Iterable<CanvasElementId> movableIds,
     required Iterable<CanvasElementRead> movedElements,
     required this.documentSummary,
     required this.selectionBoundsWorld,
-  }) : movableIds = List.unmodifiable(movableIds),
+  }) : selectedElementIdsBefore = List.unmodifiable(selectedElementIdsBefore),
+       movableIds = List.unmodifiable(movableIds),
        movedElements = List.unmodifiable(movedElements);
 
   final PointerSessionId sessionId;
   final PointerSessionToken pointerToken;
   final Offset proposedDelta;
+  final List<CanvasElementId> selectedElementIdsBefore;
   final List<CanvasElementId> movableIds;
   final List<CanvasElementRead> movedElements;
   final CanvasDocumentSummary documentSummary;
@@ -141,14 +144,16 @@ final class EraserCommitIntent {
     required this.sessionId,
     required this.pointerToken,
     required this.eraserThickness,
-    required this.corridorPointCount,
+    required Iterable<Offset> corridorWorld,
     required this.erasedEntries,
-  });
+  }) : _corridorWorld = List.unmodifiable(corridorWorld);
 
   final PointerSessionId sessionId;
   final PointerSessionToken pointerToken;
   final double eraserThickness;
-  final int corridorPointCount;
+  final List<Offset> _corridorWorld;
+  List<Offset> get corridorWorld => _corridorWorld;
+  int get corridorPointCount => _corridorWorld.length;
   // This is the same immutable Store projection accepted by the terminal
   // decision. IDs remain a compatibility view, never an independent payload.
   final List<DeletionEntryFacts> erasedEntries;

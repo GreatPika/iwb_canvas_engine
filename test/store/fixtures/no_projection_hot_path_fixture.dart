@@ -64,7 +64,7 @@ void _appearanceReadDoesNotBuildProjection() {
   for (final unrelatedLayerCount in [0, 1, 8]) {
     final runtime = CanvasRuntime(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+        commitResolver: (_) => const CanvasCommitCancel(),
       ),
     );
     try {
@@ -126,6 +126,10 @@ void _registerDeletionProjectionTests() {
   test(
     'Store deletion projection has canonical and arbitrary order work bounds',
     () => expect(_storeDeletionProjectionHasBoundedOrderWork, returnsNormally),
+  );
+  test(
+    'Store background deletion projection has addressed work bounds',
+    () => expect(_backgroundDeletionProjectionHasBoundedWork, returnsNormally),
   );
 }
 
@@ -330,6 +334,7 @@ void _storeDeletionProjectionUsesCommittedEntryFacts() {
   ]).entries;
 
   _expectProjectedEntryFacts(entries, store, [
+    _ExpectedDeletionEntry(background.id, null, 0, 0),
     _ExpectedDeletionEntry(selected.id, CanvasLayerId('layer-a'), 1, 2),
     _ExpectedDeletionEntry(later.id, CanvasLayerId('layer-b'), 0, 3),
     _ExpectedDeletionEntry(last.id, CanvasLayerId('layer-b'), 1, 4),
@@ -338,7 +343,7 @@ void _storeDeletionProjectionUsesCommittedEntryFacts() {
   expect(() => entries.add(entries.first), throwsUnsupportedError);
   expect(store.backgroundElementIds, contains(background.id));
   expect(store.elementById(background.id), isNotNull);
-  expect(entries.map((entry) => entry.id), isNot(contains(background.id)));
+  expect(entries.map((entry) => entry.id), contains(background.id));
   expect(
     entries.map((entry) => entry.id),
     isNot(contains(CanvasElementId('missing'))),
@@ -386,7 +391,7 @@ final class _ExpectedDeletionEntry {
   );
 
   final CanvasElementId id;
-  final CanvasLayerId layerId;
+  final CanvasLayerId? layerId;
   final int elementIndex;
   final int orderToken;
 }
@@ -435,6 +440,22 @@ void _storeDeletionProjectionHasBoundedOrderWork() {
   expect(fixedWithUnrelated, fixedBase);
 }
 
+void _backgroundDeletionProjectionHasBoundedWork() {
+  final ids = [
+    CanvasElementId('background-target-a'),
+    CanvasElementId('background-target-b'),
+  ];
+  final base = _deletionProjectionWork(
+    _backgroundDeletionProjectionStore(unrelatedElementCount: 0),
+    ids,
+  );
+  final withUnrelated = _deletionProjectionWork(
+    _backgroundDeletionProjectionStore(unrelatedElementCount: 100),
+    ids,
+  );
+  expect(withUnrelated, base);
+}
+
 Map<DeletionProjectionWorkEvent, int> _deletionProjectionWork(
   DocumentStoreKernel store,
   List<CanvasElementId> ids,
@@ -470,6 +491,21 @@ DocumentStoreKernel _deletionProjectionStore({
               _rect('unrelated-$index'),
           ],
         ),
+      ],
+    ),
+  );
+}
+
+DocumentStoreKernel _backgroundDeletionProjectionStore({
+  required int unrelatedElementCount,
+}) {
+  return documentStoreWithDocument(
+    CanvasDocument(
+      backgroundElements: [
+        _rect('background-target-a'),
+        _rect('background-target-b'),
+        for (var index = 0; index < unrelatedElementCount; index += 1)
+          _rect('background-unrelated-$index'),
       ],
     ),
   );

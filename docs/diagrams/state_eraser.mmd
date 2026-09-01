@@ -65,16 +65,17 @@ stateDiagram-v2
     EraseDecision --> CleanupOnly: erased ids empty
     EraseDecision --> PreparedResolver: erased ids non-empty
 
-    state "Prepared deletion resolver" as PreparedResolver
+    state "Prepared unified erase confirmation" as PreparedResolver
     note right of PreparedResolver
       RuntimeRoot prepares the sparse document, Store revision/id binding,
       selection backing, revision, delivery, and erase action inputs before
-      calling the required guarded resolver with canonical Store entries.
+      resolving `CanvasEraseCommitRequest` through the required guarded unified
+      resolver with canonical Store entries and retained corridor facts.
       Preparation failure has no callback and enters cleanup.
     end note
 
-    PreparedResolver --> AcceptedInstall: resolver accepts
-    PreparedResolver --> CleanupOnly: resolver cancels or throws / discard
+    PreparedResolver --> AcceptedInstall: CanvasCommitAccept with lease
+    PreparedResolver --> CleanupOnly: cancel, error, or incompatible acceptance / discard and abort returned lease once
 
     state "Single-use accepted install" as AcceptedInstall
     note right of AcceptedInstall
@@ -96,7 +97,7 @@ stateDiagram-v2
     CleanupBeforeSignals --> CleanupCoordinator: post-success cleanup request
 
     state "Publish erase action and runtime state" as PublishCommitSignals
-    PublishCommitSignals --> [*]: publish main repaint, overlay cleanup, CanvasRuntimeState, erase action
+    PublishCommitSignals --> [*]: publish main repaint, overlay cleanup, CanvasRuntimeState, lease committed, then erase action
 
     state "Cleanup only" as CleanupOnly
     note left of CleanupOnly
@@ -136,7 +137,7 @@ stateDiagram-v2
 
   note left of Previewing
     Forbidden paths:
-    no selected-move resolver;
+    no selected-move transform preparation;
     no main-scene preview during eraser preview;
     no direct DocumentStoreKernel mutation;
     no full committed mutation during preview;

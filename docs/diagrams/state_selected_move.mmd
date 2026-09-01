@@ -71,21 +71,21 @@ stateDiagram-v2
 
     state "Resolver gate / once per terminal up" as ResolverGate
     note right of ResolverGate
-      The selected-move resolver is synchronous in v1
+      The unified commit resolver is synchronous in v1
       and may be called exactly once only from this
       terminal-up gate. Preview, cancel, load, mode,
       interactive=false, dispose, zero, and empty paths
       never call it.
     end note
 
-    ResolverGate --> ResolverCleanup: "CanvasMoveCancel"
+    ResolverGate --> ResolverCleanup: "CanvasCommitCancel"
     ResolverGate --> ResolverErrorCleanup: "resolver throws"
-    ResolverGate --> ResolverErrorCleanup: "CanvasMoveCommit delta non-finite"
-    ResolverGate --> CommitIntent: "finite CanvasMoveCommit delta"
+    ResolverGate --> ResolverCleanup: "incompatible accept or invalid Move delta / abort returned lease"
+    ResolverGate --> CommitIntent: "finite non-zero CanvasMoveCommitAccept delta"
 
     state "Resolver error cleanup" as ResolverErrorCleanup
     note right of ResolverErrorCleanup
-      Resolver exceptions and invalid committed deltas clear
+      Resolver exceptions clear
       selected-move preview/session, then leave through the
       pointer handling boundary as runtime-safe errors.
       They are not cancel/no-op outcomes.
@@ -98,7 +98,7 @@ stateDiagram-v2
       It does not mutate DocumentStoreKernel directly.
     end note
 
-    CommitIntent --> EditKernelOutcome: "open synchronous EditKernel interaction edit"
+    CommitIntent --> EditKernelOutcome: "prepare selected Move transform and consume after compatible acceptance"
 
     state "EditKernel commit outcome" as EditKernelOutcome
     note right of EditKernelOutcome
@@ -108,7 +108,7 @@ stateDiagram-v2
       buffered action effects only through its commit result.
     end note
 
-    EditKernelOutcome --> CleanupAfterSuccess: "commit installed"
+    EditKernelOutcome --> CleanupAfterSuccess: "CanvasMoveCommitAccept installed"
     EditKernelOutcome --> EditFailureCleanup: "rejected, rolled back, or threw"
 
   state "Cleanup after successful commit" as CleanupAfterSuccess
@@ -122,7 +122,7 @@ stateDiagram-v2
     state "Public state/effects after cleanup" as PublicSignals
     note right of PublicSignals
       A moveSelection action is visible only after selected
-      move cleanup and a successful EditKernel commit.
+      move cleanup, final public state, and lease commitment.
       Cleanup paths publish no action.
     end note
     PublicSignals --> [*]
@@ -139,7 +139,8 @@ stateDiagram-v2
   state "Resolver cleanup" as ResolverCleanup
   note right of ResolverCleanup
     The resolver was already called, but its result did
-    not produce an edit: CanvasMoveCancel. No edit opens,
+    not produce an edit: CanvasCommitCancel, incompatible acceptance,
+    or invalid Move delta. A returned lease is aborted once. No edit opens,
     no Store mutation occurs, and no action is emitted.
   end note
 

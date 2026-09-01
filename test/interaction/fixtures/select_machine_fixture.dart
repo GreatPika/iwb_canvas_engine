@@ -14,7 +14,7 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart'
 import 'package:iwb_canvas_engine/src/interaction/select_machine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 const _marqueeDragStart = Offset(-20, -20);
 const _marqueeBacktrackSteps = [
@@ -181,7 +181,7 @@ void _testMarqueeDragStartSlopControlsFirstPreview() {
   test('marquee dragStartSlop controls the first visible preview', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -207,7 +207,7 @@ void _testMarqueeDragStartSlopFallbackUsesTapSlop() {
   test('marquee dragStartSlop null falls back to tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
       ),
     );
@@ -234,7 +234,7 @@ void _testMarqueeContinuesInsideSlopAfterPreviewStart() {
     expect(_marqueeBacktrackSteps, hasLength(4));
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -425,7 +425,7 @@ void _testUnreliableTerminalCandidatesCleanupOnly() {
     () async {
       final scenario = _scenario(
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
+          commitResolver: acceptCommit,
           diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
         ),
       );
@@ -626,7 +626,7 @@ RuntimeRoot _runtimeRoot({
     _document(),
     config:
         config ??
-        const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit),
+        const CanvasRuntimeConfig(commitResolver: acceptCommit),
     commitEffectObserver: commitEffectObserver,
   );
 }

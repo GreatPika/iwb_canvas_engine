@@ -5,7 +5,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
-import 'accept_deletion_commit.dart';
+import 'accept_commit.dart';
 
 // The helper seeds RuntimeRoot.test from committed store state so call sites do
 // not confuse this setup seam with the public JSON load path.
@@ -13,7 +13,7 @@ import 'accept_deletion_commit.dart';
 RuntimeRoot runtimeRootWithCommittedDocumentSeed(
   CanvasDocument document, {
   CanvasRuntimeConfig config = const CanvasRuntimeConfig(
-    deletionCommitResolver: acceptDeletionCommit,
+    commitResolver: acceptCommit,
   ),
   LoadInteractionBoundary? loadInteractionBoundary,
   TextEditPrepareOverride? textEditPrepareOverride,

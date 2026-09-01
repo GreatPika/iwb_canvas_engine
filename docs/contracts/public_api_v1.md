@@ -201,7 +201,6 @@ CanvasDrawStyle
 CanvasSelectionDeleteAvailability
 CanvasResourceSource and CanvasAppKeyResourceSource
 CanvasElementRead
-CanvasMoveResolution and its variants
 CanvasDiagnosticPolicy, CanvasDiagnosticsDisabled, CanvasDiagnosticsSummary,
 CanvasDiagnosticsVerbose
 ```
@@ -233,8 +232,10 @@ CanvasActionPayload and payload family types
 CanvasContextActionRequested
 CanvasContextActionTarget and target family types
 CanvasMoveCommitRequest
-CanvasDeletionCommitRequest
-CanvasDeletionEntry
+CanvasCommitRequest and its request variants
+CanvasCommitElementEntry
+CanvasCommitResolution and its variants
+CanvasCommitLease
 CanvasResource and resource family types
 CanvasDataException
 CanvasPreparedVector
@@ -501,35 +502,6 @@ revision domains.
 ```dart
 enum CanvasSelectionDeletePolicy { partial, allOrNone }
 
-enum CanvasDeletionOperation { deleteSelection, erase }
-
-enum CanvasDeletionDecision { accept, cancel }
-
-typedef CanvasDeletionCommitResolver =
-    CanvasDeletionDecision Function(CanvasDeletionCommitRequest request);
-
-final class CanvasDeletionEntry {
-  const CanvasDeletionEntry({
-    required this.element,
-    required this.layerId,
-    required this.elementIndex,
-  });
-
-  final CanvasElement element;
-  final CanvasLayerId layerId;
-  final int elementIndex;
-}
-
-final class CanvasDeletionCommitRequest {
-  CanvasDeletionCommitRequest({
-    required this.operation,
-    required Iterable<CanvasDeletionEntry> entries,
-  });
-
-  final CanvasDeletionOperation operation;
-  final List<CanvasDeletionEntry> entries;
-}
-
 final class CanvasSelectionDeleteAvailability {
   const CanvasSelectionDeleteAvailability({
     required this.hasSelection,
@@ -545,12 +517,11 @@ final class CanvasSelectionDeleteAvailability {
 
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
-    required this.deletionCommitResolver,
+    required this.commitResolver,
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
     this.initialMode = CanvasInteractionMode.move,
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
     this.clearSelectionOnDrawModeEnter = false,
-    this.moveCommitResolver,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.eraserElementKinds,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
@@ -560,8 +531,7 @@ final class CanvasRuntimeConfig {
   final CanvasInteractionMode initialMode;
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
-  final CanvasMoveCommitResolver? moveCommitResolver;
-  final CanvasDeletionCommitResolver deletionCommitResolver;
+  final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final Set<CanvasElementKind>? eraserElementKinds;
   final CanvasDiagnosticPolicy diagnosticPolicy;
@@ -574,12 +544,15 @@ erasure, and a non-empty set is an exact allow-list of
 `CanvasElementKind` values. The runtime takes one unmodifiable copy of a
 supplied set; later caller mutation cannot change a running runtime's policy.
 
-`deletionCommitResolver` is required and receives each complete nonempty
-selection-delete or terminal-eraser Store projection before mutation. It either
-accepts or cancels the whole set; cancellation leaves committed state unchanged.
-Resolver exceptions are contained as internal bounded diagnostics. Omitted
-runtime config or resolver is a compile-time error; there is no default-accept
-compatibility path.
+`commitResolver` is required. It receives exactly one fully-qualified request
+for every admitted changed Draw, Delete, Erase, Move, Rotate, Reflect, or Text
+Edit route before installation. It is not called for service edits, replay/load,
+programmatic `CanvasEdit` operations, previews, stale/invalid/no-op terminals,
+ineligible operations, excluded eraser paths, or equal text. The resolver
+returns a generic accept/cancel decision; only Move accepts a replacement delta.
+There is no default-accept, nullable, adapter, precedence, or compatibility
+path. A host that intentionally records no history supplies its own resolver
+that returns `CanvasCommitAccept` with a no-op `CanvasCommitLease`.
 
 ### 4.6 Flutter surface
 
@@ -1699,8 +1672,8 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
 - the same runtime-local resolver also applies to
   CanvasPendingLineStartPreview.timestampMs because pending line starts are
   timestamped runtime preview outputs;
-- CanvasMoveCommitRequest is a resolver callback request, not a timestamped
-  runtime output, and does not expose timestampMs;
+- CanvasCommitRequest and every concrete request variant are resolver callback
+  requests, not timestamped runtime outputs, and do not expose timestampMs;
 - CanvasPendingLineStartPreview remains a preview output, not a user-action
   event;
 - CanvasDocument, schema v1 data, resource state, selection state, document
@@ -1708,10 +1681,9 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   cursor;
 - no-op, stale rejection, rollback, cancel, `loadDocumentFromJson`, and dispose stream
   close paths do not create timestamped action or context request outputs.
-- selected-move resolver callbacks do not resolve timestamps; only the accepted
-  move action resolves the original terminal timestamp hint during action
-  finalization after the resolver returns a finite non-zero delta and edit
-  preparation succeeds;
+- commit resolver callbacks do not resolve timestamps; only an accepted action
+  resolves its original timestamp hint during action finalization after a
+  compatible resolution and installation succeeds;
 - stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
   resolver zero delta, resolver exception, selected-move edit-preparation
   failure, rollback, load cleanup, dispose cleanup, invalid direct double tap,
@@ -1761,10 +1733,14 @@ Rules:
   guard, so unrelated document edits do not reject a still-current text edit;
 - commitTextEdit returns true, consumes the request id, and emits no document
   revision, repaint, or action event when newText equals the current text;
-- commitTextEdit changed-text commits run through EditKernel, consume the
-  request after successful prepare and EditKernel closure, silently clear only
-  a matching active text session, its paint suppression, and its owned candidate
-  state, then record the outer interaction revision before capture. It completes
+- commitTextEdit changed-text commits run through EditKernel preparation, resolve
+  exactly one `CanvasTextEditCommitRequest` from the retained complete before/after
+  pair, and consume the request only after compatible acceptance, installation,
+  and EditKernel closure. Cancel, callback failure, incompatibility, and
+  preparation failure preserve the valid request/draft for retry. A successful
+  route silently clears only a matching active text session, its paint
+  suppression, and its owned candidate state, then records the outer interaction
+  revision before capture. It completes
   common delivery and releases its guard before notifying that session closure.
   The listener may read final state, complete a separate accepted mutation, or
   start another session; identity-aware cleanup preserves the new session.
@@ -1774,8 +1750,8 @@ Rules:
   interaction revision. Rejected, failed, and equal-text requests do not create
   this listener window. Common delivery is
   RuntimeRoot's guarded sequence in exact spatial,
-  resource/session release, root-frame, bridged-frame, public-state,
-  synchronous-action, non-empty-observer order; public callbacks cannot mutate
+  resource/session release, root-frame, bridged-frame, public-state, accepted
+  lease, synchronous-action, non-empty-observer order; public callbacks cannot mutate
   the runtime during that window; the changed route may compensate the target
   text element transform to preserve the resolved
   horizontal text anchor and top edit edge when measured text bounds change,
@@ -2908,81 +2884,208 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 // CanvasTextEditingPort get textEditing;
 ```
 
-### 4.20 Move commit resolver
+### 4.20 Unified commit confirmation
 
-The resolver is synchronous in v1. Async resolver is not supported in v1.
+Confirmation is synchronous in v1; asynchronous resolution is not supported.
 
 ```dart
-typedef CanvasMoveCommitResolver = CanvasMoveResolution Function(CanvasMoveCommitRequest request);
+typedef CanvasCommitResolver =
+    CanvasCommitResolution Function(CanvasCommitRequest request);
 
-final class CanvasMoveCommitRequest {
-  CanvasMoveCommitRequest({
+abstract interface class CanvasCommitLease {
+  void committed();
+  void aborted();
+}
+
+sealed class CanvasCommitResolution { const CanvasCommitResolution(); }
+
+final class CanvasCommitCancel extends CanvasCommitResolution {
+  const CanvasCommitCancel({this.reason});
+  final String? reason;
+}
+
+final class CanvasCommitAccept extends CanvasCommitResolution {
+  const CanvasCommitAccept({required this.lease});
+  final CanvasCommitLease lease;
+}
+
+final class CanvasMoveCommitAccept extends CanvasCommitResolution {
+  const CanvasMoveCommitAccept({required this.delta, required this.lease});
+  final Offset delta;
+  final CanvasCommitLease lease;
+}
+
+sealed class CanvasCommitRequest {
+  CanvasCommitRequest({
     required this.documentSummary,
+    required this.documentRevision,
+    required Iterable<CanvasElementId> selectedElementIdsBefore,
+  });
+  final CanvasDocumentSummary documentSummary;
+  final int documentRevision;
+  List<CanvasElementId> get selectedElementIdsBefore;
+}
+
+final class CanvasCommitElementEntry {
+  const CanvasCommitElementEntry({
+    required this.element,
+    required this.layerId,
+    required this.elementIndex,
+  });
+  final CanvasElement element;
+  final CanvasLayerId? layerId;
+  final int elementIndex;
+}
+
+final class CanvasDrawCommitRequest extends CanvasCommitRequest {
+  CanvasDrawCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required this.entry,
+    required this.tool,
+    required this.layerIndex,
+    required this.createsLayer,
+  });
+  final CanvasCommitElementEntry entry;
+  final CanvasDrawTool tool;
+  final int layerIndex;
+  final bool createsLayer;
+}
+
+final class CanvasDeleteCommitRequest extends CanvasCommitRequest {
+  CanvasDeleteCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required Iterable<CanvasCommitElementEntry> entries,
+  });
+  List<CanvasCommitElementEntry> get entries;
+}
+
+final class CanvasEraseCommitRequest extends CanvasCommitRequest {
+  CanvasEraseCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required Iterable<CanvasCommitElementEntry> entries,
+    required Iterable<Offset> corridorWorld,
+    required this.eraserThickness,
+  });
+  List<CanvasCommitElementEntry> get entries;
+  List<Offset> get corridorWorld;
+  final double eraserThickness;
+}
+
+final class CanvasMoveCommitRequest extends CanvasCommitRequest {
+  CanvasMoveCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
     required Iterable<CanvasElementRead> movedElements,
     required this.proposedDelta,
     required this.selectionBoundsWorld,
   });
-
-  final CanvasDocumentSummary documentSummary;
   List<CanvasElementRead> get movedElements;
   final Offset proposedDelta;
   final Rect selectionBoundsWorld;
 }
 
-final class CanvasElementRead {
-  const CanvasElementRead({
-    required this.id,
-    required this.kind,
-    required this.revision,
-    required this.boundsWorld,
-    required this.transform,
-    required this.isLocked,
-    required this.isTransformable,
+final class CanvasRotateCommitRequest extends CanvasCommitRequest {
+  CanvasRotateCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required Iterable<CanvasElementRead> affectedElements,
+    required this.pivotWorld,
+    required this.worldTransform,
+    required this.operation,
   });
-
-  final CanvasElementId id;
-  final CanvasElementKind kind;
-  final int revision;
-  final Rect boundsWorld;
-  final CanvasTransform transform;
-  final bool isLocked;
-  final bool isTransformable;
+  List<CanvasElementRead> get affectedElements;
+  final Offset pivotWorld;
+  final CanvasTransform worldTransform;
+  final CanvasTransformOperation operation; // clockwise or counterclockwise
 }
 
-sealed class CanvasMoveResolution { const CanvasMoveResolution(); }
-
-final class CanvasMoveCommit extends CanvasMoveResolution {
-  const CanvasMoveCommit({required this.delta});
-  final Offset delta;
+final class CanvasReflectCommitRequest extends CanvasCommitRequest {
+  CanvasReflectCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required Iterable<CanvasElementRead> affectedElements,
+    required this.pivotWorld,
+    required this.worldTransform,
+    required this.operation,
+  });
+  List<CanvasElementRead> get affectedElements;
+  final Offset pivotWorld;
+  final CanvasTransform worldTransform;
+  final CanvasTransformOperation operation; // horizontal or vertical flip
 }
 
-final class CanvasMoveCancel extends CanvasMoveResolution {
-  const CanvasMoveCancel({this.reason});
-  final String? reason;
+final class CanvasTextEditCommitRequest extends CanvasCommitRequest {
+  CanvasTextEditCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required this.before,
+    required this.after,
+  });
+  final CanvasTextElement before;
+  final CanvasTextElement after;
 }
 ```
 
-Resolver rules:
+Resolver and lease rules:
 
 ```text
-- called once at selected move terminal pointer-up;
-- not called during preview;
-- not called if movement is zero;
-- not called if selected movable set is empty;
-- not called after an accepted change touches a captured participant, replaces
-  its document identity, or changes selection externally; these cancel the
-  whole gesture before publication;
-- request movedElements, bounds, and start-relative movement retain the
-  pointer-down participant basis; unrelated accepted edits and final no-ops do
-  not rebase that basis;
-- not called when gesture is cancelled by `loadDocumentFromJson`/modeChange/dispose;
-- reentrant public mutation from inside resolver throws StateError;
-- returned delta must be finite;
-- CanvasMoveCancel discards move commit and emits no action;
-- a zero returned delta discards move commit and emits no action;
-- resolver callback requests are not timestamped runtime outputs;
-- resolver exception clears preview and rethrows through pointer handling boundary as runtime-safe error.
+- Each request is an immutable snapshot assembled exactly once from the already
+  qualified route: common summary/revision/selected-before facts plus its
+  route-specific facts. Collections are unmodifiable. Delete and Erase entries
+  preserve canonical Store order; a background entry has layerId null and its
+  background order token as elementIndex.
+- Draw carries its prepared exact entry, tool, layer index, and creates-layer
+  fact. Delete carries direct or selected removal entries. Erase carries exact
+  prepared entries, retained terminal corridor, and thickness. Move carries the
+  captured participant reads, proposed delta, and bounds. Rotate/Reflect carry
+  Unit-8 prepared participant reads, pivot, exact world transform, and only
+  their respective operation pair. Text carries the complete Unit-9 prepared
+  before/after text pair, including unchanged fields.
+- `CanvasCommitAccept` is compatible with Draw, Delete, Erase, Rotate, Reflect,
+  and Text Edit. `CanvasMoveCommitAccept` is compatible only with Move and its
+  delta must be finite and non-zero. An incompatible acceptance still returns a
+  lease, which is aborted exactly once; it never installs or emits an action.
+- The returned lease is acquired before acceptance and prepared-delta validation.
+  Cancellation has no lease. Any returned lease is aborted exactly once for
+  incompatibility, invalid Move delta, cancellation after a lease, resolver or
+  preparation failure after resolution, or pre-install consume failure. No
+  lease terminal callback runs when resolution never returned a lease.
+- On installation, RuntimeRoot publishes final public state first, invokes
+  `lease.committed()` exactly once, then emits the finalized action and invokes
+  the existing observer. A lease is never aborted after installation. Text then
+  sends the matching session-close notification after the delivery guard is
+  released; a direct request without a matching session sends none.
+- Resolver and lease callbacks execute inside the existing mutation guard.
+  Public mutation, ID generation, disposal, and nested confirmation reject
+  before changing state. Guard rejection and ordinary callback failures are
+  contained; ordinary failures record only bounded internal operation/error-kind
+  diagnostics. Cancel/error/failed preparation preserve committed state and
+  action silence; a text failure also preserves the valid request or draft for
+  retry.
+- No request is published during previews, on cancellation/cleanup, for stale,
+  invalid, equal, ineligible, or excluded routes, or for service edits/replay.
+  Selected Move retains its pointer-down participant basis; unrelated and final
+  no-op edits do not rebase it, while participant, identity, or selection
+  changes cancel before resolution. Resolver requests are not timestamped
+  runtime outputs.
 ```
+
+`CanvasDeletionCommitResolver`, `CanvasDeletionCommitRequest`,
+`CanvasDeletionEntry`, `CanvasDeletionDecision`, `CanvasDeletionOperation`,
+`CanvasMoveCommitResolver`, `CanvasMoveResolution`, `CanvasMoveCommit`, and
+`CanvasMoveCancel` are removed source-breaking v1 public names. This change
+does not alter `CanvasElementRead`, selection deletion policy/availability,
+action payloads, schemas, resources, IDs, defaults, or pointer/tool settings.
 
 ### 4.21 Errors and diagnostics
 

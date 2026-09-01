@@ -3,11 +3,21 @@
 public_exports:
   - CanvasRuntime
   - CanvasRuntimeConfig
-  - CanvasDeletionCommitResolver
-  - CanvasDeletionOperation
-  - CanvasDeletionDecision
-  - CanvasDeletionCommitRequest
-  - CanvasDeletionEntry
+  - CanvasCommitResolver
+  - CanvasCommitLease
+  - CanvasCommitResolution
+  - CanvasCommitCancel
+  - CanvasCommitAccept
+  - CanvasMoveCommitAccept
+  - CanvasCommitRequest
+  - CanvasCommitElementEntry
+  - CanvasDrawCommitRequest
+  - CanvasDeleteCommitRequest
+  - CanvasEraseCommitRequest
+  - CanvasMoveCommitRequest
+  - CanvasRotateCommitRequest
+  - CanvasReflectCommitRequest
+  - CanvasTextEditCommitRequest
   - CanvasSelectionDeletePolicy
   - CanvasSelectionDeleteAvailability
   - CanvasRuntimeState
@@ -108,11 +118,6 @@ public_exports:
   - CanvasContextActionTarget
   - CanvasContentElementContextActionTarget
   - CanvasEmptyCanvasContextActionTarget
-  - CanvasMoveCommitResolver
-  - CanvasMoveCommitRequest
-  - CanvasMoveResolution
-  - CanvasMoveCommit
-  - CanvasMoveCancel
   - CanvasSelectionStyle
   - CanvasGridStyle
   - CanvasDiagnosticPolicy

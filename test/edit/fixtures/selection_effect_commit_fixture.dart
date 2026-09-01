@@ -19,10 +19,13 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/id_admission.dart'
+    show IdAdmissionWorkKind, IdAdmissionWorkPhase;
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_commit.dart';
 import 'edit_kernel_test_support.dart';
 
 // This fixture keeps distinct stable owner-boundary failures in one existing
@@ -187,9 +190,9 @@ void _verifyStagedEditSelectionOrder({
   final root = runtimeRootWithCommittedDocumentSeed(
     _stagedSelectionDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         resolverCalls += 1;
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -389,9 +392,9 @@ void _verifyStagedSelectionBeforeReplacement() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _stagedSelectionDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         resolverCalls += 1;
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );

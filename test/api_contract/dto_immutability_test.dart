@@ -152,6 +152,8 @@ void main() {
         layerCount: 1,
         resourceCount: 1,
       ),
+      documentRevision: 1,
+      selectedElementIdsBefore: const [],
       movedElements: moved,
       proposedDelta: Offset.zero,
       selectionBoundsWorld: const Rect.fromLTWH(0, 0, 1, 1),
@@ -186,20 +188,26 @@ void main() {
     expect(() => preview.points.clear(), throwsUnsupportedError);
   });
 
-  test('deletion requests retain entries and reject exposed mutation', () {
+  test('delete requests retain entries and reject exposed mutation', () {
     final element = CanvasRectElement(
       id: CanvasElementId('delete-1'),
       size: const Size(1, 1),
     );
     final entries = [
-      CanvasDeletionEntry(
+      CanvasCommitElementEntry(
         element: element,
         layerId: CanvasLayerId('layer-1'),
         elementIndex: 0,
       ),
     ];
-    final request = CanvasDeletionCommitRequest(
-      operation: CanvasDeletionOperation.deleteSelection,
+    final request = CanvasDeleteCommitRequest(
+      documentSummary: const CanvasDocumentSummary(
+        elementCount: 1,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 1,
+      selectedElementIdsBefore: const [],
       entries: entries,
     );
 

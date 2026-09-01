@@ -55,7 +55,7 @@ void main() {
     );
     final runtime = CanvasRuntime(
       config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        commitResolver: _acceptCommit,
       ),
     );
     addTearDown(runtime.dispose);
@@ -93,6 +93,24 @@ void main() {
   });
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _lease = _Lease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _lease,
+      ),
+      _ => const CanvasCommitAccept(lease: _lease),
+    };
+
+final class _Lease implements CanvasCommitLease {
+  const _Lease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
+}
 ''';

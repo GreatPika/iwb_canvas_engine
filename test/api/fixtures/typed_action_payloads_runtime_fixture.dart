@@ -11,7 +11,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.da
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 import '../../support/runtime_with_document.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   test(
@@ -44,7 +44,7 @@ Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
     ),
   );
@@ -93,7 +93,7 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
     ),
   );

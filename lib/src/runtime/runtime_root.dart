@@ -27,6 +27,7 @@ import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_commit.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_deletion.dart';
 import '../contracts/public/canvas_element.dart';
@@ -64,7 +65,9 @@ import '../interaction/text_edit_guard_decision.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
+import '../store/committed_document.dart';
 import '../store/element_registry.dart';
+import '../store/layer_table.dart';
 import '../store/resource_table.dart';
 import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
@@ -173,19 +176,60 @@ enum RuntimeContextRequestDeliveryTraceEvent {
 @visibleForTesting
 enum RuntimeDeletionRequestPreparationPhase { requestConstruction, entryCopy }
 
-final class _DeletionResolution {
-  const _DeletionResolution(this.decision, {this.didThrow = false});
+final class _CommitResolutionOutcome {
+  const _CommitResolutionOutcome({
+    required this.accepted,
+    required this.lease,
+    required this.resolverFailed,
+    this.moveDelta,
+  });
 
-  final CanvasDeletionDecision decision;
-  final bool didThrow;
+  const _CommitResolutionOutcome.cancelled()
+    : this(accepted: false, lease: null, resolverFailed: false);
+
+  const _CommitResolutionOutcome.resolverFailed()
+    : this(accepted: false, lease: null, resolverFailed: true);
+
+  final bool accepted;
+  final CanvasCommitLease? lease;
+  final Offset? moveDelta;
+  final bool resolverFailed;
 }
 
-final class _ContainedMoveResolverFailure implements Exception {
-  const _ContainedMoveResolverFailure();
+/// Runtime owns one operation-local terminal attempt; this value never escapes
+/// to history and marks the attempt before host code can throw.
+final class _CommitLeaseAttempt {
+  _CommitLeaseAttempt(this._lease);
+
+  final CanvasCommitLease? _lease;
+  bool _attempted = false;
+
+  void committed(RuntimeRoot root) => _attempt(root, committed: true);
+  void aborted(RuntimeRoot root) => _attempt(root, committed: false);
+
+  void _attempt(RuntimeRoot root, {required bool committed}) {
+    final lease = _lease;
+    if (lease == null) {
+      return;
+    }
+    if (_attempted) {
+      throw StateError('A CanvasCommitLease terminal was attempted twice.');
+    }
+    _attempted = true;
+    root._invokeCommitLease(lease, committed: committed);
+  }
 }
 
-Never _throwContainedMoveResolverFailure() {
-  throw const _ContainedMoveResolverFailure();
+final class _PreparedTextEditCommit {
+  const _PreparedTextEditCommit({
+    required this.prepared,
+    required this.before,
+    required this.after,
+  });
+
+  final PreparedInteractionCommit prepared;
+  final CanvasTextElement before;
+  final CanvasTextElement after;
 }
 
 // Common delivery has public callback seams for resource, frame, state, action,
@@ -1067,31 +1111,39 @@ final class RuntimeRoot
       ),
       'selection deletion preparation observation failed',
     );
-    final resolution = _resolveDeletion(
-      _deletionRequest(
-        operation: CanvasDeletionOperation.deleteSelection,
-        entries: removalEntries,
-      ),
+    final resolution = _resolveCommit(
+      _deleteRequest(removalEntries),
+      isMove: false,
     );
-    if (resolution.decision != CanvasDeletionDecision.accept) {
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    if (!resolution.accepted) {
       prepared.discard();
+      leaseAttempt.aborted(this);
       return;
     }
-    _deliverEditCommitResult(prepared.consume());
+    late CommitDeliveryResult applyResult;
+    try {
+      applyResult = prepared.consume();
+    } on Object {
+      leaseAttempt.aborted(this);
+      rethrow;
+    }
+    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
   }
 
-  CanvasDeletionCommitRequest _deletionRequest({
-    required CanvasDeletionOperation operation,
-    required Iterable<DeletionEntryFacts> entries,
-  }) {
+  CanvasDeleteCommitRequest _deleteRequest(
+    Iterable<DeletionEntryFacts> entries,
+  ) {
     assert(
       _throwInjectedDeletionRequestPreparationFailure(
         RuntimeDeletionRequestPreparationPhase.requestConstruction,
       ),
       'deletion request construction injection did not complete',
     );
-    final request = CanvasDeletionCommitRequest(
-      operation: operation,
+    final request = CanvasDeleteCommitRequest(
+      documentSummary: _documentSummary(),
+      documentRevision: _store.documentRevision,
+      selectedElementIdsBefore: _selection.selectedElementIds,
       entries: entries.map((entry) {
         assert(
           _throwInjectedDeletionRequestPreparationFailure(
@@ -1105,7 +1157,7 @@ final class RuntimeRoot
           ),
           'deletion request work observation failed',
         );
-        return CanvasDeletionEntry(
+        return CanvasCommitElementEntry(
           element: entry.element,
           layerId: entry.layerId,
           elementIndex: entry.elementIndex,
@@ -1121,35 +1173,6 @@ final class RuntimeRoot
     return request;
   }
 
-  _DeletionResolution _resolveDeletion(CanvasDeletionCommitRequest request) {
-    try {
-      return _DeletionResolution(
-        _runGuardedResolverCallback(
-          () => config.deletionCommitResolver(request),
-        ),
-      );
-      // ResolverCallbackRejection is the guard's explicit, contained callback
-      // outcome; treating it as an ordinary Error would duplicate diagnostics.
-      // ignore: avoid_catching_errors
-    } on ResolverCallbackRejection {
-      return const _DeletionResolution(
-        CanvasDeletionDecision.cancel,
-        didThrow: true,
-      );
-    } on Object catch (error) {
-      RuntimeInteractionDiagnosticsAdapter(
-        _diagnostics,
-      ).recordResolverCallbackFailed(
-        operation: request.operation.name,
-        errorKind: _resolverCallbackErrorKind(error),
-      );
-      return const _DeletionResolution(
-        CanvasDeletionDecision.cancel,
-        didThrow: true,
-      );
-    }
-  }
-
   String _resolverCallbackErrorKind(Object error) {
     if (error is Error) {
       return 'error';
@@ -1158,6 +1181,82 @@ final class RuntimeRoot
       return 'exception';
     }
     return 'object';
+  }
+
+  _CommitResolutionOutcome _resolveCommit(
+    CanvasCommitRequest request, {
+    required bool isMove,
+  }) {
+    final CanvasCommitResolution resolution;
+    try {
+      resolution = _runGuardedResolverCallback(
+        () => config.commitResolver(request),
+      );
+      // The guard has already recorded its own bounded diagnostic.
+      // ignore: avoid_catching_errors
+    } on ResolverCallbackRejection {
+      return const _CommitResolutionOutcome.resolverFailed();
+    } on Object catch (error) {
+      RuntimeInteractionDiagnosticsAdapter(
+        _diagnostics,
+      ).recordResolverCallbackFailed(
+        operation: _commitOperationName(request),
+        errorKind: _resolverCallbackErrorKind(error),
+      );
+      return const _CommitResolutionOutcome.resolverFailed();
+    }
+    return switch (resolution) {
+      CanvasCommitCancel() => const _CommitResolutionOutcome.cancelled(),
+      CanvasCommitAccept(:final lease) when !isMove => _CommitResolutionOutcome(
+        accepted: true,
+        lease: lease,
+        resolverFailed: false,
+      ),
+      CanvasMoveCommitAccept(:final lease, :final delta) when isMove =>
+        _CommitResolutionOutcome(
+          accepted: true,
+          lease: lease,
+          resolverFailed: false,
+          moveDelta: delta,
+        ),
+      CanvasCommitAccept(:final lease) => _CommitResolutionOutcome(
+        accepted: false,
+        lease: lease,
+        resolverFailed: false,
+      ),
+      CanvasMoveCommitAccept(:final lease) => _CommitResolutionOutcome(
+        accepted: false,
+        lease: lease,
+        resolverFailed: false,
+      ),
+    };
+  }
+
+  String _commitOperationName(CanvasCommitRequest request) => switch (request) {
+    CanvasDrawCommitRequest() => 'draw',
+    CanvasDeleteCommitRequest() => 'delete',
+    CanvasEraseCommitRequest() => 'erase',
+    CanvasMoveCommitRequest() => 'move',
+    CanvasRotateCommitRequest() => 'rotate',
+    CanvasReflectCommitRequest() => 'reflect',
+    CanvasTextEditCommitRequest() => 'textEdit',
+  };
+
+  void _invokeCommitLease(CanvasCommitLease lease, {required bool committed}) {
+    try {
+      _runGuardedResolverCallback(committed ? lease.committed : lease.aborted);
+      // Guard rejections have their own bounded diagnostic.
+      // ignore: avoid_catching_errors
+    } on ResolverCallbackRejection {
+      return;
+    } on Object catch (error) {
+      RuntimeInteractionDiagnosticsAdapter(
+        _diagnostics,
+      ).recordResolverCallbackFailed(
+        operation: committed ? 'commitLeaseCommitted' : 'commitLeaseAborted',
+        errorKind: _resolverCallbackErrorKind(error),
+      );
+    }
   }
 
   List<DeletionEntryFacts> _selectionDeleteEntries() {
@@ -1225,41 +1324,137 @@ final class RuntimeRoot
     if (commandFacts.movableElements.isEmpty) {
       return;
     }
-    final applyResult = _prepareSelectionTransformCommit(
-      participants: commandFacts.movableElements,
-      elementIds: commandFacts.movableElements.map((element) => element.id),
-      transform: transform,
-      operation: operation,
-      pivotWorld: pivotWorld,
-      timestampHintMs: timestampMs,
+    final selectedBefore = _selection.selectedElementIds;
+    final request = switch (operation) {
+      CanvasTransformOperation.move => CanvasMoveCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: selectedBefore,
+        movedElements: commandFacts.movableElements,
+        proposedDelta: transform.translation,
+        selectionBoundsWorld: commandFacts.selectionBoundsWorld,
+      ),
+      CanvasTransformOperation.rotateClockwise ||
+      CanvasTransformOperation.rotateCounterClockwise =>
+        CanvasRotateCommitRequest(
+          documentSummary: _documentSummary(),
+          documentRevision: _store.documentRevision,
+          selectedElementIdsBefore: selectedBefore,
+          affectedElements: commandFacts.movableElements,
+          pivotWorld:
+              pivotWorld ??
+              (throw StateError('Pivoted transforms require a pivot.')),
+          worldTransform: transform,
+          operation: operation,
+        ),
+      CanvasTransformOperation.flipVertical ||
+      CanvasTransformOperation.flipHorizontal => CanvasReflectCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: selectedBefore,
+        affectedElements: commandFacts.movableElements,
+        pivotWorld:
+            pivotWorld ??
+            (throw StateError('Pivoted transforms require a pivot.')),
+        worldTransform: transform,
+        operation: operation,
+      ),
+    };
+    final preparedBeforeResolution = operation == CanvasTransformOperation.move
+        ? null
+        : _prepareDeferredSelectionTransformCommit(
+            participants: commandFacts.movableElements,
+            elementIds: commandFacts.movableElements.map(
+              (element) => element.id,
+            ),
+            transform: transform,
+            operation: operation,
+            pivotWorld: pivotWorld,
+            timestampHintMs: timestampMs,
+          );
+    final resolution = _resolveCommit(
+      request,
+      isMove: operation == CanvasTransformOperation.move,
     );
-    _deliverEditCommitResult(applyResult);
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    if (!resolution.accepted) {
+      preparedBeforeResolution?.discard();
+      leaseAttempt.aborted(this);
+      return;
+    }
+    final resolvedTransform = operation == CanvasTransformOperation.move
+        ? _acceptedMoveTransform(resolution.moveDelta, leaseAttempt)
+        : transform;
+    if (resolvedTransform == null) {
+      return;
+    }
+    late CommitDeliveryResult applyResult;
+    try {
+      final prepared =
+          preparedBeforeResolution ??
+          _prepareDeferredSelectionTransformCommit(
+            participants: commandFacts.movableElements,
+            elementIds: commandFacts.movableElements.map(
+              (element) => element.id,
+            ),
+            transform: resolvedTransform,
+            operation: operation,
+            pivotWorld: pivotWorld,
+            timestampHintMs: timestampMs,
+          );
+      applyResult = prepared.consume();
+    } on Object {
+      leaseAttempt.aborted(this);
+      rethrow;
+    }
+    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
+  }
+
+  CanvasTransform? _acceptedMoveTransform(
+    Offset? delta,
+    _CommitLeaseAttempt leaseAttempt,
+  ) {
+    if (delta == null ||
+        delta == Offset.zero ||
+        !delta.dx.isFinite ||
+        !delta.dy.isFinite) {
+      leaseAttempt.aborted(this);
+      return null;
+    }
+    return CanvasTransform.translation(delta);
   }
 
   // Command operations.
   bool removeElementByCommand(CanvasElementId id, {int? timestampMs}) {
     ensureRuntimeMutationAllowed();
-    final facts = _commandFacts.removeElementFacts(id);
-    if (!facts.canRemove) {
+    final entries = _store.projectDeletionEntries([id]).entries;
+    if (entries.length != 1) {
       return false;
     }
-    var didRemove = false;
-    final applyResult = _editKernel.prepareInteractionCommit(
+    final prepared = _editKernel.prepareDeferredInteractionCommit(
       (edit) {
-        didRemove = edit.removeElement(id);
+        edit.removeElement(id);
       },
-      augmentPlan: (plan) => didRemove
-          ? plan.withActionIntents([
-              RemoveElementActionIntent(
-                elementId: id,
-                timestampHintMs: timestampMs,
-              ),
-            ])
-          : plan,
+      augmentPlan: (plan) => plan.withActionIntents([
+        RemoveElementActionIntent(elementId: id, timestampHintMs: timestampMs),
+      ]),
     );
-    _deliverEditCommitResult(applyResult);
-
-    return didRemove;
+    final resolution = _resolveCommit(_deleteRequest(entries), isMove: false);
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    if (!resolution.accepted) {
+      prepared.discard();
+      leaseAttempt.aborted(this);
+      return false;
+    }
+    late CommitDeliveryResult applyResult;
+    try {
+      applyResult = prepared.consume();
+    } on Object {
+      leaseAttempt.aborted(this);
+      rethrow;
+    }
+    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
+    return true;
   }
 
   CanvasClearResult clearContentByCommand({
@@ -1300,6 +1495,9 @@ final class RuntimeRoot
     return result;
   }
 
+  // Guard, prepared pair, resolver, install, and matching close notification
+  // share one ordered text lifecycle; splitting them would obscure retries.
+  // ignore: halstead-volume, source-lines-of-code
   bool commitTextEdit(
     CanvasInteractionRequestId requestId,
     String newText, {
@@ -1322,14 +1520,37 @@ final class RuntimeRoot
 
       return true;
     }
-    final applyResult = _prepareTextEditCommit((
+    final preparedText = _prepareTextEditCommit((
       requestId: requestId,
       targetElementId: targetElementId,
       newText: newText,
       timestampMs: timestampMs,
     ));
-    if (!applyResult.shouldPublishState) {
+    if (preparedText == null) {
       return false;
+    }
+    final resolution = _resolveCommit(
+      CanvasTextEditCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: _selection.selectedElementIds,
+        before: preparedText.before,
+        after: preparedText.after,
+      ),
+      isMove: false,
+    );
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    if (!resolution.accepted) {
+      preparedText.prepared.discard();
+      leaseAttempt.aborted(this);
+      return false;
+    }
+    final CommitDeliveryResult applyResult;
+    try {
+      applyResult = preparedText.prepared.consume();
+    } on Object {
+      leaseAttempt.aborted(this);
+      rethrow;
     }
     _interactionEngine.consumeTextEditRequest(requestId);
     final didClearTextEditSuppression = _textEditingPort.clearAcceptedRequest(
@@ -1339,7 +1560,7 @@ final class RuntimeRoot
     if (didClearTextEditSuppression) {
       _markTextEditInteractionChanged();
     }
-    _deliverEditCommitResult(applyResult);
+    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
     if (didClearTextEditSuppression) {
       _deliverAcceptedNotifierNotification(
         _textEditingPort.notifyActiveSessionChanged,
@@ -1349,17 +1570,21 @@ final class RuntimeRoot
     return true;
   }
 
-  CommitDeliveryResult _prepareTextEditCommit(TextEditPrepareInput input) {
+  _PreparedTextEditCommit? _prepareTextEditCommit(TextEditPrepareInput input) {
     final prepareOverride = _textEditPrepareOverride;
     if (prepareOverride != null) {
-      return prepareOverride(input);
+      final result = prepareOverride(input);
+      return result.shouldPublishState
+          ? throw StateError('Text preparation overrides cannot install edits.')
+          : null;
     }
     final transform = _textEditAnchorPreservingTransform(
       input.targetElementId,
       input.newText,
     );
-
-    return _editKernel.prepareInteractionCommit(
+    CanvasTextElement? before;
+    CanvasTextElement? after;
+    final prepared = _editKernel.prepareDeferredInteractionCommit(
       (edit) => edit.updateElement(
         CanvasTextElementUpdate(
           id: input.targetElementId,
@@ -1369,13 +1594,27 @@ final class RuntimeRoot
           text: CanvasFieldSet(input.newText),
         ),
       ),
-      augmentAcceptedPlan: (document, plan) =>
-          _sealPreparedTextEditAction(document, plan, input),
+      augmentAcceptedPlan: (document, plan) {
+        final sealed = _sealPreparedTextEditAction(document, plan, input);
+        before = sealed.before;
+        after = sealed.after;
+        return sealed.plan;
+      },
       affectedElementId: input.targetElementId,
+    );
+    return _PreparedTextEditCommit(
+      prepared: prepared,
+      before:
+          before ??
+          (throw StateError('Text edit lost its prepared before value.')),
+      after:
+          after ??
+          (throw StateError('Text edit lost its prepared after value.')),
     );
   }
 
-  CommitPlan _sealPreparedTextEditAction(
+  ({CommitPlan plan, CanvasTextElement before, CanvasTextElement after})
+  _sealPreparedTextEditAction(
     AcceptedCommitDocument document,
     CommitPlan plan,
     TextEditPrepareInput input,
@@ -1392,14 +1631,18 @@ final class RuntimeRoot
         'Text edit candidate projection did not retain text rows.',
       );
     }
-    return plan.withActionIntents([
-      EditTextActionIntent.fromPreparedText(
-        requestId: input.requestId,
-        before: before,
-        after: after,
-        timestampHintMs: input.timestampMs,
-      ),
-    ]);
+    return (
+      plan: plan.withActionIntents([
+        EditTextActionIntent.fromPreparedText(
+          requestId: input.requestId,
+          before: before,
+          after: after,
+          timestampHintMs: input.timestampMs,
+        ),
+      ]),
+      before: before,
+      after: after,
+    );
   }
 
   CanvasTransform? _textEditAnchorPreservingTransform(
@@ -2493,6 +2736,7 @@ final class RuntimeRoot
   void _deliverEditCommitResult(
     CommitDeliveryResult applyResult, {
     RuntimeNonTextRoute? route,
+    _CommitLeaseAttempt? leaseAttempt,
   }) {
     final invalidatedMoveCleanup = _invalidateSelectedMoveForAcceptedDelivery(
       applyResult,
@@ -2568,6 +2812,9 @@ final class RuntimeRoot
           surfaceRepaintTarget: surfaceRepaintTarget,
           continueAfterSurfaceFrameFailure: true,
         );
+        // Application is now irreversible and visible. A lease terminal is
+        // deliberately attempted before the existing action publication.
+        leaseAttempt?.committed(this);
         _emitActions(deliveryResult.actionIntents);
       }
       assert(
@@ -2862,34 +3109,36 @@ final class RuntimeRoot
     SelectedMoveCommitIntent intent, {
     required int? timestampHintMs,
   }) {
-    final resolver = config.moveCommitResolver;
-    final Offset? resolvedDelta;
-    try {
-      resolvedDelta = resolver == null
-          ? intent.proposedDelta
-          : _resolveSelectedMoveDelta(intent: intent, resolver: resolver);
-      // ResolverCallbackRejection is the callback guard's contained terminal
-      // outcome and must retain its original failure identity here.
-      // ignore: avoid_catching_errors
-    } on ResolverCallbackRejection {
-      _cleanupSelectedMove(PointerCleanupReason.resolverError);
+    final resolution = _resolveCommit(
+      CanvasMoveCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: intent.selectedElementIdsBefore,
+        movedElements: intent.movedElements,
+        proposedDelta: intent.proposedDelta,
+        selectionBoundsWorld: intent.selectionBoundsWorld,
+      ),
+      isMove: true,
+    );
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    final resolvedDelta = resolution.moveDelta;
+    if (!resolution.accepted ||
+        resolvedDelta == null ||
+        resolvedDelta == Offset.zero ||
+        !resolvedDelta.dx.isFinite ||
+        !resolvedDelta.dy.isFinite) {
+      leaseAttempt.aborted(this);
+      _cleanupSelectedMove(
+        resolution.resolverFailed
+            ? PointerCleanupReason.resolverError
+            : PointerCleanupReason.resolverCancel,
+      );
 
       return;
-    } on _ContainedMoveResolverFailure {
-      _cleanupSelectedMove(PointerCleanupReason.resolverError);
-
-      return;
-    } on Object {
-      _cleanupSelectedMove(PointerCleanupReason.resolverError);
-      rethrow;
     }
-    if (resolvedDelta == null || resolvedDelta == Offset.zero) {
-      _cleanupSelectedMove(PointerCleanupReason.resolverCancel);
-
-      return;
-    }
+    var installed = false;
     try {
-      final applyResult = _prepareSelectedMoveCommit(
+      final prepared = _prepareSelectedMoveCommit(
         intent: intent,
         delta: resolvedDelta,
         timestampHintMs: timestampHintMs,
@@ -2901,6 +3150,8 @@ final class RuntimeRoot
         ),
         'runtime route temporal event observation failed',
       );
+      final applyResult = prepared.consume();
+      installed = true;
       final cleanup = _cleanupSelectedMove(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
@@ -2919,64 +3170,25 @@ final class RuntimeRoot
           RuntimeNonTextRoute.selectedMove,
         ),
         route: RuntimeNonTextRoute.selectedMove,
+        leaseAttempt: leaseAttempt,
       );
     } on Object {
+      if (!installed) {
+        leaseAttempt.aborted(this);
+      }
       _cleanupSelectedMove(PointerCleanupReason.editFailure);
       rethrow;
     }
   }
 
-  Offset? _resolveSelectedMoveDelta({
-    required SelectedMoveCommitIntent intent,
-    required CanvasMoveCommitResolver resolver,
-  }) {
-    final CanvasMoveResolution resolution;
-    try {
-      resolution = _runGuardedResolverCallback(
-        () => resolver(
-          CanvasMoveCommitRequest(
-            documentSummary: intent.documentSummary,
-            movedElements: intent.movedElements,
-            proposedDelta: intent.proposedDelta,
-            selectionBoundsWorld: intent.selectionBoundsWorld,
-          ),
-        ),
-      );
-      // The public guard has already emitted its bounded rejection diagnostic.
-      // ignore: avoid_catching_errors
-    } on ResolverCallbackRejection {
-      rethrow;
-    } on Object catch (error) {
-      RuntimeInteractionDiagnosticsAdapter(
-        _diagnostics,
-      ).recordResolverCallbackFailed(
-        operation: 'move',
-        errorKind: _resolverCallbackErrorKind(error),
-      );
-      _throwContainedMoveResolverFailure();
-    }
-    return switch (resolution) {
-      CanvasMoveCommit(:final delta) => _finiteResolvedDelta(delta),
-      CanvasMoveCancel() => null,
-    };
-  }
-
-  Offset _finiteResolvedDelta(Offset delta) {
-    if (!delta.dx.isFinite || !delta.dy.isFinite) {
-      throw ArgumentError.value(delta, 'delta', 'must be finite');
-    }
-
-    return delta;
-  }
-
-  CommitDeliveryResult _prepareSelectedMoveCommit({
+  PreparedInteractionCommit _prepareSelectedMoveCommit({
     required SelectedMoveCommitIntent intent,
     required Offset delta,
     required int? timestampHintMs,
   }) {
     final transform = CanvasTransform.translation(delta);
 
-    return _prepareSelectionTransformCommit(
+    return _prepareDeferredSelectionTransformCommit(
       participants: intent.movedElements,
       elementIds: intent.movableIds,
       transform: transform,
@@ -2991,8 +3203,7 @@ final class RuntimeRoot
   // together, while each caller retains its own admission and cleanup policy.
   // Keeping every sealing input explicit avoids a per-operation wrapper and
   // makes the transform/action contract readable at its only shared owner.
-  // ignore: number-of-parameters
-  CommitDeliveryResult _prepareSelectionTransformCommit({
+  PreparedInteractionCommit _prepareDeferredSelectionTransformCommit({
     required Iterable<CanvasElementRead> participants,
     required Iterable<CanvasElementId> elementIds,
     required CanvasTransform transform,
@@ -3019,7 +3230,7 @@ final class RuntimeRoot
       ),
     };
 
-    return _editKernel.prepareInteractionCommit((edit) {
+    return _editKernel.prepareDeferredInteractionCommit((edit) {
       for (final element in participants) {
         edit.updateElement(
           _transformUpdate(element, transform.multiply(element.transform)),
@@ -3123,10 +3334,18 @@ final class RuntimeRoot
   }) {
     try {
       final elementId = _store.readElementIdCandidate();
-      final applyResult = _prepareDrawStrokeCommit(
+      CanvasCommitElementEntry? entry;
+      int? layerIndex;
+      var createsLayer = false;
+      final prepared = _prepareDrawStrokeCommit(
         intent: intent,
         elementId: elementId,
         timestampHintMs: timestampHintMs,
+        onPreparedEntry: (preparedEntry) {
+          entry = preparedEntry.entry;
+          layerIndex = preparedEntry.layerIndex;
+          createsLayer = preparedEntry.createsLayer;
+        },
       );
       assert(
         _recordRouteTemporalEvent(
@@ -3135,6 +3354,36 @@ final class RuntimeRoot
         ),
         'runtime route temporal event observation failed',
       );
+      final resolution = _resolveCommit(
+        CanvasDrawCommitRequest(
+          documentSummary: _documentSummary(),
+          documentRevision: _store.documentRevision,
+          selectedElementIdsBefore: _selection.selectedElementIds,
+          entry: entry ?? (throw StateError('Draw lost its prepared entry.')),
+          tool: intent.tool,
+          layerIndex: layerIndex ?? 0,
+          createsLayer: createsLayer,
+        ),
+        isMove: false,
+      );
+      final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+      if (!resolution.accepted) {
+        prepared.discard();
+        leaseAttempt.aborted(this);
+        _cleanupDrawStroke(
+          resolution.resolverFailed
+              ? PointerCleanupReason.resolverError
+              : PointerCleanupReason.resolverCancel,
+        );
+        return;
+      }
+      final CommitDeliveryResult applyResult;
+      try {
+        applyResult = prepared.consume();
+      } on Object {
+        leaseAttempt.aborted(this);
+        rethrow;
+      }
       final cleanup = _cleanupDrawStroke(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
@@ -3153,6 +3402,7 @@ final class RuntimeRoot
           RuntimeNonTextRoute.drawStroke,
         ),
         route: RuntimeNonTextRoute.drawStroke,
+        leaseAttempt: leaseAttempt,
       );
     } on Object {
       _cleanupDrawStroke(PointerCleanupReason.editFailure);
@@ -3160,10 +3410,14 @@ final class RuntimeRoot
     }
   }
 
-  CommitDeliveryResult _prepareDrawStrokeCommit({
+  PreparedInteractionCommit _prepareDrawStrokeCommit({
     required DrawStrokeCommitIntent intent,
     required CanvasElementId elementId,
     required int? timestampHintMs,
+    required void Function(
+      ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer}),
+    )
+    onPreparedEntry,
   }) {
     final element = CanvasStrokeElement(
       id: elementId,
@@ -3173,21 +3427,25 @@ final class RuntimeRoot
       opacity: intent.opacity,
     );
 
-    return _editKernel.prepareInteractionCommit(
+    return _editKernel.prepareDeferredInteractionCommit(
       (edit) {
         edit.addElement(element);
       },
-      augmentPlan: (plan) => plan.withActionIntents([
-        DrawStrokeActionIntent(
-          elementId: elementId,
-          tool: intent.tool,
-          color: intent.color,
-          thickness: intent.thickness,
-          opacity: intent.opacity,
-          pointCount: intent.points.length,
-          timestampHintMs: timestampHintMs,
-        ),
-      ]),
+      augmentAcceptedPlan: (document, plan) {
+        final preparedEntry = _preparedDrawEntry(document, elementId);
+        onPreparedEntry(preparedEntry);
+        return plan.withActionIntents([
+          DrawStrokeActionIntent(
+            elementId: elementId,
+            tool: intent.tool,
+            color: intent.color,
+            thickness: intent.thickness,
+            opacity: intent.opacity,
+            pointCount: intent.points.length,
+            timestampHintMs: timestampHintMs,
+          ),
+        ]);
+      },
     );
   }
 
@@ -3205,6 +3463,59 @@ final class RuntimeRoot
     return outcome;
   }
 
+  ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer})
+  _preparedDrawEntry(AcceptedCommitDocument document, CanvasElementId id) {
+    final sparse = switch (document) {
+      AcceptedSparseStoreDocument(:final commit) => commit,
+      _ => throw StateError('Draw requires a sparse prepared candidate.'),
+    };
+    final candidate = sparse.document;
+    final element = candidate.readSparseTouchedElement(
+      id,
+      side: StoreSparseCandidateReadSide.candidate,
+    );
+    final location = candidate.elements.elementLocationFacts[id];
+    final layerId = location is ElementLocationFacts ? location.layerId : null;
+    if (element == null ||
+        location is! ElementLocationFacts ||
+        location.kind != ElementLocationKind.content ||
+        layerId == null) {
+      throw StateError('Draw candidate did not retain a content placement.');
+    }
+    final layerLocation = LayerTable.withReadScope(
+      LayerTableReadScope.placement,
+      () => candidate.elements.layerTable.locationFor(layerId),
+    );
+    if (layerLocation == null) {
+      throw StateError('Draw candidate is missing its target layer.');
+    }
+    final orderToken = candidate.elements.frameOrderTokensById[id];
+    final firstElementId = layerLocation.row.elementIds.isEmpty
+        ? null
+        : layerLocation.row.elementIds.first;
+    final firstToken = firstElementId == null
+        ? null
+        : candidate.elements.frameOrderTokensById[firstElementId];
+    if (orderToken == null || firstToken == null) {
+      throw StateError('Draw candidate is missing its target element order.');
+    }
+    final elementIndex = orderToken - firstToken;
+    if (elementIndex < 0 ||
+        elementIndex >= layerLocation.row.elementIds.length ||
+        layerLocation.row.elementIds[elementIndex] != id) {
+      throw StateError('Draw candidate has an invalid target element order.');
+    }
+    return (
+      entry: CanvasCommitElementEntry(
+        element: element,
+        layerId: layerId,
+        elementIndex: elementIndex,
+      ),
+      layerIndex: layerLocation.index,
+      createsLayer: !_store.hasLayer(layerId),
+    );
+  }
+
   // Draw line commit flow.
   void _deliverDrawLineCommit(
     DrawLineCommitIntent intent, {
@@ -3212,10 +3523,18 @@ final class RuntimeRoot
   }) {
     try {
       final elementId = _store.readElementIdCandidate();
-      final applyResult = _prepareDrawLineCommit(
+      CanvasCommitElementEntry? entry;
+      int? layerIndex;
+      var createsLayer = false;
+      final prepared = _prepareDrawLineCommit(
         intent: intent,
         elementId: elementId,
         timestampHintMs: timestampHintMs,
+        onPreparedEntry: (preparedEntry) {
+          entry = preparedEntry.entry;
+          layerIndex = preparedEntry.layerIndex;
+          createsLayer = preparedEntry.createsLayer;
+        },
       );
       assert(
         _recordRouteTemporalEvent(
@@ -3224,6 +3543,36 @@ final class RuntimeRoot
         ),
         'runtime route temporal event observation failed',
       );
+      final resolution = _resolveCommit(
+        CanvasDrawCommitRequest(
+          documentSummary: _documentSummary(),
+          documentRevision: _store.documentRevision,
+          selectedElementIdsBefore: _selection.selectedElementIds,
+          entry: entry ?? (throw StateError('Draw lost its prepared entry.')),
+          tool: CanvasDrawTool.line,
+          layerIndex: layerIndex ?? 0,
+          createsLayer: createsLayer,
+        ),
+        isMove: false,
+      );
+      final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+      if (!resolution.accepted) {
+        prepared.discard();
+        leaseAttempt.aborted(this);
+        _cleanupLineEndpoint(
+          resolution.resolverFailed
+              ? PointerCleanupReason.resolverError
+              : PointerCleanupReason.resolverCancel,
+        );
+        return;
+      }
+      final CommitDeliveryResult applyResult;
+      try {
+        applyResult = prepared.consume();
+      } on Object {
+        leaseAttempt.aborted(this);
+        rethrow;
+      }
       final cleanup = _cleanupLineEndpoint(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
@@ -3242,6 +3591,7 @@ final class RuntimeRoot
           RuntimeNonTextRoute.drawLine,
         ),
         route: RuntimeNonTextRoute.drawLine,
+        leaseAttempt: leaseAttempt,
       );
     } on Object {
       _cleanupLineEndpoint(PointerCleanupReason.editFailure);
@@ -3249,10 +3599,14 @@ final class RuntimeRoot
     }
   }
 
-  CommitDeliveryResult _prepareDrawLineCommit({
+  PreparedInteractionCommit _prepareDrawLineCommit({
     required DrawLineCommitIntent intent,
     required CanvasElementId elementId,
     required int? timestampHintMs,
+    required void Function(
+      ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer}),
+    )
+    onPreparedEntry,
   }) {
     final element = CanvasLineElement(
       id: elementId,
@@ -3263,21 +3617,25 @@ final class RuntimeRoot
       opacity: intent.opacity,
     );
 
-    return _editKernel.prepareInteractionCommit(
+    return _editKernel.prepareDeferredInteractionCommit(
       (edit) {
         edit.addElement(element);
       },
-      augmentPlan: (plan) => plan.withActionIntents([
-        DrawLineActionIntent(
-          elementId: elementId,
-          color: intent.color,
-          thickness: intent.thickness,
-          opacity: intent.opacity,
-          startWorld: intent.startWorld,
-          endWorld: intent.endWorld,
-          timestampHintMs: timestampHintMs,
-        ),
-      ]),
+      augmentAcceptedPlan: (document, plan) {
+        final preparedEntry = _preparedDrawEntry(document, elementId);
+        onPreparedEntry(preparedEntry);
+        return plan.withActionIntents([
+          DrawLineActionIntent(
+            elementId: elementId,
+            color: intent.color,
+            thickness: intent.thickness,
+            opacity: intent.opacity,
+            startWorld: intent.startWorld,
+            endWorld: intent.endWorld,
+            timestampHintMs: timestampHintMs,
+          ),
+        ]);
+      },
     );
   }
 
@@ -3298,7 +3656,9 @@ final class RuntimeRoot
   // Eraser commit flow.
   // Resolver outcome, cleanup, and delivery must stay in one temporal owner so
   // cleanup cannot move after a fallible external delivery.
-  // ignore: halstead-volume, source-lines-of-code
+  // Its resolver, terminal cleanup, lease, and delivery order form one
+  // lifecycle; splitting them would make failure ownership less clear.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index
   void _deliverEraserCommit(
     EraserCommitIntent intent, {
     required int? timestampHintMs,
@@ -3334,16 +3694,23 @@ final class RuntimeRoot
         ),
         'runtime route temporal event observation failed',
       );
-      final resolution = _resolveDeletion(
-        _deletionRequest(
-          operation: CanvasDeletionOperation.erase,
-          entries: entries,
+      final resolution = _resolveCommit(
+        CanvasEraseCommitRequest(
+          documentSummary: _documentSummary(),
+          documentRevision: _store.documentRevision,
+          selectedElementIdsBefore: _selection.selectedElementIds,
+          entries: entries.map(_commitEntryFor),
+          corridorWorld: intent.corridorWorld,
+          eraserThickness: intent.eraserThickness,
         ),
+        isMove: false,
       );
-      if (resolution.decision != CanvasDeletionDecision.accept) {
+      final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+      if (!resolution.accepted) {
         prepared.discard();
+        leaseAttempt.aborted(this);
         final cleanup = _cleanupEraser(
-          resolution.didThrow
+          resolution.resolverFailed
               ? PointerCleanupReason.resolverError
               : PointerCleanupReason.resolverCancel,
           publish: false,
@@ -3358,7 +3725,13 @@ final class RuntimeRoot
         );
         return;
       }
-      final applyResult = prepared.consume();
+      final CommitDeliveryResult applyResult;
+      try {
+        applyResult = prepared.consume();
+      } on Object {
+        leaseAttempt.aborted(this);
+        rethrow;
+      }
       final cleanup = _cleanupEraser(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
@@ -3377,11 +3750,20 @@ final class RuntimeRoot
           RuntimeNonTextRoute.eraser,
         ),
         route: RuntimeNonTextRoute.eraser,
+        leaseAttempt: leaseAttempt,
       );
     } on Object {
       _cleanupEraser(PointerCleanupReason.editFailure);
       rethrow;
     }
+  }
+
+  CanvasCommitElementEntry _commitEntryFor(DeletionEntryFacts entry) {
+    return CanvasCommitElementEntry(
+      element: entry.element,
+      layerId: entry.layerId,
+      elementIndex: entry.elementIndex,
+    );
   }
 
   PreparedInteractionCommit _prepareEraserDeletion({

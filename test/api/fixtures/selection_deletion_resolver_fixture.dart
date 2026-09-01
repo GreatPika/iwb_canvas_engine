@@ -20,6 +20,7 @@ import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_commit.dart';
 
 // Route registrations stay visible together so every public resolver family is
 // auditable without a second fixture registry that could drift from this owner.
@@ -81,7 +82,7 @@ void main() {
 // witness: splitting them would permit a callback to observe a rebuilt set.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _acceptExposesExactRequestAndExistingAction() async {
-  CanvasDeletionCommitRequest? request;
+  CanvasDeleteCommitRequest? request;
   final preparationAndInstallTrace = <String>[];
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(
     CommittedDocument(_document()),
@@ -89,10 +90,12 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   final root = RuntimeRoot.test(
     store: store,
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (candidate) {
-        request = candidate;
+      commitResolver: (candidate) {
+        if (candidate is CanvasDeleteCommitRequest) {
+          request = candidate;
+        }
         preparationAndInstallTrace.add('resolver-return');
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -154,7 +157,6 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   if (observedEntries == null) {
     fail('Selection deletion did not read Store deletion entries.');
   }
-  expect(received.operation, CanvasDeletionOperation.deleteSelection);
   expect(received.entries, hasLength(3));
   expect(received.entries[0].element, same(observedEntries[0].element));
   expect(received.entries[0].layerId, CanvasLayerId('lower'));
@@ -202,7 +204,7 @@ void _cancelLeavesNoEffect() {
   var calls = 0;
   final root = _root((_) {
     calls += 1;
-    return CanvasDeletionDecision.cancel;
+    return const CanvasCommitCancel();
   });
   addTearDown(root.dispose);
   _prepareIndependentEraser(root);
@@ -272,7 +274,7 @@ void _ordinaryResolverThrowsAreContained() {
       ),
     );
     expect(record.details, {
-      'operation': 'deleteSelection',
+      'operation': 'delete',
       'errorKind': thrown is Error
           ? 'error'
           : thrown is Exception
@@ -286,7 +288,7 @@ void _excludedSelectionSetsStaySilent() {
   var calls = 0;
   final emptyRoot = _root((_) {
     calls += 1;
-    return CanvasDeletionDecision.accept;
+    return const CanvasCommitAccept(lease: testAcceptingCommitLease);
   });
   addTearDown(emptyRoot.dispose);
   final emptyConstruction = <RuntimeDeletionRouteConstructionKind>[];
@@ -299,7 +301,7 @@ void _excludedSelectionSetsStaySilent() {
 
   final rejectedRoot = _root((_) {
     calls += 1;
-    return CanvasDeletionDecision.accept;
+    return const CanvasCommitAccept(lease: testAcceptingCommitLease);
   }, selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone);
   addTearDown(rejectedRoot.dispose);
   rejectedRoot.selection.setSelection([
@@ -328,7 +330,7 @@ void _selectionDeletionCallbackUsesExistingGuard(
       () => family.invoke(root),
       throwsA(isA<ResolverCallbackRejection>()),
     );
-    return CanvasDeletionDecision.cancel;
+    return const CanvasCommitCancel();
   });
   addTearDown(root.dispose);
   root.selection.setSelection([CanvasElementId('a')]);
@@ -345,7 +347,7 @@ void _selectionResolverAllowsReadsAndClientUndoWork() {
     expect(root.selectedElementIds, {CanvasElementId('a')});
     clientUndo.add(document);
     expect(clientUndo.removeLast(), same(document));
-    return CanvasDeletionDecision.cancel;
+    return const CanvasCommitCancel();
   });
   addTearDown(root.dispose);
   root.selection.setSelection([CanvasElementId('a')]);
@@ -361,7 +363,7 @@ void _unhandledSelectionGuardRejectionIsNotDeletionFailure() {
   late RuntimeRoot root;
   root = _root((_) {
     root.setCameraOffset(const Offset(1, 1));
-    return CanvasDeletionDecision.cancel;
+    return const CanvasCommitCancel();
   }, diagnosticPolicy: const CanvasDiagnosticPolicy.summary());
   addTearDown(root.dispose);
   root.selection.setSelection([CanvasElementId('a')]);
@@ -471,7 +473,7 @@ void _expectSelectionPreparationFailure(_PreparationFailureCase failure) {
   var calls = 0;
   final root = _root((_) {
     calls += 1;
-    return CanvasDeletionDecision.accept;
+    return const CanvasCommitAccept(lease: testAcceptingCommitLease);
   }, diagnosticPolicy: const CanvasDiagnosticPolicy.summary());
   addTearDown(root.dispose);
   root.selection.setSelection([CanvasElementId('a')]);
@@ -523,7 +525,7 @@ Future<void> _selectionDeliveryFailuresRemainFinal() async {
     var resolverCalls = 0;
     final root = _root((_) {
       resolverCalls += 1;
-      return CanvasDeletionDecision.accept;
+      return const CanvasCommitAccept(lease: testAcceptingCommitLease);
     });
     addTearDown(root.dispose);
     _prepareIndependentEraser(root);
@@ -770,7 +772,7 @@ final _guardedPublicMutationFamilies = <_GuardedMutationFamily>[
   _GuardedMutationFamily('dispose', (root) => root.dispose()),
   _GuardedMutationFamily(
     'nested resolver',
-    (root) => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+    (root) => root.runResolverCallback(() => const CanvasCommitCancel()),
   ),
 ];
 
@@ -782,7 +784,7 @@ final class _GuardedMutationFamily {
 }
 
 RuntimeRoot _root(
-  CanvasDeletionCommitResolver resolver, {
+  CanvasCommitResolver resolver, {
   CanvasSelectionDeletePolicy selectionDeletePolicy =
       CanvasSelectionDeletePolicy.partial,
   CanvasDiagnosticPolicy diagnosticPolicy =
@@ -790,7 +792,7 @@ RuntimeRoot _root(
 }) => runtimeRootWithCommittedDocumentSeed(
   _document(),
   config: CanvasRuntimeConfig(
-    deletionCommitResolver: resolver,
+    commitResolver: resolver,
     selectionDeletePolicy: selectionDeletePolicy,
     diagnosticPolicy: diagnosticPolicy,
   ),

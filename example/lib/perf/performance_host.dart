@@ -157,8 +157,28 @@ CanvasTextEditSession? startPerformanceTextEditingFromContextAction(
   return runtime.textEditing.startFromContextAction(request);
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _performanceCommitLease = _PerformanceCommitLease();
+
+CanvasCommitResolution _acceptPerformanceCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _performanceCommitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _performanceCommitLease),
+    };
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(commitResolver: _acceptPerformanceCommit);
+
+final class _PerformanceCommitLease implements CanvasCommitLease {
+  const _PerformanceCommitLease();
+
+  @override
+  void aborted() => _ignoreLeaseOutcome();
+
+  @override
+  void committed() => _ignoreLeaseOutcome();
+}
+
+void _ignoreLeaseOutcome() => Object.hash(null, null);

@@ -1,4 +1,7 @@
-import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart'
+    show DocumentStoreKernel, IdAdmissionWorkEvent;
+import 'package:iwb_canvas_engine/src/store/id_admission.dart'
+    show IdAdmissionWorkKind, IdAdmissionWorkPhase;
 
 /// Captures Store-owned ID-admission work while a scenario executes.
 ///

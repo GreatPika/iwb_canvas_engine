@@ -39,7 +39,7 @@ CanvasDocument createCanvasExampleDocument() {
 
 CanvasRuntimeConfig createCanvasExampleRuntimeConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: _acceptDeletionCommit,
+    commitResolver: _acceptExampleCommit,
     clearSelectionOnDrawModeEnter: true,
     pointerPolicy: CanvasPointerPolicy(
       tapSlop: 1,
@@ -59,5 +59,25 @@ CanvasRuntime createCanvasExampleRuntime() {
   return runtime;
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
+const _exampleCommitLease = _ExampleCommitLease();
+
+CanvasCommitResolution _acceptExampleCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _exampleCommitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _exampleCommitLease),
+    };
+
+final class _ExampleCommitLease implements CanvasCommitLease {
+  const _ExampleCommitLease();
+
+  @override
+  void aborted() => _ignoreLeaseOutcome();
+
+  @override
+  void committed() => _ignoreLeaseOutcome();
+}
+
+void _ignoreLeaseOutcome() => Object.hash(null, null);

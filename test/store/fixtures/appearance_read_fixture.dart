@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
 import '../../support/document_store_with_document.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   _registerCoherentAppearanceReadTest();
@@ -23,9 +24,7 @@ void _registerAppearanceReadSideEffectTest() {
     final store = documentStoreWithDocument(_firstDocument());
     final effectBatches = <List<CommitDeliveryEffect>>[];
     final root = RuntimeRoot.test(
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
+      config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
       store: store,
       commitEffectObserver: effectBatches.add,
     );
@@ -57,9 +56,7 @@ void _registerCoherentAppearanceReadTest() {
   test('appearance reads one immutable committed boundary', () {
     final store = documentStoreWithDocument(_firstDocument());
     final root = RuntimeRoot.test(
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
+      config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
       store: store,
     );
     addTearDown(root.dispose);
@@ -186,17 +183,12 @@ void _registerAppearanceLifecycleTest() {
 
 CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
   final runtime = CanvasRuntime(
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
+    config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
   );
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
 
 void _expectAppearance(CanvasAppearance appearance, CanvasDocument document) {
   expect(appearance.backgroundColor, document.background.color);

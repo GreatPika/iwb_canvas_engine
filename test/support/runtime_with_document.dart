@@ -1,11 +1,11 @@
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import 'accept_deletion_commit.dart';
+import 'accept_commit.dart';
 
 CanvasRuntime runtimeWithDocument(
   CanvasDocument document, {
   CanvasRuntimeConfig config = const CanvasRuntimeConfig(
-    deletionCommitResolver: acceptDeletionCommit,
+    commitResolver: acceptCommit,
   ),
 }) {
   final runtime = CanvasRuntime(config: config);

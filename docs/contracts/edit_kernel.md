@@ -258,23 +258,22 @@ carry the shared immutable `TouchedSet` from
 builder and store revision deltas private. Runtime route augmentation, cleanup,
 and delivery ordering are RuntimeRoot-owned and consume no prepared state again.
 
-Deletion uses the same private prepared interaction lifetime as immediate edits.
-`EditKernel` prepares the sparse candidate; Store completes sparse validation
+Unified confirmations use the same private prepared interaction lifetime as
+immediate edits. `EditKernel` prepares the sparse candidate; Store completes sparse validation
 and binds the current revision and admitted-ID ledgers; `CommitApplier` seals
 the document, revision, delivery, action, and `PreparedSelectionEffect` inputs.
 Only then does `RuntimeRoot` construct the public immutable request and enter
-the required resolver guard. An accepted resolver consumes one private package:
+the required unified resolver guard. A compatible accepted resolver consumes one private package:
 the bound Store assignment/admission occurs first, then Selection receives the
 already-owned backing without copying, validation, normalization, comparison,
-or observer work. Cancel and ordinary resolver failure discard the package with
+or observer work. Cancel, incompatible acceptance, and ordinary resolver failure discard the package, aborting any returned lease exactly once, with
 no committed mutation; the latter is contained and diagnosed only by
 RuntimeRoot's bounded internal callback diagnostics route. The same RuntimeRoot
-callback guard is used by the current pointer-Move resolver: reads and
-host-local work remain available, while public mutation, ID generation,
-disposal, and nested resolver entry reject before their owners change. A
-callback may catch that rejection and still return its valid current decision.
-This does not change the ordinary edit rollback boundary before any accepted
-install.
+callback guard contains every unified commit resolver and lease callback: reads
+and host-local work remain available, while public mutation, ID generation,
+disposal, and nested confirmation reject before their owners change. A callback
+may catch that rejection and still return its valid current decision. This does
+not change the ordinary edit rollback boundary before any accepted install.
 
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
 orchestrates the accepted result. For changed request-originated text,
@@ -290,8 +289,10 @@ delivery. For non-text interaction routes, `RuntimeRoot` receives that closed re
 performs the route-owned `publish: false` InteractionEngine cleanup, merges its
 repaint effect, and only then enters one guarded common delivery. Its exact
 order is spatial -> resource/session release -> root frame -> bridged frame ->
-public state -> synchronous finalized action -> non-empty internal observer ->
-guard release. Every callback sees installed facts and a closed edit handle.
+public state -> accepted commit lease -> synchronous finalized action ->
+non-empty internal observer -> guard release. Every callback sees installed
+facts and a closed edit handle. A lease is terminally committed only in this
+post-install slot and is never aborted after installation.
 Each recoverable frame bridge, notifier/error-reporter, action-listener, and
 observer failure is contained at this one RuntimeRoot delivery boundary, so it
 cannot roll back accepted state or prevent later state, action, and observer

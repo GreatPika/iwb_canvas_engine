@@ -29,7 +29,7 @@ import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 // Route registrations stay visible together so every terminal callback family
 // remains auditable without a second fixture registry that can drift.
@@ -43,6 +43,9 @@ void main() {
       await _acceptsExactEntriesAndCleansBeforeDelivery();
     },
   );
+  test('terminal eraser exposes one immutable unified request and lease', () {
+    return _acceptsUnifiedEraseRequestAndLease();
+  });
   test('terminal eraser keeps Store order and filters mixed kinds', () {
     _mixedKindTerminalRequestKeepsStoreFacts();
   });
@@ -55,6 +58,9 @@ void main() {
       _terminalCancelAndThrowAreContained();
     },
   );
+  test('terminal eraser aborts an incompatible move lease once', () {
+    return _incompatibleEraseResolutionAbortsLease();
+  });
   for (final family in _guardedEraserMutationFamilies) {
     test('terminal eraser rejects ${family.name} in its resolver', () {
       _terminalEraserCallbackUsesExistingGuard(family);
@@ -95,7 +101,7 @@ void main() {
 void _retainedApproximationGeometryWitnesses() {
   final missedTargetId = CanvasElementId('retained-detour-miss');
   final shortcutTargetId = CanvasElementId('retained-shortcut-hit');
-  CanvasDeletionCommitRequest? request;
+  CanvasEraseCommitRequest? request;
   final actions = <CanvasActionCommitted>[];
   final root = RuntimeRoot.test(
     store: DocumentStoreKernel.withCommittedDocumentForTesting(
@@ -122,9 +128,9 @@ void _retainedApproximationGeometryWitnesses() {
       ),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (candidate) {
-        request = candidate;
-        return CanvasDeletionDecision.accept;
+      commitResolver: (candidate) {
+        request = candidate as CanvasEraseCommitRequest;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -166,12 +172,12 @@ void _resampledEraserTerminalCarriesRetainedCount() {
       CommittedDocument(_document()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         expect(
           root.interactionEngine.activeSession?.eraserCapture?.points,
           hasLength(4000),
         );
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -194,8 +200,8 @@ void _resampledEraserTerminalCarriesRetainedCount() {
 // ignore: halstead-volume, source-lines-of-code
 void _terminalCleanupDoesNoDisplacedCorridorWork() {
   for (final decision in [
-    CanvasDeletionDecision.cancel,
-    CanvasDeletionDecision.accept,
+    const CanvasCommitCancel(),
+    const CanvasCommitAccept(lease: testAcceptingCommitLease),
   ]) {
     final trace = <String>[];
     late RuntimeRoot root;
@@ -203,7 +209,7 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
       store: DocumentStoreKernel.withCommittedDocumentForTesting(
         CommittedDocument(_document()),
       ),
-      config: CanvasRuntimeConfig(deletionCommitResolver: (_) => decision),
+      config: CanvasRuntimeConfig(commitResolver: (_) => decision),
     );
     addTearDown(root.dispose);
     final retained = _startEraser(root, retainedOverflow: true);
@@ -234,7 +240,7 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
 // terminal witness: either can regress while the final document still looks OK.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
-  CanvasDeletionCommitRequest? request;
+  CanvasEraseCommitRequest? request;
   final events = <String>[];
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(
     CommittedDocument(_document()),
@@ -242,10 +248,10 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   final root = RuntimeRoot.test(
     store: store,
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (candidate) {
-        request = candidate;
+      commitResolver: (candidate) {
+        request = candidate as CanvasEraseCommitRequest;
         events.add('resolver-return');
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -306,7 +312,6 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   if (observedEntries == null) {
     fail('Terminal eraser did not read Store deletion entries.');
   }
-  expect(received.operation, CanvasDeletionOperation.erase);
   expect(received.entries, hasLength(1));
   expect(received.entries.single.element, same(observedEntries.single.element));
   expect(received.entries.single.layerId, observedEntries.single.layerId);
@@ -327,23 +332,82 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   ]);
   expect(construction, [
     RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
-    RuntimeDeletionRouteConstructionKind.request,
   ]);
+}
+
+// The public request, accepted lease, final state, and action order need one
+// pointer-route witness; internal construction events cannot prove this API.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _acceptsUnifiedEraseRequestAndLease() async {
+  CanvasEraseCommitRequest? request;
+  var resolverCalls = 0;
+  final lease = _UnifiedEraserLease();
+  final root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(_document()),
+    ),
+    config: CanvasRuntimeConfig(
+      initialMode: CanvasInteractionMode.draw,
+      initialDrawStyle: CanvasDrawStyle(
+        tool: CanvasDrawTool.eraser,
+        eraserThickness: 4,
+      ),
+      commitResolver: (candidate) {
+        resolverCalls += 1;
+        request = candidate as CanvasEraseCommitRequest;
+        return CanvasCommitAccept(lease: lease);
+      },
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+  lease.onCommitted = () => lease.snapshots.add((
+    revision: root.state.value.revisions.document,
+    actions: actions.length,
+  ));
+
+  root.handlePointer(_sampleAt(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _sampleAt(CanvasPointerLifecyclePhase.up, const Offset(1, 0)),
+  );
+  await Future<void>.delayed(Duration.zero);
+
+  final received = request;
+  if (received == null) fail('Expected qualified unified eraser request.');
+  expect(resolverCalls, 1);
+  expect(received.documentSummary.elementCount, 1);
+  expect(received.documentRevision, 0);
+  expect(received.selectedElementIdsBefore, isEmpty);
+  expect(received.entries.single.element.id, CanvasElementId('erasable'));
+  expect(received.entries.single.layerId, CanvasLayerId('eraser-layer'));
+  expect(received.entries.single.elementIndex, 0);
+  expect(received.corridorWorld, [Offset.zero, const Offset(1, 0)]);
+  expect(received.eraserThickness, 4);
+  expect(() => received.entries.clear(), throwsUnsupportedError);
+  expect(() => received.corridorWorld.clear(), throwsUnsupportedError);
+  expect(actions, hasLength(1));
+  expect(lease.snapshots, [(revision: 1, actions: 0)]);
+  expect(lease.committedCalls, 1);
+  expect(lease.abortedCalls, 0);
 }
 
 // This route-local witness consumes the Unit-2 filter at the real pointer
 // terminal: a request rebuilt from candidates would include the text element.
 // ignore: halstead-volume, source-lines-of-code
 void _mixedKindTerminalRequestKeepsStoreFacts() {
-  CanvasDeletionCommitRequest? request;
+  CanvasEraseCommitRequest? request;
   final root = RuntimeRoot.test(
     store: DocumentStoreKernel.withCommittedDocumentForTesting(
       CommittedDocument(_mixedKindDocument()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (candidate) {
-        request = candidate;
-        return CanvasDeletionDecision.accept;
+      commitResolver: (candidate) {
+        request = candidate as CanvasEraseCommitRequest;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
       eraserElementKinds: const {CanvasElementKind.rect},
     ),
@@ -449,9 +513,7 @@ void _terminalEraserRetainsLayersAndResources() {
         ),
       ),
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
-    ),
+    config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
   );
   addTearDown(root.dispose);
   _startEraser(root);
@@ -500,7 +562,7 @@ void _terminalCancelAndThrowAreContained() {
         CommittedDocument(_document()),
       ),
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: (_) {
+        commitResolver: (_) {
           calls += 1;
           expect(retained?.points, hasLength(4000));
           if (thrown != null) {
@@ -508,7 +570,7 @@ void _terminalCancelAndThrowAreContained() {
             // ignore: only_throw_errors
             throw thrown;
           }
-          return CanvasDeletionDecision.cancel;
+          return const CanvasCommitCancel();
         },
         diagnosticPolicy: thrown != null
             ? const CanvasDiagnosticPolicy.summary()
@@ -539,7 +601,6 @@ void _terminalCancelAndThrowAreContained() {
     expect(calls, 1);
     expect(construction, [
       RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
-      RuntimeDeletionRouteConstructionKind.request,
     ]);
     expect(root.readDocument(), before);
     expect(retained?.points, hasLength(4000));
@@ -568,6 +629,44 @@ void _terminalCancelAndThrowAreContained() {
   }
 }
 
+// An incompatible result must prove its lease and no-effect observations on the
+// same real route; separating them would conceal a wrong terminal order.
+// ignore: halstead-volume
+Future<void> _incompatibleEraseResolutionAbortsLease() async {
+  final lease = _UnifiedEraserLease();
+  final root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(_document()),
+    ),
+    config: CanvasRuntimeConfig(
+      initialMode: CanvasInteractionMode.draw,
+      initialDrawStyle: CanvasDrawStyle(
+        tool: CanvasDrawTool.eraser,
+        eraserThickness: 4,
+      ),
+      commitResolver: (_) =>
+          CanvasMoveCommitAccept(delta: const Offset(1, 0), lease: lease),
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  root.handlePointer(_sampleAt(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _sampleAt(CanvasPointerLifecyclePhase.up, const Offset(1, 0)),
+  );
+  await Future<void>.delayed(Duration.zero);
+
+  expect(root.readDocument().layers.single.elements, hasLength(1));
+  expect(actions, isEmpty);
+  expect(lease.abortedCalls, 1);
+  expect(lease.committedCalls, 0);
+}
+
 // The callback actions and terminal cleanup must share one real-route witness.
 // ignore: halstead-volume
 void _terminalEraserCallbackUsesExistingGuard(
@@ -579,13 +678,13 @@ void _terminalEraserCallbackUsesExistingGuard(
       CommittedDocument(_document()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         expect(root.readDocument().layers, isNotEmpty);
         expect(
           () => family.invoke(root),
           throwsA(isA<ResolverCallbackRejection>()),
         );
-        return CanvasDeletionDecision.cancel;
+        return const CanvasCommitCancel();
       },
     ),
   );
@@ -611,11 +710,11 @@ void _terminalResolverAllowsReadsAndClientUndoWork() {
       CommittedDocument(_document()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         final document = root.readDocument();
         clientUndo.add(document);
         expect(clientUndo.removeLast(), same(document));
-        return CanvasDeletionDecision.cancel;
+        return const CanvasCommitCancel();
       },
     ),
   );
@@ -641,9 +740,9 @@ void _unhandledEraserGuardRejectionIsNotDeletionFailure() {
       CommittedDocument(_document()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         root.setCameraOffset(const Offset(1, 1));
-        return CanvasDeletionDecision.cancel;
+        return const CanvasCommitCancel();
       },
       diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
     ),
@@ -688,10 +787,10 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
     final root = RuntimeRoot.test(
       store: store,
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: (_) {
+        commitResolver: (_) {
           resolverCalls += 1;
           events.add('resolver-return');
-          return CanvasDeletionDecision.accept;
+          return const CanvasCommitAccept(lease: testAcceptingCommitLease);
         },
       ),
     );
@@ -849,9 +948,9 @@ void _expectSilentEraserTerminal({
       CommittedDocument(document),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         resolverCalls += 1;
-        return CanvasDeletionDecision.cancel;
+        return const CanvasCommitCancel();
       },
       eraserElementKinds: eraserElementKinds,
     ),
@@ -1023,24 +1122,6 @@ final _eraserPreparationFailures = <_EraserPreparationFailureCase>[
     ),
   ),
   _EraserPreparationFailureCase(
-    'RuntimeRoot request construction',
-    (error, operation) => RuntimeRoot.injectDeletionRequestPreparationFailure(
-      RuntimeDeletionRequestPreparationPhase.requestConstruction,
-      error,
-      operation,
-    ),
-    hasPreparedCommit: true,
-  ),
-  _EraserPreparationFailureCase(
-    'RuntimeRoot request entry copy',
-    (error, operation) => RuntimeRoot.injectDeletionRequestPreparationFailure(
-      RuntimeDeletionRequestPreparationPhase.entryCopy,
-      error,
-      operation,
-    ),
-    hasPreparedCommit: true,
-  ),
-  _EraserPreparationFailureCase(
     'CommitApplier revision preparation',
     (error, operation) => CommitApplier.injectDeletionPreparationFailure(
       DeletionCommitPreparationPhase.revisionPreparation,
@@ -1068,9 +1149,9 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
       CommittedDocument(_document()),
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         resolverCalls += 1;
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
       diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
     ),
@@ -1106,13 +1187,7 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
   );
 
   expect(resolverCalls, 0);
-  expect(
-    construction,
-    failure.hasPreparedCommit
-        ? [RuntimeDeletionRouteConstructionKind.eraserPreparedCommit]
-        : isEmpty,
-    reason: failure.name,
-  );
+  expect(construction, isEmpty, reason: failure.name);
   expect(cleanupReasons, [PointerCleanupReason.editFailure]);
   expect(root.readDocument(), beforeDocument);
   expect(root.selection.selectedElementIds, beforeSelection);
@@ -1177,15 +1252,10 @@ void _expectOrderedTerminalCleanup(List<String> trace) {
 }
 
 final class _EraserPreparationFailureCase {
-  const _EraserPreparationFailureCase(
-    this.name,
-    this.inject, {
-    this.hasPreparedCommit = false,
-  });
+  const _EraserPreparationFailureCase(this.name, this.inject);
 
   final String name;
   final void Function(Error error, void Function() operation) inject;
-  final bool hasPreparedCommit;
 }
 
 final _guardedEraserMutationFamilies = <_GuardedEraserMutationFamily>[
@@ -1276,7 +1346,7 @@ final _guardedEraserMutationFamilies = <_GuardedEraserMutationFamily>[
   _GuardedEraserMutationFamily('dispose', (root) => root.dispose()),
   _GuardedEraserMutationFamily(
     'nested resolver',
-    (root) => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+    (root) => root.runResolverCallback(() => const CanvasCommitCancel()),
   ),
 ];
 
@@ -1349,6 +1419,24 @@ CanvasPointerSample _sampleAt(
   kind: PointerDeviceKind.touch,
   timestampMs: 23,
 );
+
+final class _UnifiedEraserLease implements CanvasCommitLease {
+  void Function()? onCommitted;
+  int committedCalls = 0;
+  int abortedCalls = 0;
+  final List<({int revision, int actions})> snapshots = [];
+
+  @override
+  void committed() {
+    committedCalls += 1;
+    onCommitted?.call();
+  }
+
+  @override
+  void aborted() {
+    abortedCalls += 1;
+  }
+}
 
 CanvasDocument _document() => CanvasDocument(
   layers: [

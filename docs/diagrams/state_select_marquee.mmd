@@ -142,7 +142,7 @@ stateDiagram-v2
   note right of OverlayCleanup
     Marquee cleanup requests overlay repaint only from the
     coordinator-owned outcome.
-    It never uses selected-move resolver, delta staging,
+    It never uses selected-move transform preparation, delta staging,
     selected supplement cleanup, or main-scene preview cleanup.
   end note
 
@@ -154,7 +154,7 @@ stateDiagram-v2
 
   note left of DragPreview
     Negative invariants:
-    no selected-move resolver, delta, or main-scene preview;
+    no selected-move transform preparation, delta, or main-scene preview;
     no direct Store mutation from InteractionEngine;
     no commit on cancel, stale, invalid, or no-op paths;
   end note

@@ -17,7 +17,8 @@ sequenceDiagram
   participant Applier as CommitApplier
   participant Selection as SelectionKernel
   participant Runtime as RuntimeRoot
-  participant Resolver as required deletion resolver
+  participant Resolver as CanvasCommitResolver
+  participant Lease as CanvasCommitLease
   participant Diagnostics as DiagnosticsHub
   participant Signals as Public state/effects
 
@@ -174,7 +175,7 @@ sequenceDiagram
           Applier->>Applier: seal single-use prepared state
           Applier-->>Runtime: single-use prepared deletion
           Note over EK,Applier: All current interaction preparation completes before the callback.
-          Runtime->>Runtime: construct immutable CanvasDeletionCommitRequest and copy entry DTOs
+          Runtime->>Runtime: construct immutable CanvasEraseCommitRequest and copy exact entry/corridor DTOs
           alt request construction or entry copy fails
             Runtime->>IE: cleanup eraser session with editFailure and publish directly
             IE->>Cleanup: typed cleanup request for eraser failure cleanup
@@ -188,9 +189,9 @@ sequenceDiagram
             Runtime-->>Tools: synchronously rethrow original request-preparation error through handlePointer
             Tools-->>Surface: propagate original error to the public caller
           else request constructed
-            Runtime->>Resolver: guarded required deletion request
+            Runtime->>Resolver: resolve CanvasEraseCommitRequest under runtime guard
             alt resolver accepts
-              Resolver-->>Runtime: accept
+              Resolver-->>Runtime: CanvasCommitAccept(lease)
               Note over Runtime,Store: Resolver return and the first Store install share one synchronous stack with no external callback or publication between them.
               Runtime->>Applier: consume prepared interaction once
               Applier->>Store: assignment-only prepared document install
@@ -207,10 +208,11 @@ sequenceDiagram
               Runtime->>Spatial: apply touched removals only
               Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
               Runtime->>Signals: deliver state after document, selection, and preview effects
+              Runtime->>Lease: committed() under runtime guard
               Runtime->>Signals: deliver existing erase action notification
               Note over Runtime,Signals: State/action delivery is post-install. Accepted Store and Selection facts remain final if delivery fails.
             else resolver cancels
-              Resolver-->>Runtime: cancel
+              Resolver-->>Runtime: CanvasCommitCancel
               Runtime->>Applier: discard prepared deletion
               Runtime->>IE: cleanup eraser session with resolverCancel, publish: false
               IE->>Cleanup: typed cleanup request for eraser resolverCancel cleanup
@@ -222,7 +224,7 @@ sequenceDiagram
               Runtime->>Signals: deliver preview cleanup state/effect only
               Note over Store,Signals: No Store, Selection, timestamp, action, or diagnostic mutation occurs.
             else resolver guard rejects
-              Resolver-->>Runtime: ResolverCallbackRejection contained as cancel (didThrow: true)
+              Resolver-->>Runtime: guard rejection contained as non-application
               Runtime->>Applier: discard prepared deletion
               Runtime->>IE: cleanup eraser session with resolverError, publish: false
               IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
@@ -235,7 +237,7 @@ sequenceDiagram
               Note over Store,Signals: No Store, Selection, timestamp, action, or resolver-failure diagnostic mutation occurs.
             else resolver throws ordinary object
               Resolver-->>Runtime: throw
-              Runtime->>Diagnostics: record one bounded deletion-resolver failure
+              Runtime->>Diagnostics: record one bounded erase resolver failure
               Runtime->>Applier: discard prepared deletion
               Runtime->>IE: cleanup eraser session with resolverError, publish: false
               IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
@@ -247,7 +249,7 @@ sequenceDiagram
               Runtime->>Signals: deliver preview cleanup state/effect only
               Note over Store,Signals: No Store, Selection, timestamp, or action mutation occurs.
             end
-            Note over Resolver,Diagnostics: Guard rejection is contained as cancel with didThrow=true. Only an ordinary callback error records the bounded diagnostic.
+            Note over Resolver,Diagnostics: Guard rejection and ordinary callback errors are contained. Only an ordinary callback error records the bounded diagnostic; any returned non-applicable lease is aborted once.
           end
         else deletion-commit preparation fails
           Note over EK,Store: The original error can arise in EditKernel validation/build, RuntimeRoot's configured preparation seam, CommitApplier preparation, or Store normalization/bind.

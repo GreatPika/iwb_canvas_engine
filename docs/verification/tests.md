@@ -215,12 +215,12 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 `current_closure_checker_test` proves the same forbidden-edge classes in
 `architecture_graph.yaml`.
 
-Deletion release evidence is intentionally split by public seam: the external
-compile owner independently rejects omitted `CanvasRuntime.config` and a null
-deletion resolver; selection and terminal eraser fixtures exercise their real
-routes; the runtime work fixture owns prepared/install/cleanup cardinality; and
-the diagnostics fixture owns the bounded resolver-failure record. The
-maintained example is a separate package verification step:
+Unified confirmation evidence is intentionally split by public seam: the
+external compile owner independently rejects omitted `CanvasRuntime.config` and
+`commitResolver`; route fixtures exercise Draw, Delete, Erase, Move, Rotate,
+Reflect, and Text Edit; the runtime work fixture owns prepared/install/cleanup
+cardinality; and the diagnostics fixture owns the bounded resolver/lease-failure
+record. The maintained example is a separate package verification step:
 
 ```bash
 cd example && flutter analyze
@@ -928,7 +928,7 @@ the source of product truth.
   - Production seam/owner: retained-corridor capture in
     `lib/src/interaction/eraser_machine.dart` and its terminal handoff through
     `InteractionEngine` and `RuntimeInteractionReadAdapter`.
-  - Verification owner: interaction eraser routing and terminal resolver suites.
+  - Verification owner: interaction eraser routing and terminal unified-commit suites.
   - Failure family: preview, terminal geometry, intent/action point count, or
     documented accuracy boundary uses a corridor other than the retained
     approximation.
@@ -943,7 +943,7 @@ the source of product truth.
     helper-only resampling, and predecessor behavior are insufficient.
   - Durable and refactor-stable value: keeps one semantic corridor and its
     explicit accuracy cost across capture, runtime, and geometry refactors.
-  - Artifact target: existing eraser routing and terminal resolver fixtures.
+  - Artifact target: existing eraser routing and terminal unified-commit fixtures.
 
 - `visual-only-move-admission`
   - Contract chain: `visual-only-move-route` → `visual-only-move-evidence` →
@@ -1044,7 +1044,7 @@ the source of product truth.
   - Production seam/owner: centralized eraser cleanup across the existing
     `InteractionEngine` and `RuntimeRoot` exit routes.
   - Verification owner: existing interaction routing, geometry no-partial, and
-    terminal resolver suites.
+    terminal unified-commit suites.
   - Failure family: mutable capture remains reachable after a source-owned exit
     or clears through a second owner at the wrong observable phase.
   - Concrete failing witness: preview can disappear while an obsolete session
@@ -1059,7 +1059,7 @@ the source of product truth.
     or a second cleanup hook do not prove cleanup ownership or timing.
   - Durable and refactor-stable value: keeps owner reachability and cleanup
     ordering stable through session and cleanup implementation changes.
-  - Artifact target: existing eraser routing, no-partial, terminal resolver,
+  - Artifact target: existing eraser routing, no-partial, terminal unified-commit,
     load cleanup, tool settings, interactive-false, and dispose suites.
 
 - `cleanup-work-displacement-admission`
@@ -1071,7 +1071,7 @@ the source of product truth.
     and geometry work owners in `InteractionEngine` and
     `RuntimeInteractionReadAdapter`.
   - Verification owner: existing interaction routing, geometry no-partial,
-    terminal resolver, load cleanup, tool settings, interactive-false, and
+    terminal unified-commit, load cleanup, tool settings, interactive-false, and
     dispose suites.
   - Failure family: cleanup releases capture correctly while recomputing
     retained-corridor or geometry work before release.
@@ -1086,7 +1086,7 @@ the source of product truth.
     counters.
   - Durable and refactor-stable value: prevents work displacement across
     cleanup, session, storage, and geometry helper refactors.
-  - Artifact target: existing eraser routing, no-partial, terminal resolver,
+  - Artifact target: existing eraser routing, no-partial, terminal unified-commit,
     load cleanup, tool settings, interactive-false, and dispose suites.
 
 - `single-terminal-pass-admission`
@@ -1190,7 +1190,7 @@ the source of product truth.
   - Impact: `EXTEND_COVERAGE`.
   - Production seam/owner: prepared eraser commit resolution, consume, cleanup,
     and common delivery in `RuntimeRoot` and its action finalizer.
-  - Verification owner: existing terminal eraser deletion resolver suite.
+  - Verification owner: existing terminal eraser unified-commit suite.
   - Failure family: resolver rejection, accepted cleanup, retained point-count
     propagation, or post-consume delivery finality acquires the wrong order or
     rollback semantics.
@@ -1473,17 +1473,16 @@ Permanent artifact admission:
       terminal contract across frame, selection, and interaction-reader
       refactors without prescribing their representations.
 - `test/interaction/move_machine_test.dart` proves selected-move admission,
-  preview, resolver request shape, commit, cancel, stale/invalid terminal,
+  preview, unified commit request shape, commit, cancel, stale/invalid terminal,
   zero-delta/no-movable cleanup, contained resolver/edit failure cleanup,
   transform math, rejected public mutation/disposal and a valid Move decision
-  after a caught guard rejection, direct
-  no-resolver zero-guard preparation versus configured guard-release-before-
-  preparation, rejected guard-release/no-preparation branches, post-success
+  after a caught guard rejection, resolver-before-preparation, rejected
+  guard-release/no-preparation branches, post-success
   cleanup, and closed-apply/cleanup/common-delivery traces whose real
   frame/state/action/observer callbacks see the cleaned selected-move state
   and merged repaint intent. It also proves participant style/eligibility
   changes, same-id replacement, and external selection changes clear a live
-  Move before resolver publication; unrelated and final no-op edits retain the
+  Move before unified resolver publication; unrelated and final no-op edits retain the
   original participant/request basis. Its real pointer-to-frame route further
   proves that a selected nonparticipant becoming movable during the gesture
   remains ordinary paint and does not enter the captured move basis.

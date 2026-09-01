@@ -18,7 +18,7 @@ sequenceDiagram
   participant Ordinary as OrdinaryPaintPlanner
   participant Supplement as SelectedMoveSupplementPlanner
   participant PlanCache as OrdinaryPaintRecordCache
-  participant Resolver as CanvasMoveCommitResolver
+  participant Resolver as CanvasCommitResolver
   participant EK as EditKernel
   participant Draft as DraftDocument
   participant Touched as TouchedSet
@@ -115,7 +115,7 @@ sequenceDiagram
     Tools->>IE: mode-change cancellation for active token
     IE->>IE: classify active selected move as cancelled
     Note over IE,Resolver: Resolver is not called for mode-change cancellation.
-  else terminal pointer up resolved as CanvasMoveCancel
+  else terminal pointer up resolved as CanvasCommitCancel
     User->>Surface: pointer up
     Surface->>Tools: handlePointer(CanvasPointerInput finite up)
     Tools->>IE: same-token finite terminal sample
@@ -126,8 +126,8 @@ sequenceDiagram
     ReadPort->>Store: read summary, moved element reads, and selected bounds
     Store-->>ReadPort: CanvasMoveCommitRequest inputs
     ReadPort-->>IE: CanvasMoveCommitRequest inputs
-    Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard
-    Resolver-->>Runtime: CanvasMoveCancel(reason), then guard closes
+    Runtime->>Resolver: resolve CanvasMoveCommitRequest under runtime guard
+    Resolver-->>Runtime: CanvasCommitCancel(reason)
     Runtime->>IE: discard selected move commit intent and request cleanup
   end
 

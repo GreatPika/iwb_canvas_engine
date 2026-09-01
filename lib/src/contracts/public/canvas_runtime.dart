@@ -9,6 +9,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import 'canvas_actions.dart';
+import 'canvas_commit.dart';
 import 'canvas_diagnostics.dart';
 import 'canvas_deletion.dart';
 import 'canvas_document.dart';
@@ -22,12 +23,11 @@ import 'canvas_tools.dart';
 /// Public API v1 declaration for [CanvasRuntimeConfig].
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
-    required this.deletionCommitResolver,
+    required this.commitResolver,
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
     this.initialMode = CanvasInteractionMode.move,
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
     this.clearSelectionOnDrawModeEnter = false,
-    this.moveCommitResolver,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.eraserElementKinds,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
@@ -37,8 +37,7 @@ final class CanvasRuntimeConfig {
   final CanvasInteractionMode initialMode;
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
-  final CanvasMoveCommitResolver? moveCommitResolver;
-  final CanvasDeletionCommitResolver deletionCommitResolver;
+  final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
 
   /// Limits eraser reads to these element kinds; null admits every kind.

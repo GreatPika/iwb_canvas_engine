@@ -16,7 +16,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.da
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   test(
@@ -327,7 +327,7 @@ RuntimeRoot _eraserRoot([
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: CanvasDrawStyle(
         tool: CanvasDrawTool.eraser,
@@ -532,7 +532,7 @@ EraserCommitIntent _eraserCommitIntent() {
     sessionId: const PointerSessionId(1),
     pointerToken: const PointerSessionToken(1),
     eraserThickness: 8,
-    corridorPointCount: 3,
+    corridorWorld: const [Offset.zero, Offset(1, 0), Offset(2, 0)],
     erasedEntries: [
       DeletionEntryFacts(
         element: CanvasRectElement(

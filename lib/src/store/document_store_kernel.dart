@@ -30,10 +30,6 @@ import 'sparse_store_commit.dart';
 import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
-export 'id_admission.dart' show IdAdmissionWorkKind, IdAdmissionWorkPhase;
-export 'sparse_store_commit.dart' show StoreAffectedElementProjection;
-export 'store_commit_finalization.dart' show MaterializedStoreCommitCandidates;
-
 // Admission observations carry a semantic operation and, when it is a sparse
 // ledger visit, the visited ID. Tests own accumulation, so production retains
 // neither IDs nor telemetry history.
@@ -708,7 +704,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   // These validation and position reads share one committed snapshot. Keeping
   // them together preserves the fail-closed boundary without a second lookup
   // lifecycle merely to satisfy a metric.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
   DeletionEntryFacts? _deletionEntryFor(
     CommittedDocument document,
     CanvasElementId id,
@@ -727,9 +723,28 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       'deletion projection work observation failed',
     );
     final location = document.elements.elementLocationFacts[id];
-    if (element == null ||
-        location == null ||
-        location.kind != ElementLocationKind.content) {
+    if (element == null || location == null) {
+      return null;
+    }
+    final orderToken = document.elements.frameOrderTokensById[id];
+    if (orderToken == null) {
+      return null;
+    }
+    if (location.kind == ElementLocationKind.background) {
+      final backgroundIds = document.elements.backgroundElementIds;
+      if (orderToken < 0 ||
+          orderToken >= backgroundIds.length ||
+          backgroundIds[orderToken] != id) {
+        return null;
+      }
+      return DeletionEntryFacts(
+        element: element,
+        layerId: null,
+        elementIndex: orderToken,
+        orderToken: orderToken,
+      );
+    }
+    if (location.kind != ElementLocationKind.content) {
       return null;
     }
     final layerId = location.layerId;
@@ -741,8 +756,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       'deletion projection work observation failed',
     );
     final layer = document.elements.layerTable.locationFor(layerId)?.row;
-    final orderToken = document.elements.frameOrderTokensById[id];
-    if (layer == null || layer.elementIds.isEmpty || orderToken == null) {
+    if (layer == null || layer.elementIds.isEmpty) {
       return null;
     }
     final firstToken =

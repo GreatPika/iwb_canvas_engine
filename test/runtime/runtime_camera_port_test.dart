@@ -23,8 +23,27 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+    commitResolver: _acceptCommit,
   );
+}
+
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+  @override
+  void aborted() {}
+  @override
+  void committed() {}
 }
 
 void main() {

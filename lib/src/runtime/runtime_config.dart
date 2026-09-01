@@ -1,4 +1,4 @@
-import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_commit.dart';
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_deletion.dart';
 import '../contracts/public/canvas_element.dart';
@@ -12,8 +12,7 @@ final class RuntimeConfig {
       initialMode = config.initialMode,
       initialDrawStyle = config.initialDrawStyle,
       clearSelectionOnDrawModeEnter = config.clearSelectionOnDrawModeEnter,
-      moveCommitResolver = config.moveCommitResolver,
-      deletionCommitResolver = config.deletionCommitResolver,
+      commitResolver = config.commitResolver,
       selectionDeletePolicy = config.selectionDeletePolicy,
       eraserElementKinds = _materializeEraserElementKinds(
         config.eraserElementKinds,
@@ -24,8 +23,7 @@ final class RuntimeConfig {
   final CanvasInteractionMode initialMode;
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
-  final CanvasMoveCommitResolver? moveCommitResolver;
-  final CanvasDeletionCommitResolver deletionCommitResolver;
+  final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final Set<CanvasElementKind>? eraserElementKinds;
   final RuntimeDiagnosticsConfig diagnostics;

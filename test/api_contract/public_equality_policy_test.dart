@@ -94,17 +94,23 @@ void main() {
       id: CanvasElementId('deletion-element'),
       size: const Size(1, 1),
     );
-    final deletionEntry = CanvasDeletionEntry(
+    final deletionEntry = CanvasCommitElementEntry(
       element: deletionElement,
       layerId: CanvasLayerId('layer-1'),
       elementIndex: 0,
     );
-    final deletionRequest = CanvasDeletionCommitRequest(
-      operation: CanvasDeletionOperation.deleteSelection,
+    final deletionRequest = CanvasDeleteCommitRequest(
+      documentSummary: const CanvasDocumentSummary(
+        elementCount: 1,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      documentRevision: 1,
+      selectedElementIdsBefore: const [],
       entries: [deletionEntry],
     );
     expect(
-      CanvasDeletionEntry(
+      CanvasCommitElementEntry(
         element: deletionElement,
         layerId: CanvasLayerId('layer-1'),
         elementIndex: 0,
@@ -112,8 +118,14 @@ void main() {
       isNot(equals(deletionEntry)),
     );
     expect(
-      CanvasDeletionCommitRequest(
-        operation: CanvasDeletionOperation.deleteSelection,
+      CanvasDeleteCommitRequest(
+        documentSummary: const CanvasDocumentSummary(
+          elementCount: 1,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+        documentRevision: 1,
+        selectedElementIdsBefore: const [],
         entries: [deletionEntry],
       ),
       isNot(equals(deletionRequest)),
@@ -238,14 +250,6 @@ void main() {
         isLocked: false,
         isTransformable: true,
       ),
-    );
-    _expectValueEquality(
-      CanvasMoveCommit(delta: const Offset(1, 2)),
-      CanvasMoveCommit(delta: const Offset(1, 2)),
-    );
-    _expectValueEquality(
-      CanvasMoveCancel(reason: 'blocked'),
-      CanvasMoveCancel(reason: 'blocked'),
     );
     _expectValueEquality(
       CanvasDiagnosticPolicy.disabled(),

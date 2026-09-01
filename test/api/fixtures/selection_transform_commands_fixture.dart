@@ -6,8 +6,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
+import 'package:iwb_canvas_engine/src/runtime/selection_transform_facts_reader.dart';
 import '../../support/runtime_with_document.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 final _moveTransform = CanvasTransform.translation(const Offset(3, 4));
 
@@ -20,6 +22,22 @@ void main() {
   test(
     'rotate and flip use selection center pivot and document order actions',
     _rotateAndFlipUseSelectionCenterPivotAndDocumentOrderActions,
+  );
+  test(
+    'unified rotation and reflection requests retain qualified facts once',
+    _unifiedTransformRequestsRetainFactsAndLeaseOrder,
+  );
+  test(
+    'rotation and reflection rejection paths leave committed state unchanged',
+    _transformRejectionsLeaveCommittedStateUnchanged,
+  );
+  test(
+    'ineligible transform commands remain resolver silent',
+    _ineligibleTransformCommandsStayResolverSilent,
+  );
+  test(
+    'accepted move aborts its lease when preparation overflows',
+    _acceptedMoveOverflowAbortsLease,
   );
 
   test(
@@ -44,17 +62,55 @@ void main() {
   );
 }
 
+void _acceptedMoveOverflowAbortsLease() {
+  final lease = _TransformLease();
+  var calls = 0;
+  final runtime = runtimeWithDocument(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('l'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('a'),
+              size: const Size(1, 1),
+              transform: CanvasTransform.translation(const Offset(10000000, 0)),
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) {
+        calls += 1;
+        return CanvasMoveCommitAccept(delta: const Offset(1, 0), lease: lease);
+      },
+    ),
+  );
+  addTearDown(runtime.dispose);
+  runtime.selection.setSelection([CanvasElementId('a')]);
+  final before = runtime.state.value;
+  expect(
+    () => runtime.selection.moveSelection(const Offset(1, 0)),
+    throwsA(isA<Object>()),
+  );
+  expect(calls, 1);
+  expect(lease.abortedCalls, 1);
+  expect(lease.committedCalls, 0);
+  expect(runtime.state.value, before);
+}
+
 // The request and cancel snapshot are one public-route witness, so keeping
 // their assertions together makes the Store-to-resolver contract readable.
 // ignore: halstead-volume
 void _selectionDeletionResolverCanCancelThePreparedSet() {
-  final requests = <CanvasDeletionCommitRequest>[];
+  final requests = <CanvasDeleteCommitRequest>[];
   final runtime = runtimeWithDocument(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (request) {
-        requests.add(request);
-        return CanvasDeletionDecision.cancel;
+      commitResolver: (request) {
+        requests.add(request as CanvasDeleteCommitRequest);
+        return const CanvasCommitCancel();
       },
     ),
   );
@@ -69,7 +125,6 @@ void _selectionDeletionResolverCanCancelThePreparedSet() {
 
   expect(requests, hasLength(1));
   final request = requests.single;
-  expect(request.operation, CanvasDeletionOperation.deleteSelection);
   expect(request.entries.map((entry) => entry.element.id), [
     CanvasElementId('rect-a'),
     CanvasElementId('rect-b'),
@@ -83,7 +138,26 @@ void _selectionDeletionResolverCanCancelThePreparedSet() {
 // together because they are one public move command contract.
 // ignore: halstead-volume, source-lines-of-code
 Future<void> _moveValidatesDeltaAndMovesOnlyEligibleSelectedElements() async {
-  final runtime = runtimeWithDocument(_document());
+  final preparedWork = <PreparedInteractionApplyWorkEvent>[];
+  final runtime = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (request) {
+        expect(request, isA<CanvasMoveCommitRequest>());
+        expect(
+          preparedWork.where(
+            (event) => event == PreparedInteractionApplyWorkEvent.prepared,
+          ),
+          isEmpty,
+        );
+        final move = request as CanvasMoveCommitRequest;
+        return CanvasMoveCommitAccept(
+          delta: move.proposedDelta,
+          lease: testAcceptingCommitLease,
+        );
+      },
+    ),
+  );
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -94,8 +168,24 @@ Future<void> _moveValidatesDeltaAndMovesOnlyEligibleSelectedElements() async {
   runtime.selection.selectAll(onlySelectable: false);
   final before = runtime.state.value;
 
-  runtime.selection.moveSelection(const Offset(3, 4), timestampMs: 11);
+  CommitApplier.observePreparedInteractionWork(
+    preparedWork.add,
+    () => runtime.selection.moveSelection(const Offset(3, 4), timestampMs: 11),
+  );
   await Future<void>.delayed(Duration.zero);
+
+  expect(
+    preparedWork.where(
+      (event) => event == PreparedInteractionApplyWorkEvent.prepared,
+    ),
+    hasLength(1),
+  );
+  expect(
+    preparedWork.where(
+      (event) => event == PreparedInteractionApplyWorkEvent.consumed,
+    ),
+    hasLength(1),
+  );
 
   expect(runtime.state.value.revisions.document, before.revisions.document + 1);
   _expectTransformClose(_element(runtime, 'rect-a').transform, _moveTransform);
@@ -182,6 +272,382 @@ _rotateAndFlipUseSelectionCenterPivotAndDocumentOrderActions() async {
   _expectFlipAction(actions.last);
 }
 
+// One public command trace per operation keeps exact retained request facts,
+// the Unit-8 read count, lease order, and resulting action mutually visible.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+Future<void> _unifiedTransformRequestsRetainFactsAndLeaseOrder() async {
+  final cases = <_TransformRequestCase>[
+    _TransformRequestCase.rotate(
+      CanvasTransformOperation.rotateClockwise,
+      (selection) => selection.rotateSelectionClockwise(timestampMs: 31),
+      CanvasTransform.rotationDegrees(90),
+    ),
+    _TransformRequestCase.rotate(
+      CanvasTransformOperation.rotateCounterClockwise,
+      (selection) => selection.rotateSelectionCounterClockwise(timestampMs: 32),
+      CanvasTransform.rotationDegrees(-90),
+    ),
+    _TransformRequestCase.reflect(
+      CanvasTransformOperation.flipVertical,
+      (selection) => selection.flipSelectionVertical(timestampMs: 33),
+      CanvasTransform.scale(1, -1),
+    ),
+    _TransformRequestCase.reflect(
+      CanvasTransformOperation.flipHorizontal,
+      (selection) => selection.flipSelectionHorizontal(timestampMs: 34),
+      CanvasTransform.scale(-1, 1),
+    ),
+  ];
+
+  for (final testCase in cases) {
+    CanvasCommitRequest? request;
+    var resolverCalls = 0;
+    final preparedWork = <PreparedInteractionApplyWorkEvent>[];
+    final lease = _TransformLease();
+    final runtime = runtimeWithDocument(
+      _document(),
+      config: CanvasRuntimeConfig(
+        commitResolver: (candidate) {
+          expect(
+            preparedWork.where(
+              (event) => event == PreparedInteractionApplyWorkEvent.prepared,
+            ),
+            hasLength(1),
+          );
+          resolverCalls += 1;
+          request = candidate;
+          return CanvasCommitAccept(lease: lease);
+        },
+      ),
+    );
+    final actions = <CanvasActionCommitted>[];
+    final subscription = runtime.actions.listen(actions.add);
+    try {
+      runtime.selection.selectAll(onlySelectable: false);
+      final before = runtime.state.value;
+      lease.onCommitted = () => lease.snapshots.add((
+        revision: runtime.state.value.revisions.document,
+        actions: actions.length,
+      ));
+      final orderingWork = <SelectionTransformOrderingWorkEvent>[];
+      CommitApplier.observePreparedInteractionWork(
+        preparedWork.add,
+        () => observeSelectionTransformOrderingWork(
+          orderingWork.add,
+          () => testCase.invoke(runtime.selection),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      final received = request;
+      if (received == null) fail('Expected a qualified transform request.');
+      expect(resolverCalls, 1);
+      expect(
+        received.documentSummary,
+        const CanvasDocumentSummary(
+          elementCount: 6,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+      );
+      expect(received.documentRevision, before.revisions.document);
+      expect(received.selectedElementIdsBefore, _allSelectedIds);
+      expect(
+        () => received.selectedElementIdsBefore.clear(),
+        throwsUnsupportedError,
+      );
+      _expectTransformRequest(testCase, received);
+      expect(orderingWork, hasLength(5));
+      expect(
+        orderingWork,
+        everyElement(
+          SelectionTransformOrderingWorkEvent.canonicalOrderComparison,
+        ),
+      );
+      expect(actions, hasLength(1));
+      expect(
+        preparedWork.where(
+          (event) => event == PreparedInteractionApplyWorkEvent.prepared,
+        ),
+        hasLength(1),
+      );
+      expect(
+        preparedWork.where(
+          (event) => event == PreparedInteractionApplyWorkEvent.consumed,
+        ),
+        hasLength(1),
+      );
+      expect(
+        preparedWork.where(
+          (event) => event == PreparedInteractionApplyWorkEvent.discarded,
+        ),
+        isEmpty,
+      );
+      expect(lease.snapshots, [
+        (revision: before.revisions.document + 1, actions: 0),
+      ]);
+      expect(lease.committedCalls, 1);
+      expect(lease.abortedCalls, 0);
+    } finally {
+      await subscription.cancel();
+      runtime.dispose();
+    }
+  }
+}
+
+// Cancellation, callback failure, and a Move-only resolution are the three
+// distinct rejection forms that must not reach Unit-8 installation.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
+  final cancelledPreparedWork = <PreparedInteractionApplyWorkEvent>[];
+  final cancelled = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) {
+        expect(
+          cancelledPreparedWork.where(
+            (event) => event == PreparedInteractionApplyWorkEvent.prepared,
+          ),
+          hasLength(1),
+        );
+        return const CanvasCommitCancel();
+      },
+    ),
+  );
+  final cancelledActions = <CanvasActionCommitted>[];
+  final cancelledSubscription = cancelled.actions.listen(cancelledActions.add);
+  try {
+    cancelled.selection.selectAll(onlySelectable: false);
+    final before = cancelled.state.value;
+    CommitApplier.observePreparedInteractionWork(
+      cancelledPreparedWork.add,
+      cancelled.selection.rotateSelectionClockwise,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(cancelled.state.value, before);
+    expect(cancelledActions, isEmpty);
+    expect(
+      cancelledPreparedWork.where(
+        (event) => event == PreparedInteractionApplyWorkEvent.discarded,
+      ),
+      hasLength(1),
+    );
+    expect(
+      cancelledPreparedWork.where(
+        (event) => event == PreparedInteractionApplyWorkEvent.consumed,
+      ),
+      isEmpty,
+    );
+  } finally {
+    await cancelledSubscription.cancel();
+    cancelled.dispose();
+  }
+
+  final failing = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) => throw StateError('transform resolver failure'),
+    ),
+  );
+  final failingActions = <CanvasActionCommitted>[];
+  final failingSubscription = failing.actions.listen(failingActions.add);
+  try {
+    failing.selection.selectAll(onlySelectable: false);
+    final before = failing.state.value;
+    failing.selection.rotateSelectionCounterClockwise();
+    await Future<void>.delayed(Duration.zero);
+    expect(failing.state.value, before);
+    expect(failingActions, isEmpty);
+  } finally {
+    await failingSubscription.cancel();
+    failing.dispose();
+  }
+
+  final lease = _TransformLease();
+  final incompatible = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) =>
+          CanvasMoveCommitAccept(delta: const Offset(1, 0), lease: lease),
+    ),
+  );
+  final incompatibleActions = <CanvasActionCommitted>[];
+  final incompatibleSubscription = incompatible.actions.listen(
+    incompatibleActions.add,
+  );
+  try {
+    incompatible.selection.selectAll(onlySelectable: false);
+    final before = incompatible.state.value;
+    incompatible.selection.flipSelectionVertical();
+    await Future<void>.delayed(Duration.zero);
+    expect(incompatible.state.value, before);
+    expect(incompatibleActions, isEmpty);
+    expect(lease.abortedCalls, 1);
+    expect(lease.committedCalls, 0);
+  } finally {
+    await incompatibleSubscription.cancel();
+    incompatible.dispose();
+  }
+}
+
+Future<void> _ineligibleTransformCommandsStayResolverSilent() async {
+  var resolverCalls = 0;
+  final runtime = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) {
+        resolverCalls += 1;
+        return const CanvasCommitCancel();
+      },
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = runtime.actions.listen(actions.add);
+  try {
+    runtime.selection.setSelection([CanvasElementId('locked-a')]);
+    final before = runtime.state.value;
+
+    runtime.selection.rotateSelectionClockwise();
+    runtime.selection.rotateSelectionCounterClockwise();
+    runtime.selection.flipSelectionVertical();
+    runtime.selection.flipSelectionHorizontal();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(resolverCalls, 0);
+    expect(runtime.state.value, before);
+    expect(actions, isEmpty);
+  } finally {
+    await subscription.cancel();
+    runtime.dispose();
+  }
+}
+
+final _allSelectedIds = [
+  CanvasElementId('rect-a'),
+  CanvasElementId('locked-a'),
+  CanvasElementId('rect-b'),
+  CanvasElementId('hidden-a'),
+  CanvasElementId('not-selectable-a'),
+  CanvasElementId('not-deletable-a'),
+];
+
+final _movableSelectedIds = [
+  CanvasElementId('rect-a'),
+  CanvasElementId('rect-b'),
+  CanvasElementId('hidden-a'),
+  CanvasElementId('not-selectable-a'),
+  CanvasElementId('not-deletable-a'),
+];
+
+// Keeping the complete immutable payload together makes a failed public
+// confirmation easier to diagnose than duplicated partial assertions.
+// ignore: halstead-volume, source-lines-of-code
+void _expectTransformRequest(
+  _TransformRequestCase testCase,
+  CanvasCommitRequest request,
+) {
+  final expectedTransform = _aroundPivot(testCase.localTransform, Offset.zero);
+  final affected = switch (request) {
+    CanvasRotateCommitRequest(
+      :final affectedElements,
+      :final pivotWorld,
+      :final worldTransform,
+      :final operation,
+    )
+        when testCase.isRotation =>
+      (
+        affectedElements: affectedElements,
+        pivotWorld: pivotWorld,
+        worldTransform: worldTransform,
+        operation: operation,
+      ),
+    CanvasReflectCommitRequest(
+      :final affectedElements,
+      :final pivotWorld,
+      :final worldTransform,
+      :final operation,
+    )
+        when !testCase.isRotation =>
+      (
+        affectedElements: affectedElements,
+        pivotWorld: pivotWorld,
+        worldTransform: worldTransform,
+        operation: operation,
+      ),
+    _ => throw TestFailure('Wrong unified transform request subtype.'),
+  };
+  expect(affected.operation, testCase.operation);
+  expect(affected.pivotWorld, Offset.zero);
+  _expectTransformClose(affected.worldTransform, expectedTransform);
+  expect(
+    affected.affectedElements.map((element) => element.id),
+    _movableSelectedIds,
+  );
+  _expectTransformClose(
+    affected.affectedElements[0].transform,
+    CanvasTransform.identity,
+  );
+  _expectTransformClose(
+    affected.affectedElements[1].transform,
+    CanvasTransform.translation(const Offset(10, 0)),
+  );
+  expect(() => affected.affectedElements.clear(), throwsUnsupportedError);
+}
+
+final class _TransformRequestCase {
+  const _TransformRequestCase._({
+    required this.operation,
+    required this.invoke,
+    required this.localTransform,
+    required this.isRotation,
+  });
+
+  factory _TransformRequestCase.rotate(
+    CanvasTransformOperation operation,
+    void Function(CanvasSelectionPort selection) invoke,
+    CanvasTransform localTransform,
+  ) => _TransformRequestCase._(
+    operation: operation,
+    invoke: invoke,
+    localTransform: localTransform,
+    isRotation: true,
+  );
+
+  factory _TransformRequestCase.reflect(
+    CanvasTransformOperation operation,
+    void Function(CanvasSelectionPort selection) invoke,
+    CanvasTransform localTransform,
+  ) => _TransformRequestCase._(
+    operation: operation,
+    invoke: invoke,
+    localTransform: localTransform,
+    isRotation: false,
+  );
+
+  final CanvasTransformOperation operation;
+  final void Function(CanvasSelectionPort selection) invoke;
+  final CanvasTransform localTransform;
+  final bool isRotation;
+}
+
+final class _TransformLease implements CanvasCommitLease {
+  void Function()? onCommitted;
+  int committedCalls = 0;
+  int abortedCalls = 0;
+  final List<({int revision, int actions})> snapshots = [];
+
+  @override
+  void committed() {
+    committedCalls += 1;
+    onCommitted?.call();
+  }
+
+  @override
+  void aborted() {
+    abortedCalls += 1;
+  }
+}
+
 // Deletion pruning and no-op silence are one observable command contract.
 // ignore: halstead-volume
 Future<void> _deleteSelectionPrunesRemovedIdsAndStaysSilentForNoop() async {
@@ -218,7 +684,7 @@ Future<void> _allOrNoneSelectionDeletionRejectsMixedSelection() async {
   final allOrNoneRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -256,7 +722,7 @@ Future<void> _lockedContentRemainsDeletableUnderAllOrNone() async {
   final lockedRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/public/canvas_contract_limits.dart';
@@ -53,7 +53,7 @@ final class EraserMachine {
       sessionId: input.sessionId,
       pointerToken: input.pointerToken,
       eraser: input.eraser,
-      corridorPointCount: input.facts.corridorPoints.length,
+      corridorWorld: input.facts.corridorPoints,
       erasedEntries: input.facts.erasedEntries,
     );
   }
@@ -280,13 +280,13 @@ final class EraserTerminalDecision {
     required PointerSessionId sessionId,
     required PointerSessionToken pointerToken,
     required PointerEraserCapture eraser,
-    required int corridorPointCount,
+    required Iterable<Offset> corridorWorld,
     required List<DeletionEntryFacts> erasedEntries,
   }) : intent = EraserCommitIntent(
          sessionId: sessionId,
          pointerToken: pointerToken,
          eraserThickness: eraser.thickness,
-         corridorPointCount: corridorPointCount,
+         corridorWorld: corridorWorld,
          erasedEntries: erasedEntries,
        );
 

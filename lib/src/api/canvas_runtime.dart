@@ -19,6 +19,7 @@ import 'canvas_runtime_frame_bridge.dart';
 import 'canvas_runtime_surface_bridge.dart';
 
 export '../contracts/public/canvas_runtime.dart';
+export '../contracts/public/canvas_commit.dart';
 export '../contracts/public/canvas_deletion.dart';
 
 /// Public API v1 declaration for [CanvasRuntime].

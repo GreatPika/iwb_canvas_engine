@@ -17,8 +17,10 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_action_finalizer.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/id_admission.dart'
+    show IdAdmissionWorkKind;
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 // The four route matrices share the same public work oracle. Keeping their
 // registrations adjacent makes the fixed-k/N and terminal-outcome coverage
@@ -51,30 +53,26 @@ void main() {
     () {
       _expectSelectionWithoutDeletion(
         document: _document(targetCount: 2),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
-        ),
+        config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
         select: const [],
       );
       _expectSelectionWithoutDeletion(
         document: _document(targetCount: 1, includeNotDeletable: true),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
+          commitResolver: acceptCommit,
           selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
         ),
         select: [CanvasElementId('target-0'), CanvasElementId('blocked')],
       );
       _expectEraserWithoutDeletion(
         document: _document(targetCount: 1),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
-        ),
+        config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
         terminalPosition: const Offset(1000, 0),
       );
       _expectEraserWithoutDeletion(
         document: _document(targetCount: 1),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
+          commitResolver: acceptCommit,
           eraserElementKinds: <CanvasElementKind>{},
         ),
         terminalPosition: Offset.zero,
@@ -115,9 +113,18 @@ void main() {
           large.projectionEventsAtResolver,
           small.projectionEventsAtResolver,
         );
-        expect(small.requestEntryCopies, 2);
-        expect(large.requestEntryCopies, 2);
-        expect(largerK.requestEntryCopies, 4);
+        expect(
+          small.requestEntryCopies,
+          route == _DeletionRoute.selection ? 2 : 0,
+        );
+        expect(
+          large.requestEntryCopies,
+          route == _DeletionRoute.selection ? 2 : 0,
+        );
+        expect(
+          largerK.requestEntryCopies,
+          route == _DeletionRoute.selection ? 4 : 0,
+        );
         expect(largerK.preparedWork, small.preparedWork);
         expect(largerK.installWork, small.installWork);
         expect(largerK.ownerLoopWork.actionCommittedReads, 4);
@@ -223,9 +230,9 @@ Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(targetCount: 2),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         callbacks += 1;
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       },
     ),
   );
@@ -295,7 +302,7 @@ _DeletionWorkResult _runRoute({
       unrelatedElementCount: unrelatedElementCount,
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (_) {
         callbacks += 1;
         projectionEventsAtResolver = projectionWork.length;
         entryRouteEventsAtResolver = entryRouteWork.length;
@@ -430,13 +437,19 @@ void _expectNonemptyConstruction(
   required int targetCount,
 }) {
   expect(result.callbacks, 1);
-  expect(result.construction, [
+  expect(
+    result.construction,
     route == _DeletionRoute.selection
-        ? RuntimeDeletionRouteConstructionKind.selectionPreparedCommit
-        : RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
-    RuntimeDeletionRouteConstructionKind.request,
-  ]);
-  expect(result.requestEntryCopies, targetCount);
+        ? [
+            RuntimeDeletionRouteConstructionKind.selectionPreparedCommit,
+            RuntimeDeletionRouteConstructionKind.request,
+          ]
+        : [RuntimeDeletionRouteConstructionKind.eraserPreparedCommit],
+  );
+  expect(
+    result.requestEntryCopies,
+    route == _DeletionRoute.selection ? targetCount : 0,
+  );
   if (outcome == _ResolverOutcome.accept) {
     expect(result.sealedDeliveryWork, (
       preparations: 1,
@@ -532,9 +545,9 @@ void _expectSelectionWithoutDeletion({
   final root = runtimeRootWithCommittedDocumentSeed(
     document,
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (request) {
         callbacks += 1;
-        return config.deletionCommitResolver(_emptyRequest);
+        return config.commitResolver(request);
       },
       selectionDeletePolicy: config.selectionDeletePolicy,
       eraserElementKinds: config.eraserElementKinds,
@@ -570,9 +583,9 @@ void _expectEraserWithoutDeletion({
   final root = runtimeRootWithCommittedDocumentSeed(
     document,
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (request) {
         callbacks += 1;
-        return config.deletionCommitResolver(_emptyRequest);
+        return config.commitResolver(request);
       },
       eraserElementKinds: config.eraserElementKinds,
     ),
@@ -702,11 +715,6 @@ List<CanvasElementId> _targetIds(int count) => [
     CanvasElementId('target-$index'),
 ];
 
-final _emptyRequest = CanvasDeletionCommitRequest(
-  operation: CanvasDeletionOperation.deleteSelection,
-  entries: const [],
-);
-
 enum _DeletionRoute { selection, eraser }
 
 enum _EraserDeliveryFailure { state, action }
@@ -721,12 +729,12 @@ enum _ResolverOutcome {
   static const nonemptyValues = values;
   static const discardValues = [cancel, error, exception, object];
 
-  CanvasDeletionDecision resolve() {
+  CanvasCommitResolution resolve() {
     switch (this) {
       case accept:
-        return CanvasDeletionDecision.accept;
+        return const CanvasCommitAccept(lease: testAcceptingCommitLease);
       case cancel:
-        return CanvasDeletionDecision.cancel;
+        return const CanvasCommitCancel();
       case error:
         throw StateError('resolver Error');
       case exception:

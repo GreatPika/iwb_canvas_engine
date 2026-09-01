@@ -12,7 +12,8 @@ flowchart LR
     PointerInput["CanvasPointerInput\nfinite samples or no-position\nterminal cleanup input"]
     Sample["CanvasPointerSample\nfinite coordinates for all phases"]
     TerminalCleanupInput["CanvasPointerTerminalCleanup\nno coordinates; up/cancel only"]
-    MoveResolver["CanvasMoveCommitResolver\nselected move terminal only"]
+    CommitResolver["CanvasCommitResolver\nqualified Draw/Delete/Erase/Move/Rotate/Reflect/TextEdit"]
+    CommitLease["CanvasCommitLease\ncommitted or aborted once"]
     PublicSignals["Public state/effects\naction events, CanvasRuntimeState,\nmain/overlay repaint requests"]
   end
 
@@ -106,19 +107,18 @@ flowchart LR
   CleanupByKind -->|"selected move cleanup"| MainRepaint
   CleanupByKind -->|"overlay preview cleanup"| OverlayRepaint
 
-  CommitIntent -->|"selected move zero delta or empty movable set\nbefore resolver"| CancelIntent
-  CommitIntent -->|"selected move request when non-zero\nand movable set is non-empty"| MoveResolver
-  MoveResolver -.->|"CanvasMoveCancel"| CancelIntent
-  MoveResolver -.->|"resolver exception requires preview cleanup"| TerminalCleanup
-  MoveResolver -.->|"runtime-safe error"| ErrorProjection
-  MoveResolver -->|"finite committed delta"| CommitIntent
-
+  CommitIntent -->|"no-op, stale, invalid, excluded, or cancelled\nwithout resolver"| CancelIntent
+  CommitIntent -->|"fully qualified immutable request"| CommitResolver
+  CommitResolver -.->|"CanvasCommitCancel or callback failure"| CancelIntent
+  CommitResolver -.->|"incompatible/invalid Move accept"| CommitLease
+  CommitLease -.->|"aborted once before install"| TerminalCleanup
   CommitIntent -->|"terminal commit intent\nno document mutation yet"| Delivery
-  Delivery -->|"read-only candidate, public element,\nand action descriptor"| InteractionEdit
+  Delivery -->|"prepared exact facts and action descriptor"| InteractionEdit
   InteractionEdit -->|"draft mutations for terminal result"| Draft
   Draft -->|"exact touched state"| Touched
   Touched -->|"compile exact effects"| Compiler
-  Compiler -->|"preflighted commit payload"| AtomicInstall
+  Compiler -->|"preflighted prepared commit payload"| CommitResolver
+  CommitResolver -->|"compatible accept and lease"| AtomicInstall
   AtomicInstall -->|"accepted ledger reserves route ID, replaces committed tables, and invalidates projection revision"| Committed
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
   SelectionEffect -->|"update selected ids/revision"| SelectionFacts
@@ -127,7 +127,9 @@ flowchart LR
   EditResult -->|"EditKernel closes handle, then RuntimeRoot performs publish-false cleanup"| ClosedDeliveryCleanup
   ClosedDeliveryCleanup -->|"cleanup outcome augments repaint, then guarded common delivery: spatial scope"| SpatialDelta
   SpatialDelta -->|"then resource/release and root/bridge frame repaint"| MainRepaint
-  MainRepaint -->|"then state, changed action, non-empty observer"| Actions
+  MainRepaint -->|"then final public state"| PublicSignals
+  PublicSignals -->|"accepted terminal once"| CommitLease
+  CommitLease -->|"then changed action and non-empty observer"| Actions
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
   Rollback -.->|"candidate remains next; committed document, selection, revisions,\nand action events unchanged"| ErrorProjection

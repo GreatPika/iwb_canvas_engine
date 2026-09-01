@@ -14,7 +14,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.d
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   _testRuntimeInjectsReadPortIntoInteractionEngine();
@@ -437,7 +437,7 @@ void _testEraserKindPolicyBeforeBudgets() {
   test('eraser kind policy filters terminal reads before budgets', () {
     final root = _eraserPolicyRoot(
       const CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         eraserElementKinds: {CanvasElementKind.rect},
       ),
     );
@@ -461,11 +461,11 @@ void _testEraserKindPolicyBeforeBudgets() {
 
   test('null preserves eraser admission and empty disables it', () {
     final unrestrictedRoot = _eraserPolicyRoot(
-      const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit),
+      const CanvasRuntimeConfig(commitResolver: acceptCommit),
     );
     final disabledRoot = _eraserPolicyRoot(
       const CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         eraserElementKinds: {},
       ),
     );

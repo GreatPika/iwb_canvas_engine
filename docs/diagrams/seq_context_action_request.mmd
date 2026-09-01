@@ -12,6 +12,8 @@ sequenceDiagram
   participant Spatial as SpatialKernel
   participant Geometry as GeometryPolicy
   participant Registry as InteractionRequestRegistry
+  participant Resolver as CanvasCommitResolver
+  participant Lease as CanvasCommitLease
   participant Requests as CanvasContextActionRequested stream
   participant Commands as CanvasCommandPort
   participant Edit as EditKernel
@@ -209,8 +211,15 @@ sequenceDiagram
       Commands-->>App: true
       Note over Commands,Signals: Accepted no-op consumes request without document revision, repaint, or action event.
     else changed text is valid
-      Commands->>Edit: update text inside normal EditKernel transaction
-      Edit-->>Commands: accepted install and closed edit handle
+      Commands->>Edit: prepare text edit with exact before/after pair
+      Edit-->>Commands: single-use prepared text install
+      Commands->>Resolver: resolve CanvasTextEditCommitRequest under runtime guard
+      alt CanvasCommitCancel, callback failure, or pre-install failure
+        Commands->>Edit: discard prepared text install
+        Note over Commands,Signals: The valid request and matching draft/session remain retryable; no state, action, or close notification occurs. A returned lease is aborted once when present.
+        Commands-->>App: false
+      else CanvasCommitAccept with lease
+      Commands->>Edit: consume accepted install and close edit handle
       Commands->>Registry: consume and remove request facts
       alt request matches active text session
         Commands->>Commands: silently clear matching active session, suppression, and owned candidate state
@@ -218,12 +227,15 @@ sequenceDiagram
       else direct live request without active session
         Note over Commands,Signals: No active-session dismissal notification or interaction revision, while accepted changed text still reaches common delivery.
       end
-      Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, state, editText action, observer
+      Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, final state
+      Commands->>Lease: committed() under runtime guard
+      Commands->>Signals: editText action, observer, then guard release
       alt request matched active text session
         Commands->>AppUI: notify active-session closure after guard release
         Note over AppUI,Signals: The listener sees accepted text and the consumed request after outer delivery. It may read state, complete a separate accepted mutation, or start another session; identity-aware cleanup preserves that new session. Flutter-reported listener errors do not stop the accepted route.
       end
       Commands-->>App: true
+      end
     end
   end
 

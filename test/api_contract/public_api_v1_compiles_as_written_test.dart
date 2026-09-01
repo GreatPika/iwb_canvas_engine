@@ -25,22 +25,22 @@ void rejectsOmittedRuntimeConfig() {
     expect(analyze.exitCode, isNot(0));
   });
 
-  test('non-null deletion resolver is required to compile', () async {
+  test('non-null commit resolver is required to compile', () async {
     final analyze = await _analyzeConsumerSource('''
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-void rejectsNullDeletionResolver() {
-  CanvasRuntimeConfig(deletionCommitResolver: null);
+void rejectsNullCommitResolver() {
+  CanvasRuntimeConfig(commitResolver: null);
 }
 ''');
     expect(analyze.exitCode, isNot(0));
   });
 
-  test('deletion resolver is required to compile', () async {
+  test('commit resolver is required to compile', () async {
     final analyze = await _analyzeConsumerSource('''
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-void rejectsOmittedDeletionResolver() {
+void rejectsOmittedCommitResolver() {
   CanvasRuntimeConfig();
 }
 ''');
@@ -319,9 +319,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasDeletionDecision _acceptDeletionCommit(
-  CanvasDeletionCommitRequest _,
-) => CanvasDeletionDecision.accept;
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
 
 void acceptPublicSurface() {
 $publicUses
@@ -505,7 +512,7 @@ void _exerciseP2ContractSurface() {
 
   final runtime = CanvasRuntime(
     config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+      commitResolver: _resolveCommit,
       pointerPolicy: CanvasPointerPolicy(
         tapSlop: 9,
         doubleTapSlop: 18,
@@ -524,16 +531,15 @@ void _exerciseP2ContractSurface() {
         eraserThickness: 20,
       ),
       clearSelectionOnDrawModeEnter: true,
-      moveCommitResolver: _resolveMove,
       diagnosticPolicy: CanvasDiagnosticPolicy.verbose(
         maxPreviewLength: 128,
         maxListEntries: 8,
       ),
     ),
   );
-  const defaultSelectionDeleteConfig = CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+  const defaultSelectionDeleteConfig = CanvasRuntimeConfig(commitResolver: _resolveCommit);
   const explicitSelectionDeleteConfig = CanvasRuntimeConfig(
-    deletionCommitResolver: _acceptDeletionCommit,
+    commitResolver: _resolveCommit,
     selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
   );
   const deleteAvailability = CanvasSelectionDeleteAvailability(
@@ -777,18 +783,21 @@ void _exerciseP2ContractSurface() {
   );
   final moveRequest = CanvasMoveCommitRequest(
     documentSummary: documentSummary,
+    documentRevision: 1,
+    selectedElementIdsBefore: [elementId],
     movedElements: [elementRead],
     proposedDelta: const Offset(1, 1),
     selectionBoundsWorld: const Rect.fromLTWH(0, 0, 10, 10),
   );
-  final CanvasMoveResolution moveCommit =
-      const CanvasMoveCommit(delta: Offset(1, 1));
-  final CanvasMoveResolution moveCancel =
-      const CanvasMoveCancel(reason: 'blocked');
+  const CanvasCommitResolution moveCommit = CanvasMoveCommitAccept(
+    delta: Offset(1, 1),
+    lease: _commitLease,
+  );
+  const CanvasCommitResolution moveCancel = CanvasCommitCancel(reason: 'blocked');
   _use(moveRequest.movedElements);
   _use(moveCommit);
   _use(moveCancel);
-  _use(_resolveMove);
+  _use(_resolveCommit);
 
   final actionPayloads = <CanvasActionPayload>[
     CanvasTransformActionPayload(
@@ -1025,8 +1034,21 @@ void _exerciseInlineTextEditingContractSurface(
   session?.dismiss();
 }
 
-CanvasMoveResolution _resolveMove(CanvasMoveCommitRequest request) {
-  return CanvasMoveCommit(delta: request.proposedDelta);
+CanvasCommitResolution _resolveCommit(CanvasCommitRequest request) {
+  if (request case CanvasMoveCommitRequest(:final proposedDelta)) {
+    return CanvasMoveCommitAccept(delta: proposedDelta, lease: _commitLease);
+  }
+  return _acceptCommit(request);
+}
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
 }
 
 final class _ConsumerResourceResolver implements CanvasResourceResolver {

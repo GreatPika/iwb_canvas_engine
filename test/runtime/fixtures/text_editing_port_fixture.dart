@@ -13,6 +13,8 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 // ignore_for_file: number-of-imports
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
+import '../../support/accept_commit.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
@@ -32,6 +34,7 @@ void main() {
   _testDirectCommandCommitClearsActiveSession();
   _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate();
   _testSessionNoOpCommitUsesCommandPath();
+  _testSessionCancelPreservesDraftForRetry();
   _testCandidateStateReusedAndPrunedAfterCommit();
   _testStaleCandidateStatePruned();
   _testStaleCommitCleanup();
@@ -39,6 +42,7 @@ void main() {
   _testUnrelatedDocumentRevisionIsObservationOnly();
   _testUnrelatedDocumentRevisionPreservesSuppressionIdentity();
   _testPreparedTextFactsAreExactBeforeInstall();
+  _testUnifiedSessionCommitRequestAndLeaseOrder();
   _testFailedPreparePreservesActiveSessionForRetry();
   _testValidationFailurePreservesActiveSession();
   _testSuccessfulLoadClearsActiveSession();
@@ -752,7 +756,15 @@ double _anchorValueFor(Rect bounds, TextAlign align) {
 
 void _testSessionNoOpCommitUsesCommandPath() {
   test('session no-op commit consumes request without action', () async {
-    final scenario = _Scenario();
+    var resolverCalls = 0;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) {
+          resolverCalls += 1;
+          return const CanvasCommitCancel();
+        },
+      ),
+    );
     try {
       final request = await scenario.issueTextRequest();
       final session = _expectSession(
@@ -769,6 +781,50 @@ void _testSessionNoOpCommitUsesCommandPath() {
         scenario.root.interactionEngine.requestFactsFor(request.requestId),
         isNull,
       );
+      expect(resolverCalls, 0);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+}
+
+// A rejected session must retain the same draft and request until the host
+// accepts it; this tests the public session seam without a new text owner.
+// ignore: halstead-volume
+void _testSessionCancelPreservesDraftForRetry() {
+  test('session cancel preserves the matching draft for retry', () async {
+    var accept = false;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) => accept
+            ? const CanvasCommitAccept(lease: testAcceptingCommitLease)
+            : const CanvasCommitCancel(),
+      ),
+    );
+    try {
+      final request = await scenario.issueTextRequest();
+      final session = _expectSession(
+        scenario.root.textEditing.startFromContextAction(request),
+      );
+      session.updateText('session retry');
+      final beforeDocument = scenario.root.readDocument();
+      final beforeRevisions = scenario.root.state.value.revisions;
+      final beforeSelection = scenario.root.selectedElementIds;
+
+      expect(session.commit(timestampMs: 45), isFalse);
+      expect(scenario.root.readDocument(), same(beforeDocument));
+      expect(scenario.root.state.value.revisions, beforeRevisions);
+      expect(scenario.root.selectedElementIds, beforeSelection);
+      expect(session.isActive, isTrue);
+      expect(session.liveText, 'session retry');
+      expect(scenario.root.textEditing.activeSession.value, same(session));
+      _expectRequestFactsLive(scenario.root, request);
+      expect(scenario.actions, isEmpty);
+
+      accept = true;
+      expect(session.commit(timestampMs: 46), isTrue);
+      expect(_textValue(scenario.root), 'session retry');
+      expect(scenario.actions, hasLength(1));
     } finally {
       await scenario.dispose();
     }
@@ -972,6 +1028,103 @@ void _testPreparedTextFactsAreExactBeforeInstall() {
           ('expanded\nprepared text', const Color(0xB3221144)),
         ]);
       } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// The session route keeps its prepared pair, public resolver request, lease,
+// delivery, and late-close sequence in one witness to prevent temporal drift.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testUnifiedSessionCommitRequestAndLeaseOrder() {
+  test(
+    'session commit exposes the sealed text pair before state lease action close',
+    () async {
+      CanvasTextEditCommitRequest? request;
+      final lease = _TextCommitLease();
+      final scenario = _Scenario(
+        document: _richTextDocument(),
+        config: CanvasRuntimeConfig(
+          commitResolver: (candidate) {
+            request = candidate as CanvasTextEditCommitRequest;
+            return CanvasCommitAccept(lease: lease);
+          },
+        ),
+      );
+      final order = <String>[];
+      final actionSubscription = scenario.root.actions.listen(
+        (_) => order.add('action'),
+      );
+      void onState() => order.add('state');
+      void onActiveSession() => order.add('close');
+      scenario.root.state.addListener(onState);
+      scenario.root.textEditing.activeSession.addListener(onActiveSession);
+      try {
+        final contextRequest = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(contextRequest),
+        );
+        final original = _textElement(scenario.root);
+        session.updateText('expanded\nunified text');
+        order.clear();
+        lease.onCommitted = () {
+          order.add('lease');
+          lease.snapshots.add((
+            revision: scenario.root.state.value.revisions.document,
+            actions: scenario.actions.length,
+          ));
+        };
+
+        expect(session.commit(timestampMs: 71), isTrue);
+
+        final received = request;
+        if (received == null) fail('Expected a unified text commit request.');
+        expect(
+          received.documentSummary,
+          const CanvasDocumentSummary(
+            elementCount: 2,
+            layerCount: 1,
+            resourceCount: 0,
+          ),
+        );
+        expect(received.documentRevision, 0);
+        expect(received.selectedElementIdsBefore, isEmpty);
+        expect(
+          () => received.selectedElementIdsBefore.clear(),
+          throwsUnsupportedError,
+        );
+        final committed = _textElement(scenario.root);
+        _expectCompleteTextElement(received.before, original);
+        _expectCompleteTextElement(received.after, committed);
+        expect(received.before.text, 'hello');
+        expect(received.after.text, 'expanded\nunified text');
+        expect(received.after.revision, received.before.revision + 1);
+        expect(received.after.transform, isNot(received.before.transform));
+        expect(received.before.maxWidth, isNull);
+        expect(received.after.maxWidth, isNull);
+        expect(received.after.metadata, received.before.metadata);
+        expect(lease.snapshots, [(revision: 1, actions: 0)]);
+        expect(lease.committedCalls, 1);
+        expect(lease.abortedCalls, 0);
+        expect(order, ['state', 'lease', 'action', 'close']);
+
+        scenario.root.edits.edit((edit) {
+          edit.updateElement(
+            CanvasTextElementUpdate(
+              id: _textId,
+              text: const CanvasFieldSet('later edit'),
+            ),
+          );
+        });
+        expect(received.after.text, 'expanded\nunified text');
+        expect(received.before.text, 'hello');
+        _expectCompleteTextElement(received.after, committed);
+        _expectCompleteTextElement(received.before, original);
+      } finally {
+        scenario.root.state.removeListener(onState);
+        scenario.root.textEditing.activeSession.removeListener(onActiveSession);
+        await actionSubscription.cancel();
         await scenario.dispose();
       }
     },
@@ -1276,8 +1429,12 @@ void _expectRequestFactsLive(
 }
 
 final class _Scenario {
-  _Scenario({CanvasDocument? document})
-    : root = runtimeRootWithCommittedDocumentSeed(document ?? _document()) {
+  _Scenario({CanvasDocument? document, CanvasRuntimeConfig? config})
+    : root = runtimeRootWithCommittedDocumentSeed(
+        document ?? _document(),
+        config:
+            config ?? const CanvasRuntimeConfig(commitResolver: acceptCommit),
+      ) {
     actionSubscription = root.actions.listen(actions.add);
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
@@ -1325,6 +1482,24 @@ final class _Scenario {
     await actionSubscription.cancel();
     await requestSubscription.cancel();
     root.dispose();
+  }
+}
+
+final class _TextCommitLease implements CanvasCommitLease {
+  void Function()? onCommitted;
+  int committedCalls = 0;
+  int abortedCalls = 0;
+  final List<({int revision, int actions})> snapshots = [];
+
+  @override
+  void committed() {
+    committedCalls += 1;
+    onCommitted?.call();
+  }
+
+  @override
+  void aborted() {
+    abortedCalls += 1;
   }
 }
 

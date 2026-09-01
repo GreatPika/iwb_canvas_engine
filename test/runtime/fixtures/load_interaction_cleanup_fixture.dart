@@ -17,7 +17,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.d
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   _registerLoadSuccessCleanupTests();
@@ -543,7 +543,7 @@ RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
   return runtimeRootWithCommittedDocumentSeed(
     _unselectedMoveDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
+      commitResolver: acceptCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
     ),
     commitEffectObserver: observer,

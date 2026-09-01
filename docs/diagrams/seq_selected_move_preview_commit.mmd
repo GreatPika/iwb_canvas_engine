@@ -18,7 +18,8 @@ sequenceDiagram
   participant Ordinary as OrdinaryPaintPlanner
   participant Supplement as SelectedMoveSupplementPlanner
   participant PlanCache as OrdinaryPaintRecordCache
-  participant Resolver as CanvasMoveCommitResolver
+  participant Resolver as CanvasCommitResolver
+  participant Lease as CanvasCommitLease
   participant EK as EditKernel
   participant Draft as DraftDocument
   participant Touched as TouchedSet
@@ -132,12 +133,10 @@ sequenceDiagram
     Store-->>ReadPort: retained basis is current or conflicted
     ReadPort-->>IE: terminal conflict fact; request inputs remain captured
 
-    opt resolver configured
-      Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard
-      Resolver-->>Runtime: CanvasMoveCommit(delta) or CanvasMoveCancel, then guard closes
-    end
+    Runtime->>Resolver: resolve CanvasMoveCommitRequest under runtime guard
+    Resolver-->>Runtime: CanvasMoveCommitAccept(delta, lease) or CanvasCommitCancel
 
-    alt CanvasMoveCancel returned
+    alt CanvasCommitCancel returned
       IE->>Cleanup: typed cleanup request for selected move session
         Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
@@ -156,7 +155,8 @@ sequenceDiagram
       Preview->>Frame: request main-scene repaint cleanup
       Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
       IE-->>Tools: finish contained non-application
-    else resolver returns non-finite delta
+    else incompatible acceptance, zero, or non-finite Move delta
+      Runtime->>Lease: aborted() under runtime guard
       IE->>Cleanup: typed cleanup request for selected move session
         Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
@@ -165,8 +165,8 @@ sequenceDiagram
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
-      IE-->>Tools: rethrow invalid-result ArgumentError
-    else finite committed delta accepted
+      IE-->>Tools: finish contained non-application
+    else finite non-zero CanvasMoveCommitAccept delta
       Runtime->>Runtime: seal shared transform/action preparation from immutable participants, final transform, operation, pivot, and timestamp
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed, nested edit, or resolver reentrant mutation
@@ -204,10 +204,11 @@ sequenceDiagram
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
+        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state
         Runtime->>Spatial: apply touched-id spatial update
         Runtime->>Frame: publish merged main repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
+        Runtime->>Lease: committed() under runtime guard
         Runtime->>Signals: publish move action notification
         Signals-->>Surface: repaint main scene without preview delta
         IE-->>Tools: terminal handling complete

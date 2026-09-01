@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import 'canvas_document.dart';
 import 'canvas_element.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
@@ -217,26 +216,6 @@ final class CanvasEmptyCanvasContextActionTarget
   const CanvasEmptyCanvasContextActionTarget();
 }
 
-/// Public API v1 declaration for [CanvasMoveCommitResolver].
-typedef CanvasMoveCommitResolver =
-    CanvasMoveResolution Function(CanvasMoveCommitRequest request);
-
-/// Public API v1 declaration for [CanvasMoveCommitRequest].
-final class CanvasMoveCommitRequest {
-  CanvasMoveCommitRequest({
-    required this.documentSummary,
-    required Iterable<CanvasElementRead> movedElements,
-    required this.proposedDelta,
-    required this.selectionBoundsWorld,
-  }) : _movedElements = List.unmodifiable(movedElements);
-
-  final CanvasDocumentSummary documentSummary;
-  final List<CanvasElementRead> _movedElements;
-  final Offset proposedDelta;
-  final Rect selectionBoundsWorld;
-  List<CanvasElementRead> get movedElements => _movedElements;
-}
-
 @immutable
 /// Public API v1 declaration for [CanvasElementRead].
 final class CanvasElementRead {
@@ -282,40 +261,4 @@ final class CanvasElementRead {
       isTransformable,
     );
   }
-}
-
-@immutable
-/// Public API v1 declaration for [CanvasMoveResolution].
-sealed class CanvasMoveResolution {
-  const CanvasMoveResolution();
-}
-
-@immutable
-/// Public API v1 declaration for [CanvasMoveCommit].
-final class CanvasMoveCommit extends CanvasMoveResolution {
-  const CanvasMoveCommit({required this.delta});
-  final Offset delta;
-
-  @override
-  bool operator ==(Object other) {
-    return other is CanvasMoveCommit && other.delta == delta;
-  }
-
-  @override
-  int get hashCode => delta.hashCode;
-}
-
-@immutable
-/// Public API v1 declaration for [CanvasMoveCancel].
-final class CanvasMoveCancel extends CanvasMoveResolution {
-  const CanvasMoveCancel({this.reason});
-  final String? reason;
-
-  @override
-  bool operator ==(Object other) {
-    return other is CanvasMoveCancel && other.reason == reason;
-  }
-
-  @override
-  int get hashCode => reason.hashCode;
 }

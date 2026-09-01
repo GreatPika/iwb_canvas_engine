@@ -19,7 +19,7 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart'
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 void main() {
   _testRecordsEveryInteractionDiagnosticCode();
@@ -143,7 +143,7 @@ void _testVectorInteractionReliabilityUsesExistingRoute() {
       final enabledRoot = runtimeRootWithCommittedDocumentSeed(
         _nonMovableVectorDocument(),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
+          commitResolver: acceptCommit,
           diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
         ),
       );
@@ -198,13 +198,17 @@ void _testResolverReentrantMutationDiagnostic() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
-        diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
-        moveCommitResolver: (_) {
-          root.selection.clearSelection();
-
-          return const CanvasMoveCommit(delta: Offset(1, 1));
+        commitResolver: (request) {
+          if (request is CanvasMoveCommitRequest) {
+            root.selection.clearSelection();
+            return const CanvasMoveCommitAccept(
+              delta: Offset(1, 1),
+              lease: testAcceptingCommitLease,
+            );
+          }
+          return acceptCommit(request);
         },
+        diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
       ),
     );
     addTearDown(root.dispose);
@@ -300,9 +304,7 @@ void _testDeletionResolverDiagnostics() {
         expect(root.diagnosticRecords, hasLength(1));
         _expectBoundedDeletionFailure(
           root.diagnosticRecords.single,
-          operation: route == _DeletionRoute.selection
-              ? 'deleteSelection'
-              : 'erase',
+          operation: route == _DeletionRoute.selection ? 'delete' : 'erase',
           errorKind: thrown is Error
               ? 'error'
               : thrown is Exception
@@ -315,7 +317,10 @@ void _testDeletionResolverDiagnostics() {
 
   test('deletion diagnostic controls and disabled callbacks stay silent', () {
     for (final route in _DeletionRoute.values) {
-      for (final decision in CanvasDeletionDecision.values) {
+      for (final decision in [
+        const CanvasCommitAccept(lease: testAcceptingCommitLease),
+        const CanvasCommitCancel(),
+      ]) {
         final root = _deletionRoot(
           (_) => decision,
           diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
@@ -354,14 +359,19 @@ void _testMoveResolverDiagnosticObservationFailuresAreContained() {
         final root = runtimeRootWithCommittedDocumentSeed(
           _document(),
           config: CanvasRuntimeConfig(
-            deletionCommitResolver: acceptDeletionCommit,
-            diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
-            moveCommitResolver: (_) {
-              if (resolverThrows) {
-                throw StateError('sensitive resolver failure must not leak');
+            commitResolver: (request) {
+              if (request is CanvasMoveCommitRequest) {
+                if (resolverThrows) {
+                  throw StateError('sensitive resolver failure must not leak');
+                }
+                return const CanvasMoveCommitAccept(
+                  delta: Offset(10, 0),
+                  lease: testAcceptingCommitLease,
+                );
               }
-              return const CanvasMoveCommit(delta: Offset(10, 0));
+              return acceptCommit(request);
             },
+            diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
           ),
         );
         addTearDown(root.dispose);
@@ -432,13 +442,13 @@ void _deliverSelectedMove(RuntimeRoot root) {
 }
 
 RuntimeRoot _deletionRoot(
-  CanvasDeletionCommitResolver resolver, {
+  CanvasCommitResolver resolver, {
   CanvasDiagnosticPolicy diagnosticPolicy =
       const CanvasDiagnosticPolicy.disabled(),
 }) => runtimeRootWithCommittedDocumentSeed(
   _document(),
   config: CanvasRuntimeConfig(
-    deletionCommitResolver: resolver,
+    commitResolver: resolver,
     diagnosticPolicy: diagnosticPolicy,
   ),
 );

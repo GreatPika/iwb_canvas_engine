@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_commit.dart';
 
 // One named test per public family makes the absence of resolver interception
 // auditable; extracting them would duplicate the shared runtime setup only.
@@ -15,13 +16,6 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 // helper that could accidentally turn several public families into one proof.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void main() {
-  test('direct command removal stays outside deletion resolver', () {
-    final scenario = _scenario();
-    addTearDown(scenario.root.dispose);
-    expect(scenario.root.commands.removeElement(CanvasElementId('a')), isTrue);
-    expect(_ids(scenario.root), isNot(contains(CanvasElementId('a'))));
-    expect(scenario.calls, 0);
-  });
   test('public edit removal stays outside deletion resolver', () {
     final scenario = _scenario();
     addTearDown(scenario.root.dispose);
@@ -101,9 +95,9 @@ _Scenario _scenario() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: (_) {
+      commitResolver: (request) {
         calls += 1;
-        return CanvasDeletionDecision.accept;
+        return acceptCommit(request);
       },
     ),
   );

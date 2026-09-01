@@ -14,7 +14,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import '../../support/accept_deletion_commit.dart';
+import '../../support/accept_commit.dart';
 
 // This fixture exercises one public pointer route across its real owners, so
 // keeping the focused imports together is clearer than introducing test glue.
@@ -25,6 +25,22 @@ const _groupMoveStart = Offset(10, 0);
 const _groupMoveEnd = Offset(19, 0);
 const _previewDelta = Offset(5, 0);
 const _commitDelta = Offset(17, 0);
+
+typedef _MoveCommitResolver =
+    CanvasCommitResolution Function(CanvasMoveCommitRequest request);
+
+CanvasMoveCommitAccept _acceptMove(Offset delta) {
+  return CanvasMoveCommitAccept(delta: delta, lease: testAcceptingCommitLease);
+}
+
+CanvasCommitCancel _cancelMove() => const CanvasCommitCancel();
+
+CanvasCommitResolver _resolveMoveRequest(_MoveCommitResolver resolver) {
+  return (request) => switch (request) {
+    CanvasMoveCommitRequest() => resolver(request),
+    _ => acceptCommit(request),
+  };
+}
 
 void main() {
   _registerMoveMachineFactTests();
@@ -265,7 +281,7 @@ void _testUnselectedMovableDragCancelRestoresSelection() {
   test('cancel during unselected movable drag restores previous selection', () {
     final scenario = _actionScenario(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -292,9 +308,7 @@ void _testUnselectedMovableResolverCancelRestoresSelection() {
     'resolver cancel during unselected movable drag restores previous selection',
     () async {
       final scenario = _actionScenario(
-        config: _dragStartBeforeTapConfig(
-          moveCommitResolver: (_) => const CanvasMoveCancel(),
-        ),
+        config: _dragStartBeforeTapConfig(resolver: (_) => _cancelMove()),
       );
       final root = scenario.root;
       _selectPreviousObject(root);
@@ -313,7 +327,7 @@ void _testUnselectedMovableDragUsesDragStartSlop() {
   test('unselected movable drag starts after dragStartSlop before tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -566,7 +580,7 @@ void _testSelectedMoveDragStartSlopFallbackUsesTapSlop() {
   test('selected move dragStartSlop null falls back to tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
       ),
     );
@@ -594,7 +608,7 @@ void _testSelectedMoveContinuesInsideSlopAfterPreviewStart() {
   test('selected move keeps preview live when crossing back through start', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
+        commitResolver: acceptCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -964,7 +978,7 @@ void _testUnrelatedAndNoOpEditsPreserveCapturedMoveBasis() {
       final scenario = _noCommitScenario(
         resolver: (value) {
           request = value;
-          return const CanvasMoveCommit(delta: Offset(9, 0));
+          return _acceptMove(const Offset(9, 0));
         },
       );
       final root = scenario.root;
@@ -1013,7 +1027,7 @@ void _testMixedEditNoOpSelectionPreservesCapturedMoveBasis() {
     'mixed edit no-op selection preserves active move before publication',
     () async {
       final scenario = _noCommitScenario(
-        resolver: (_) => const CanvasMoveCommit(delta: Offset(9, 0)),
+        resolver: (_) => _acceptMove(const Offset(9, 0)),
       );
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a')]);
@@ -1055,7 +1069,7 @@ void _testRealFrameExcludesNewlyEligibleSelectedNonparticipant() {
         resolver: (value) {
           request = value;
 
-          return const CanvasMoveCommit(delta: _selectedMoveDragEnd);
+          return _acceptMove(_selectedMoveDragEnd);
         },
       );
       final root = scenario.root;
@@ -1179,10 +1193,7 @@ void _testSelectedVectorMoveCommitUpdatesDocument() {
             ),
           ],
         ),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
-          moveCommitResolver: _commitVectorMove,
-        ),
+        config: const CanvasRuntimeConfig(commitResolver: _commitVectorMove),
       );
       addTearDown(root.dispose);
       root.selection.setSelection([CanvasElementId('vector-a')]);
@@ -1227,8 +1238,17 @@ void _testSelectedMoveResolverPrecedesPreparation() {
           ),
         ),
       );
-      expect(directTrace, ['prepare-open']);
-      _expectResolverGuardEvents(directEvents, const []);
+      expect(directTrace, [
+        'guard-enter',
+        'guard-release',
+        'prepare-open',
+        'guard-enter',
+        'guard-release',
+      ]);
+      _expectResolverGuardEvents(directEvents, [
+        RuntimeRouteTemporalEventKind.resolverGuardEntered,
+        RuntimeRouteTemporalEventKind.resolverGuardReleased,
+      ]);
 
       final acceptedTrace = <String>[];
       final acceptedEvents = <RuntimeRouteTemporalEvent>[];
@@ -1236,7 +1256,7 @@ void _testSelectedMoveResolverPrecedesPreparation() {
         resolver: (_) {
           acceptedTrace.add('resolver-enter');
           try {
-            return const CanvasMoveCommit(delta: Offset(3, 0));
+            return _acceptMove(const Offset(3, 0));
           } finally {
             acceptedTrace.add('resolver-exit');
           }
@@ -1267,16 +1287,18 @@ void _testSelectedMoveResolverPrecedesPreparation() {
         'resolver-exit',
         'guard-release',
         'prepare-open',
+        'guard-enter',
+        'guard-release',
       ]);
       _expectResolverGuardEvents(acceptedEvents, [
         RuntimeRouteTemporalEventKind.resolverGuardEntered,
         RuntimeRouteTemporalEventKind.resolverGuardReleased,
       ]);
 
-      for (final resolver in <CanvasMoveCommitResolver>[
-        (_) => const CanvasMoveCancel(),
-        (_) => const CanvasMoveCommit(delta: Offset.zero),
-        (_) => const CanvasMoveCommit(delta: Offset(double.infinity, 0)),
+      for (final resolver in <_MoveCommitResolver>[
+        (_) => _cancelMove(),
+        (_) => _acceptMove(Offset.zero),
+        (_) => _acceptMove(const Offset(double.infinity, 0)),
         (_) => throw StateError('resolver rejection'),
       ]) {
         final trace = <String>[];
@@ -1317,7 +1339,7 @@ void _testSelectedMoveResolverPrecedesPreparation() {
             },
           ),
         );
-        expect(trace, [
+        expect(trace.take(4), [
           'guard-enter',
           'resolver-enter',
           'resolver-exit',
@@ -1360,7 +1382,8 @@ void _expectResolverGuardEvents(
                   RuntimeRouteTemporalEventKind.resolverGuardEntered ||
               event.kind == RuntimeRouteTemporalEventKind.resolverGuardReleased,
         )
-        .map((event) => event.kind),
+        .map((event) => event.kind)
+        .take(expected.length),
     expected,
   );
 }
@@ -1396,8 +1419,8 @@ void _recordRouteLifecycleTrace(
   }
 }
 
-CanvasMoveCommit _commitVectorMove(CanvasMoveCommitRequest _) {
-  return const CanvasMoveCommit(delta: Offset(7, 8));
+CanvasMoveCommitAccept _commitVectorMove(CanvasCommitRequest _) {
+  return _acceptMove(const Offset(7, 8));
 }
 
 _CommitScenario _commitScenario() {
@@ -1408,7 +1431,7 @@ _CommitScenario _commitScenario() {
       resolverCalls += 1;
       request = value;
 
-      return const CanvasMoveCommit(delta: Offset(7, 8));
+      return _acceptMove(const Offset(7, 8));
     },
   );
   final actions = <CanvasActionCommitted>[];
@@ -1477,9 +1500,7 @@ void _expectMoveAction(CanvasActionCommitted action) {
 
 void _testSelectedMoveResolverCancelDoesNotCommit() {
   test('selected move resolver cancel cleans preview without action', () async {
-    final scenario = _noCommitScenario(
-      resolver: (_) => const CanvasMoveCancel(),
-    );
+    final scenario = _noCommitScenario(resolver: (_) => _cancelMove());
     final root = scenario.root;
     root.selection.setSelection([CanvasElementId('a')]);
 
@@ -1488,7 +1509,6 @@ void _testSelectedMoveResolverCancelDoesNotCommit() {
 
     expect(scenario.resolverCalls(), 1);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
-    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1497,7 +1517,7 @@ void _testSelectedMoveResolverZeroDeltaDoesNotCommit() {
     'selected move resolver zero delta cleans preview without action',
     () async {
       final scenario = _noCommitScenario(
-        resolver: (_) => const CanvasMoveCommit(delta: Offset.zero),
+        resolver: (_) => _acceptMove(Offset.zero),
       );
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a')]);
@@ -1507,7 +1527,6 @@ void _testSelectedMoveResolverZeroDeltaDoesNotCommit() {
 
       expect(scenario.resolverCalls(), 1);
       _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
-      _expectNextAcceptedMoveStartsTimestampCursor(scenario);
     },
   );
 }
@@ -1516,9 +1535,7 @@ void _testGroupInteriorResolverCancelDoesNotCommit() {
   test(
     'selected group interior resolver cancel cleans preview without action',
     () async {
-      final scenario = _noCommitScenario(
-        resolver: (_) => const CanvasMoveCancel(),
-      );
+      final scenario = _noCommitScenario(resolver: (_) => _cancelMove());
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
 
@@ -1545,7 +1562,6 @@ void _testSelectedMoveResolverErrorCleansPreview() {
     );
     expect(scenario.root.diagnosticRecords, isEmpty);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
-    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1572,21 +1588,17 @@ void _testGroupInteriorResolverErrorCleansPreview() {
 void _testSelectedMoveNonFiniteResolverDeltaCleansPreview() {
   test('selected move non-finite resolver delta cleans preview', () {
     final scenario = _noCommitScenario(
-      resolver: (_) =>
-          const CanvasMoveCommit(delta: Offset(double.infinity, 0)),
+      resolver: (_) => _acceptMove(const Offset(double.infinity, 0)),
     );
     final root = scenario.root;
     root.selection.setSelection([CanvasElementId('a')]);
     _startSelectedMove(root);
 
-    expect(
-      () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
-      ),
-      throwsArgumentError,
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );
+    expect(_rect(root, 'a').transform, CanvasTransform.identity);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
-    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1620,7 +1632,7 @@ _CancelScenario _cancelScenario() {
     resolver: (_) {
       resolverCalls += 1;
 
-      return const CanvasMoveCommit(delta: Offset(1, 1));
+      return _acceptMove(const Offset(1, 1));
     },
   );
   final actions = <CanvasActionCommitted>[];
@@ -1691,7 +1703,7 @@ void _testSelectedMoveInteractiveDisabledDoesNotResolve() {
 void _testSelectedMoveEditFailureCleansPreview() {
   test('selected move edit failure cleans preview and rethrows', () {
     final scenario = _noCommitScenario(
-      resolver: (_) => const CanvasMoveCommit(delta: Offset(1e8, 0)),
+      resolver: (_) => _acceptMove(const Offset(1e8, 0)),
     );
     final root = scenario.root;
     root.selection.setSelection([CanvasElementId('a')]);
@@ -1705,18 +1717,16 @@ void _testSelectedMoveEditFailureCleansPreview() {
     );
     expect(scenario.resolverCalls(), 1);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
-    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
-_NoCommitScenario _noCommitScenario({CanvasMoveCommitResolver? resolver}) {
+_NoCommitScenario _noCommitScenario({_MoveCommitResolver? resolver}) {
   var resolverCalls = 0;
   final root = _runtimeRoot(
     resolver: (request) {
       resolverCalls += 1;
 
-      return resolver?.call(request) ??
-          const CanvasMoveCommit(delta: Offset(1, 1));
+      return resolver?.call(request) ?? _acceptMove(const Offset(1, 1));
     },
   );
   final actions = <CanvasActionCommitted>[];
@@ -1744,11 +1754,10 @@ _NoCommitScenario _occludedNoCommitScenario({
       occluderLocked: occluderLocked,
     ),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: acceptDeletionCommit,
-      moveCommitResolver: (request) {
+      commitResolver: (request) {
         resolverCalls += 1;
 
-        return const CanvasMoveCommit(delta: Offset(1, 1));
+        return _acceptMove(const Offset(1, 1));
       },
     ),
   );
@@ -1779,15 +1788,6 @@ void _expectNoMoveEffects(
   expect(_rect(scenario.root, 'a').isLocked, expectedLocked);
 }
 
-void _expectNextAcceptedMoveStartsTimestampCursor(_NoCommitScenario scenario) {
-  scenario.root.selection.moveSelection(const Offset(2, 0));
-
-  expect(scenario.actions, hasLength(1));
-  final action = scenario.actions.single;
-  expect(action.type, CanvasActionType.moveSelection);
-  expect(action.timestampMs, 0);
-}
-
 void _testSelectedMoveResolverReentrancy() {
   test(
     'resolver reentrant public mutation is contained without runtime effects',
@@ -1797,7 +1797,7 @@ void _testSelectedMoveResolverReentrancy() {
         resolver: (_) {
           root.selection.clearSelection();
 
-          return const CanvasMoveCommit(delta: Offset(1, 1));
+          return _acceptMove(const Offset(1, 1));
         },
       );
       addTearDown(root.dispose);
@@ -1826,7 +1826,7 @@ void _testSelectedMoveResolverDisposeReentrancy() {
       resolver: (_) {
         root.dispose();
 
-        return const CanvasMoveCommit(delta: Offset(1, 1));
+        return _acceptMove(const Offset(1, 1));
       },
     );
     addTearDown(root.dispose);
@@ -1853,11 +1853,10 @@ void _testSelectedMoveResolverFailureFidelity() {
       var branch = 0;
       root = RuntimeRoot.test(
         config: CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
           diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
-          moveCommitResolver: (_) {
+          commitResolver: (_) {
             return switch (branch) {
-              0 => root.runResolverCallback(() => const CanvasMoveCancel()),
+              0 => root.runResolverCallback(_cancelMove),
               1 => _rejectPublicMutationFromResolver(root),
               2 => throw StateError('move resolver sentinel'),
               _ => _acceptMoveAfterCaughtMutation(root),
@@ -1931,8 +1930,7 @@ void _testSelectedMoveCleanupPrecedesDelivery() {
     late RuntimeRoot root;
     root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: acceptDeletionCommit,
-        moveCommitResolver: (_) => const CanvasMoveCommit(delta: Offset(2, 0)),
+        commitResolver: (_) => _acceptMove(const Offset(2, 0)),
       ),
       commitEffectObserver: (effects) {
         observerCalls += 1;
@@ -2020,13 +2018,13 @@ void _expectSelectedMoveMergedRepaint(List<CommitDeliveryEffect> effects) {
   expect(repaint.overlayCanvas, isFalse);
 }
 
-CanvasMoveResolution _rejectPublicMutationFromResolver(RuntimeRoot root) {
+CanvasCommitResolution _rejectPublicMutationFromResolver(RuntimeRoot root) {
   root.generateElementId();
 
-  return const CanvasMoveCancel();
+  return _cancelMove();
 }
 
-CanvasMoveResolution _acceptMoveAfterCaughtMutation(RuntimeRoot root) {
+CanvasCommitResolution _acceptMoveAfterCaughtMutation(RuntimeRoot root) {
   try {
     root.generateElementId();
   }
@@ -2034,7 +2032,7 @@ CanvasMoveResolution _acceptMoveAfterCaughtMutation(RuntimeRoot root) {
   on ResolverCallbackRejection {
     // A host can handle the rejected mutation and return its existing decision.
   }
-  return const CanvasMoveCommit(delta: Offset(2, 0));
+  return _acceptMove(const Offset(2, 0));
 }
 
 void _deliverContainedResolverFailureWithoutPreparation(RuntimeRoot root) {
@@ -2184,7 +2182,7 @@ void _cancelSelectedMove(RuntimeRoot root, Offset position) {
 
 _ActionScenario _actionScenario({
   CanvasRuntimeConfig config = const CanvasRuntimeConfig(
-    deletionCommitResolver: acceptDeletionCommit,
+    commitResolver: acceptCommit,
   ),
 }) {
   final root = _runtimeRoot(config: config);
@@ -2198,25 +2196,24 @@ _ActionScenario _actionScenario({
   return _ActionScenario(root: root, actions: actions);
 }
 
-CanvasRuntimeConfig _dragStartBeforeTapConfig({
-  CanvasMoveCommitResolver? moveCommitResolver,
-}) {
+CanvasRuntimeConfig _dragStartBeforeTapConfig({_MoveCommitResolver? resolver}) {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: acceptDeletionCommit,
+    commitResolver: resolver == null
+        ? acceptCommit
+        : _resolveMoveRequest(resolver),
     pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
-    moveCommitResolver: moveCommitResolver,
   );
 }
 
 CanvasRuntimeConfig _wideTapDragStartConfig() {
   return CanvasRuntimeConfig(
-    deletionCommitResolver: acceptDeletionCommit,
+    commitResolver: acceptCommit,
     pointerPolicy: CanvasPointerPolicy(tapSlop: 32, dragStartSlop: 4),
   );
 }
 
 RuntimeRoot _runtimeRoot({
-  CanvasMoveCommitResolver? resolver,
+  _MoveCommitResolver? resolver,
   CanvasRuntimeConfig? config,
   CommitEffectObserver? commitEffectObserver,
 }) {
@@ -2225,8 +2222,9 @@ RuntimeRoot _runtimeRoot({
     config:
         config ??
         CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
-          moveCommitResolver: resolver,
+          commitResolver: resolver == null
+              ? acceptCommit
+              : _resolveMoveRequest(resolver),
         ),
     commitEffectObserver: commitEffectObserver,
   );

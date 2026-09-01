@@ -18,6 +18,8 @@ sequenceDiagram
   participant CC as CommitCompiler
   participant Effects as CommitEffects
   participant Applier as CommitApplier
+  participant Resolver as CanvasCommitResolver
+  participant Lease as CanvasCommitLease
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
   participant Events as EventBuffer
@@ -159,13 +161,18 @@ sequenceDiagram
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact add-line touched set and invalidation
       Touched-->>CC: added id and revision facts
-      alt commit preflight and install succeed
+      alt commit preflight and preparation succeed
         CC->>Store: preflight invariants and finite line row validation
         Store-->>CC: preflight accepted
         CC->>Effects: prepare typed main RepaintIntent
         CC->>Events: attach staged drawLine action to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Applier: prepare common single-use apply, seal delivery, and bind Store/ID ownership
+        Runtime->>Resolver: resolve prepared CanvasDrawCommitRequest under runtime guard
+        alt CanvasCommitCancel, callback failure, or pre-install failure
+          Runtime->>Applier: discard prepared line; returned lease aborted once when present
+          Runtime->>IE: cleanup line session without document/action commit
+        else CanvasCommitAccept with lease
         Applier->>Store: consume assignment-only Store install
         Store->>Store: assign prebound line-ID admission, layer membership, registry, line row, and revision state; invalidate projection revision and leave cache rebuild lazy until read
         Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
@@ -178,14 +185,16 @@ sequenceDiagram
         IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
+        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state
         Runtime->>Spatial: apply touched-id spatial add for new line id
         Spatial-->>Runtime: spatial index updated for new paint and hit bounds
         Runtime->>Frame: publish merged main and overlay repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
+        Runtime->>Lease: committed() under runtime guard
         Runtime->>Signals: publish drawLine action notification
         Signals-->>Surface: repaint main scene with committed line and overlay without preview
         Runtime-->>Tools: terminal handling complete
+        end
       else edit exception, rejected Future, or preflight failure
         EK->>Events: discard pending drawLine action
         EK->>EK: rollback draft and close session

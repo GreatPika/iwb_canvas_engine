@@ -63,13 +63,18 @@ stateDiagram-v2
 
     state TerminalDecision <<choice>>
     TerminalDecision --> CleanupOnly: terminal intent is no-op, zero selected-move delta, or empty movable set
-    TerminalDecision --> ResolverDecision: selected move with non-zero proposed delta and non-empty movable set
-    TerminalDecision --> CommitIntent: committing non-move tool terminal intent
+    TerminalDecision --> ResolverDecision: qualified selected move, draw, or eraser terminal intent
 
-    state "Selected move resolver decision" as ResolverDecision
-    ResolverDecision --> CleanupOnly: CanvasMoveCancel
+    state "Unified commit resolver decision" as ResolverDecision
+    note right of ResolverDecision
+      RuntimeRoot completes each route's existing preparation, then sends one
+      immutable CanvasCommitRequest under the mutation guard. Draw/Delete/Erase
+      use generic acceptance; Move uses a finite non-zero replacement delta.
+      A returned lease is aborted once whenever installation will not occur.
+    end note
+    ResolverDecision --> CleanupOnly: CanvasCommitCancel or non-applicable acceptance
     ResolverDecision --> ResolverErrorCleanup: resolver exception
-    ResolverDecision --> CommitIntent: finite CanvasMoveCommit delta
+    ResolverDecision --> CommitIntent: compatible acceptance
 
     state "Resolver error cleanup" as ResolverErrorCleanup
     note right of ResolverErrorCleanup
@@ -87,12 +92,12 @@ stateDiagram-v2
       DocumentStoreKernel directly.
     end note
 
-    CommitIntent --> EditKernelCommit: RuntimeRoot opens synchronous EditKernel session
+    CommitIntent --> EditKernelCommit: RuntimeRoot consumes prepared interaction edit
 
     state "EditKernel commit outcome" as EditKernelCommit
     note right of EditKernelCommit
       Atomic install, rollback, rejection, and staged action
-      publication belong to the EditKernel commit outcome path.
+      publication belong to the prepared EditKernel commit outcome path.
     end note
 
     EditKernelCommit --> CleanupCoordinator: post-success cleanup request
@@ -104,7 +109,7 @@ stateDiagram-v2
       active-pointer interactive=false, dispose, stale terminal, invalid terminal, no-op, and
       non-committing paths create typed cleanup requests with
       cleanup reason and ownership context.
-      The selected-move resolver is not called on cancel,
+      The unified commit resolver is not called on cancel,
       load, mode, interactive=false, or dispose paths.
     end note
 
@@ -171,7 +176,7 @@ stateDiagram-v2
     no direct Store mutation from InteractionEngine;
     no multiple active pointer sessions;
     no stale terminal commit;
-    no selected-move resolver on cancel, load,
+    no unified commit resolver on cancel, load,
     mode, active-pointer interactive=false, or dispose;
     no cleanup of pending line state that is not owned
     by the active routed pointer session;

@@ -24,12 +24,29 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-CanvasDeletionDecision _acceptDeletionCommit(
-  CanvasDeletionCommitRequest _,
-) => CanvasDeletionDecision.accept;
+const _commitLease = _CommitLease();
+
+CanvasCommitResolution _acceptCommit(CanvasCommitRequest request) =>
+    switch (request) {
+      CanvasMoveCommitRequest(:final proposedDelta) => CanvasMoveCommitAccept(
+        delta: proposedDelta,
+        lease: _commitLease,
+      ),
+      _ => const CanvasCommitAccept(lease: _commitLease),
+    };
 
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(commitResolver: _acceptCommit);
+
+final class _CommitLease implements CanvasCommitLease {
+  const _CommitLease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
+}
 
 void main() {
   testWidgets('schema v1 document reaches runtime state and selection', (tester) async {
@@ -565,14 +582,18 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
   var resolverCalls = 0;
   final runtime = CanvasRuntime(
     config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      clearSelectionOnDrawModeEnter: true,
-      moveCommitResolver: (request) {
-        resolverCalls += 1;
-        moveRequest = request;
-
-        return const CanvasMoveCommit(delta: Offset(7, 8));
+      commitResolver: (request) {
+        if (request is CanvasMoveCommitRequest) {
+          resolverCalls += 1;
+          moveRequest = request;
+          return const CanvasMoveCommitAccept(
+            delta: Offset(7, 8),
+            lease: _commitLease,
+          );
+        }
+        return _acceptCommit(request);
       },
+      clearSelectionOnDrawModeEnter: true,
     ),
   );
   runtime.edits.loadDocumentFromJson(

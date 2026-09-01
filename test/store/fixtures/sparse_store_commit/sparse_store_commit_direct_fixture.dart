@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/element_registry.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
+import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../../support/document_store_with_document.dart';
