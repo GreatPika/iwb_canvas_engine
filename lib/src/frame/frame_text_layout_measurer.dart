@@ -1,13 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/painting.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/internal/measured_text_layout.dart';
 import 'frame_cache.dart';
 
 final class FrameTextLayoutMeasurer implements MeasuredTextLayoutPort {
+  static final Object _newLayoutWorkZoneKey = Object();
+
   FrameTextLayoutMeasurer({TextLayoutCache? cache})
     : cache = cache ?? TextLayoutCache();
 
   final TextLayoutCache cache;
+
+  /// Observes actual cache-miss layout work without adding retained telemetry.
+  @visibleForTesting
+  static T observeNewLayoutWork<T>(
+    void Function(String text, Color color) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_newLayoutWorkZoneKey: sink});
 
   @override
   MeasuredTextLayoutResult measureTextLayout(MeasuredTextLayoutInput input) {
@@ -28,6 +40,14 @@ final class FrameTextLayoutMeasurer implements MeasuredTextLayoutPort {
     if (cached != null) {
       return cached;
     }
+
+    assert(() {
+      final sink = Zone.current[_newLayoutWorkZoneKey];
+      if (sink is void Function(String, Color)) {
+        sink(input.text, input.color);
+      }
+      return true;
+    }(), 'text layout work observation failed');
 
     final painter = _textPainterFor(input);
     final entry = TextLayoutCacheEntry(

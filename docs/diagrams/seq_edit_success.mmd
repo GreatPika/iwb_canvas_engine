@@ -63,6 +63,12 @@ sequenceDiagram
   CC->>Events: stage commit event buffer
   Note over Events: Low-level CanvasEdit commits stage no user action events.
 
+  opt changed TextEdit
+    Runtime->>Store: project addressed base/candidate text rows
+    Store-->>Runtime: exact before/after pair
+    Runtime->>Runtime: seal action id and lengths from pair
+  end
+
   CC->>Applier: hand off compiled CommitPlan
   Applier->>Applier: materialize accepted document when needed and seal delivery/action inputs
   opt explicit desired selection or implicit prune/replacement effect

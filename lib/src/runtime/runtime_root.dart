@@ -76,7 +76,6 @@ import 'runtime_interaction_read_adapter.dart';
 typedef TextEditPrepareInput = ({
   CanvasInteractionRequestId requestId,
   CanvasElementId targetElementId,
-  String previousText,
   String newText,
   int? timestampMs,
 });
@@ -912,7 +911,7 @@ final class RuntimeRoot
       MeasuredTextLayoutInput(
         text: text,
         fontSize: facts.fontSize ?? 24,
-        color: facts.textColor ?? const Color(0xFF000000),
+        color: _textLayoutColorForFrame(facts),
         align: facts.textAlign ?? TextAlign.left,
         direction: facts.textDirection ?? TextDirection.ltr,
         isBold: facts.isBold ?? false,
@@ -1326,7 +1325,6 @@ final class RuntimeRoot
     final applyResult = _prepareTextEditCommit((
       requestId: requestId,
       targetElementId: targetElementId,
-      previousText: previousText,
       newText: newText,
       timestampMs: timestampMs,
     ));
@@ -1371,16 +1369,37 @@ final class RuntimeRoot
           text: CanvasFieldSet(input.newText),
         ),
       ),
-      augmentPlan: (plan) => plan.withActionIntents([
-        EditTextActionIntent(
-          requestId: input.requestId,
-          elementId: input.targetElementId,
-          previousTextLength: input.previousText.length,
-          nextTextLength: input.newText.length,
-          timestampHintMs: input.timestampMs,
-        ),
-      ]),
+      augmentAcceptedPlan: (document, plan) =>
+          _sealPreparedTextEditAction(document, plan, input),
+      affectedElementId: input.targetElementId,
     );
+  }
+
+  CommitPlan _sealPreparedTextEditAction(
+    AcceptedCommitDocument document,
+    CommitPlan plan,
+    TextEditPrepareInput input,
+  ) {
+    final projection = switch (document) {
+      AcceptedSparseStoreDocument(:final commit) =>
+        _store.projectAffectedElement(commit, input.targetElementId),
+      _ => throw StateError('Text edits require a sparse prepared candidate.'),
+    };
+    final before = projection.before;
+    final after = projection.after;
+    if (before is! CanvasTextElement || after is! CanvasTextElement) {
+      throw StateError(
+        'Text edit candidate projection did not retain text rows.',
+      );
+    }
+    return plan.withActionIntents([
+      EditTextActionIntent.fromPreparedText(
+        requestId: input.requestId,
+        before: before,
+        after: after,
+        timestampHintMs: input.timestampMs,
+      ),
+    ]);
   }
 
   CanvasTransform? _textEditAnchorPreservingTransform(
@@ -2991,7 +3010,8 @@ final class RuntimeRoot
         elementIds: elementIds,
         transform: transform,
         operation: operation,
-        pivotWorld: pivotWorld ??
+        pivotWorld:
+            pivotWorld ??
             (throw StateError(
               'Pivot is required for non-move selection transforms.',
             )),
@@ -2999,16 +3019,13 @@ final class RuntimeRoot
       ),
     };
 
-    return _editKernel.prepareInteractionCommit(
-      (edit) {
-        for (final element in participants) {
-          edit.updateElement(
-            _transformUpdate(element, transform.multiply(element.transform)),
-          );
-        }
-      },
-      augmentPlan: (plan) => plan.withActionIntents([actionIntent]),
-    );
+    return _editKernel.prepareInteractionCommit((edit) {
+      for (final element in participants) {
+        edit.updateElement(
+          _transformUpdate(element, transform.multiply(element.transform)),
+        );
+      }
+    }, augmentPlan: (plan) => plan.withActionIntents([actionIntent]));
   }
 
   InteractionCleanupOutcome _cleanupSelectedMove(
@@ -3960,12 +3977,23 @@ bool _sameIdSet(
 }
 
 Color _textLayoutColorFor(StoreElementFacts facts) {
-  final color = facts.textColor ?? const Color(0xFF000000);
-  final primitiveAlpha = (facts.opacity.clamp(0, 1) * 255).round();
-  final sourceAlpha = (color.toARGB32() >> 24) & 0xFF;
+  return _textLayoutColor(color: facts.textColor, opacity: facts.opacity);
+}
+
+Color _textLayoutColorForFrame(FrameElementFacts facts) {
+  return _textLayoutColor(color: facts.textColor, opacity: facts.opacity);
+}
+
+Color _textLayoutColor({required Color? color, required double opacity}) {
+  final resolvedColor = color ?? const Color(0xFF000000);
+  if (opacity >= 1) {
+    return resolvedColor;
+  }
+  final primitiveAlpha = (opacity.clamp(0, 1) * 255).round();
+  final sourceAlpha = (resolvedColor.toARGB32() >> 24) & 0xFF;
   final combinedAlpha = (sourceAlpha * primitiveAlpha / 255).round();
 
-  return color.withAlpha(combinedAlpha);
+  return resolvedColor.withAlpha(combinedAlpha);
 }
 
 // Runtime state snapshot helpers.

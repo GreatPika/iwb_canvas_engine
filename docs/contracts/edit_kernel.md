@@ -236,6 +236,17 @@ failure or a final no-op. This is a Store-internal boundary: edit sessions,
 drafts, `CommitApplier`, and runtime consumers receive only the finished
 prepared payload and do not obtain candidate access.
 
+A changed text edit seals its lengths-only action before installation from one
+addressed pair projected from that finished sparse payload: the committed base
+text row and the normalized candidate text row for the request target. The
+projection reads neither a whole-document view nor a live post-install value;
+it supplies the action id and both lengths from that exact-value pair. The
+immutable facts are compared by their complete values, not by DTO identity.
+Projection or
+action sealing failure is still preparation failure, so no installer, request
+consumption, session close, draft discard, or action delivery occurs and the
+same live request may be retried.
+
 After an accepted branch, `CommitApplier` assembles the contract-owned immutable
 commit delivery payload only from its already sealed inputs; it does not invoke
 callbacks, traverse effects, or rebuild selection or document values. The

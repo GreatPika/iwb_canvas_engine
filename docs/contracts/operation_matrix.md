@@ -165,8 +165,14 @@ Notes:
   `CanvasRuntimeState` and has no document, selection, preview, spatial,
   projection, resource, repaint, or action effect.
 - `commitTextEdit` validates `newText` before request consumption and before
-  draft mutation. Changed text commits consume the request only after successful
-  EditKernel prepare and closure, silently clear only a matching active session
+  draft mutation. For a changed text candidate, it projects the addressed
+  committed-before and normalized-candidate-after text rows before installation
+  and seals `editText` id and lengths only from that pair. This projection does
+  not read a whole document or mutate state; the pair is exact by complete
+  immutable values rather than DTO reference identity. Its failure remains preparation
+  failure, preserving the live request, draft, session, and action silence for
+  retry. Changed text commits consume the request only after successful
+  EditKernel preparation, pair sealing, and closure, silently clear only a matching active session
   and its owned suppression/candidate state, and record the outer interaction
   revision before frame capture. Common delivery completes and releases its
   guard before that closure is notified. The listener observes the accepted

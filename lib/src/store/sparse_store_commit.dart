@@ -8,14 +8,29 @@ import 'revision_state.dart';
 import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
+/// One addressed committed/candidate element pair from a sparse preparation.
+///
+/// The pair is immutable and exists only on the one-use prepared payload.
+final class StoreAffectedElementProjection {
+  const StoreAffectedElementProjection({
+    required this.before,
+    required this.after,
+  });
+
+  final CanvasElement before;
+  final CanvasElement after;
+}
+
 final class StoreSparseCommit {
   StoreSparseCommit({
     required Iterable<StoreSparseMutation> mutations,
     required this.revisionDelta,
+    this.affectedElementId,
   }) : mutations = List.unmodifiable(mutations);
 
   final List<StoreSparseMutation> mutations;
   final StoreRevisionDelta revisionDelta;
+  final CanvasElementId? affectedElementId;
 }
 
 final class PreparedSparseStoreCommit {
@@ -28,6 +43,7 @@ final class PreparedSparseStoreCommit {
     this.admittedLayerIds = const [],
     this.admittedResourceIds = const [],
     this.idAdmissions,
+    this.affectedElementProjection,
   });
 
   final RevisionState baseRevisions;
@@ -38,6 +54,7 @@ final class PreparedSparseStoreCommit {
   final List<String> admittedLayerIds;
   final List<String> admittedResourceIds;
   final StoreIdAdmissions? idAdmissions;
+  final StoreAffectedElementProjection? affectedElementProjection;
 
   bool get hasChanges => revisionDelta.hasChanges;
 }

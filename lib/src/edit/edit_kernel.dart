@@ -33,6 +33,8 @@ typedef InteractionCommitPreparer =
       AcceptedCommitDocument document,
       CommitPlan plan,
     );
+typedef AcceptedCommitPlanAugment =
+    CommitPlan Function(AcceptedCommitDocument document, CommitPlan plan);
 typedef SparseCommitPreparer =
     PreparedSparseStoreCommit Function(StoreSparseCommit commit);
 typedef MaterializedCommitPreparer =
@@ -121,6 +123,8 @@ final class EditKernel {
   CommitDeliveryResult prepareInteractionCommit<T>(
     T Function(CanvasEdit edit) fn, {
     CommitPlan Function(CommitPlan plan)? augmentPlan,
+    AcceptedCommitPlanAugment? augmentAcceptedPlan,
+    CanvasElementId? affectedElementId,
   }) {
     _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {
@@ -137,9 +141,15 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      final accepted = _acceptedCommitFor(session);
+      final accepted = _acceptedCommitFor(
+        session,
+        affectedElementId: affectedElementId,
+      );
       if (accepted.plan.hasChanges) {
-        final plan = augmentPlan?.call(accepted.plan) ?? accepted.plan;
+        final plan =
+            augmentAcceptedPlan?.call(accepted.document, accepted.plan) ??
+            augmentPlan?.call(accepted.plan) ??
+            accepted.plan;
         final applyResult = _installCommittedDocument(accepted.document, plan);
         session.close();
         _isSessionOpen = false;
@@ -232,7 +242,10 @@ final class EditKernel {
   // Sparse, materialized, replacement, and selection-only candidates converge
   // here; keeping the terminal choice together makes atomic routing auditable.
   // ignore: halstead-volume, source-lines-of-code
-  _AcceptedEditCommit _acceptedCommitFor(EditSession session) {
+  _AcceptedEditCommit _acceptedCommitFor(
+    EditSession session, {
+    CanvasElementId? affectedElementId,
+  }) {
     final selectionEffect = session.pendingSelectionEffect;
     if (!session.didChange) {
       return selectionEffect == null
@@ -291,7 +304,9 @@ final class EditKernel {
       );
     }
 
-    final prepared = _prepareSparseCommit(session.sparseCommit);
+    final prepared = _prepareSparseCommit(
+      session.sparseCommitFor(affectedElementId: affectedElementId),
+    );
 
     return _acceptedPreparedStoreCommit(
       _AcceptedStoreCommitInput(

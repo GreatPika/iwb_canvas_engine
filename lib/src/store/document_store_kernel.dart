@@ -31,6 +31,7 @@ import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
 export 'id_admission.dart' show IdAdmissionWorkKind, IdAdmissionWorkPhase;
+export 'sparse_store_commit.dart' show StoreAffectedElementProjection;
 export 'store_commit_finalization.dart' show MaterializedStoreCommitCandidates;
 
 // Admission observations carry a semantic operation and, when it is a sparse
@@ -132,6 +133,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   static final Object _deletionPreparedInstallFailureZoneKey = Object();
   static final Object _deletionPreparationFailureZoneKey = Object();
   static final Object _selectionNormalizationWorkZoneKey = Object();
+  static final Object _affectedElementProjectionTestScopeZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(
@@ -244,6 +246,84 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     T Function() operation,
   ) {
     return runZoned(operation, zoneValues: {_idAdmissionWorkZoneKey: sink});
+  }
+
+  /// Observes real addressed candidate projections without retaining facts.
+  @visibleForTesting
+  static T observeAffectedElementProjection<T>(
+    void Function(StoreAffectedElementProjection projection) sink,
+    T Function() operation,
+  ) {
+    final inherited = _affectedElementProjectionTestScopeForCurrentZone;
+    return runZoned(
+      operation,
+      zoneValues: {
+        _affectedElementProjectionTestScopeZoneKey:
+            inherited?.withObserver(sink) ??
+            _AffectedElementProjectionTestScope(observer: sink),
+      },
+    );
+  }
+
+  /// Fails the actual pre-install projection owner under test assertions.
+  @visibleForTesting
+  static T injectAffectedElementProjectionFailure<T>(
+    Error error,
+    T Function() operation,
+  ) {
+    final inherited = _affectedElementProjectionTestScopeForCurrentZone;
+    return runZoned(
+      operation,
+      zoneValues: {
+        _affectedElementProjectionTestScopeZoneKey:
+            (inherited ?? const _AffectedElementProjectionTestScope())
+                .withFailure(error),
+      },
+    );
+  }
+
+  static _AffectedElementProjectionTestScope?
+  get _affectedElementProjectionTestScopeForCurrentZone =>
+      Zone.current[_affectedElementProjectionTestScopeZoneKey]
+          as _AffectedElementProjectionTestScope?;
+
+  /// Projects one already-prepared sparse candidate against its committed base.
+  ///
+  /// Both reads are addressed by [id], so preparing an action from the pair
+  /// cannot materialize or traverse unrelated document rows.
+  StoreAffectedElementProjection projectAffectedElement(
+    PreparedSparseStoreCommit candidate,
+    CanvasElementId id,
+  ) {
+    if (candidate.baseRevisions != _document.revisions) {
+      throw StateError('A sparse candidate no longer matches committed state.');
+    }
+    final projection = candidate.affectedElementProjection;
+    if (projection == null ||
+        projection.before.id != id ||
+        projection.after.id != id) {
+      throw StateError('An affected element projection requires both rows.');
+    }
+    assert(
+      _observeAffectedElementProjectionForTesting(
+        _affectedElementProjectionTestScopeForCurrentZone,
+        projection,
+      ),
+      'affected element projection observation failed',
+    );
+    return projection;
+  }
+
+  static bool _observeAffectedElementProjectionForTesting(
+    _AffectedElementProjectionTestScope? scope,
+    StoreAffectedElementProjection projection,
+  ) {
+    final failure = scope?.failure;
+    if (failure != null) {
+      throw failure;
+    }
+    scope?.observer?.call(projection);
+    return true;
   }
 
   /// Assert-only observation of the deletion-specific Store boundary.
@@ -947,6 +1027,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         revisionDelta: revisionDelta,
         journal: journal,
         candidate: candidate,
+        affectedElementId: commit.affectedElementId,
       ),
     );
   }
@@ -962,9 +1043,12 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     required StoreRevisionDelta revisionDelta,
     required _SparseTransactionJournal journal,
     required _StoreTransactionCandidate candidate,
+    required CanvasElementId? affectedElementId,
   }) {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
-    final accounting = _SparseTransactionAccounting();
+    final accounting = _SparseTransactionAccounting(
+      affectedElementId: affectedElementId,
+    );
     try {
       _replaySparseJournal(
         candidate: candidate,
@@ -1044,6 +1128,8 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         touched: touched,
         layerCandidates: accounting.readAcceptedLayerCandidates(),
       );
+      final affectedElementProjection = accounting
+          .readAcceptedAffectedElementProjection();
       candidate.phase(StoreSparseCandidateEventKind.consume);
       final admittedElementIds = accounting.readAdmittedElementIds();
       final admittedLayerIds = accounting.readAdmittedLayerIds();
@@ -1061,6 +1147,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
           layerIds: admittedLayerIds,
           resourceIds: admittedResourceIds,
         ),
+        affectedElementProjection: affectedElementProjection,
       );
     } catch (_) {
       candidate.phase(StoreSparseCandidateEventKind.discard);
@@ -3386,6 +3473,9 @@ final class _SparseTransactionJournalEntry {
 // parallel journal-derived classification path.
 // ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
 final class _SparseTransactionAccounting {
+  _SparseTransactionAccounting({CanvasElementId? affectedElementId})
+    : _affectedElementId = affectedElementId;
+
   final _SparseTouchedCommittedFacts _touched = _SparseTouchedCommittedFacts();
   final _SparseAcceptedLayerCandidates _acceptedLayerCandidates =
       _SparseAcceptedLayerCandidates();
@@ -3395,6 +3485,9 @@ final class _SparseTransactionAccounting {
   final Set<CanvasElementId> _resourceRelationshipElementIds = {};
   final Map<_DeferredSparseElementUpdateValidation, int>
   _deferredElementUpdateValidations = {};
+  final CanvasElementId? _affectedElementId;
+  CanvasElement? _affectedElementBefore;
+  CanvasElement? _affectedElementAfter;
   var _requiredMutationDelta = const StoreRevisionDelta();
   var _needsFullResourceRelationshipValidation = false;
 
@@ -3463,11 +3556,33 @@ final class _SparseTransactionAccounting {
     }
     _recordRequiredMutationDelta(applied.requiredRevisionDelta);
     for (final update in updates) {
+      _captureAffectedElementUpdate(update);
       if (_sparseElementUpdateChangesResourceRelationships(update) &&
           _resourceRelationshipElementIds.add(update.element.id)) {
         _append(SparseTransactionWorkLedger.relationship);
       }
     }
+  }
+
+  StoreAffectedElementProjection? readAcceptedAffectedElementProjection() {
+    final id = _affectedElementId;
+    if (id == null) {
+      return null;
+    }
+    final before = _affectedElementBefore;
+    final after = _affectedElementAfter;
+    if (before == null || after == null || before.id != id || after.id != id) {
+      throw StateError('The requested affected element was not accepted.');
+    }
+    return StoreAffectedElementProjection(before: before, after: after);
+  }
+
+  void _captureAffectedElementUpdate(StoreSparseUpdateElement update) {
+    if (update.element.id != _affectedElementId) {
+      return;
+    }
+    _affectedElementBefore ??= update.before;
+    _affectedElementAfter = update.element;
   }
 
   void recordDeferredValidation(
@@ -3948,3 +4063,31 @@ final class StoreElementFacts {
 }
 
 enum StoreElementLocationKind { background, content }
+
+final class _AffectedElementProjectionTestScope {
+  const _AffectedElementProjectionTestScope({this.failure, this.observer});
+
+  final Error? failure;
+  final void Function(StoreAffectedElementProjection projection)? observer;
+
+  _AffectedElementProjectionTestScope withFailure(Error nextFailure) =>
+      _AffectedElementProjectionTestScope(
+        failure: nextFailure,
+        observer: observer,
+      );
+
+  _AffectedElementProjectionTestScope withObserver(
+    void Function(StoreAffectedElementProjection projection) nextObserver,
+  ) {
+    final inherited = observer;
+    return _AffectedElementProjectionTestScope(
+      failure: failure,
+      observer: inherited == null
+          ? nextObserver
+          : (projection) {
+              inherited(projection);
+              nextObserver(projection);
+            },
+    );
+  }
+}

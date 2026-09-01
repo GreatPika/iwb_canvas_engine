@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../public/canvas_actions.dart';
+import '../public/canvas_element.dart';
 import '../public/canvas_geometry.dart';
 import '../public/canvas_ids.dart';
 import '../public/canvas_tools.dart';
@@ -201,6 +202,20 @@ final class EraseActionIntent extends CommitActionIntent {
 }
 
 final class EditTextActionIntent extends CommitActionIntent {
+  /// Builds the public lengths-only action from an already validated pair.
+  factory EditTextActionIntent.fromPreparedText({
+    required CanvasInteractionRequestId requestId,
+    required CanvasTextElement before,
+    required CanvasTextElement after,
+    int? timestampHintMs,
+  }) => EditTextActionIntent(
+    requestId: requestId,
+    elementId: after.id,
+    previousTextLength: before.text.length,
+    nextTextLength: after.text.length,
+    timestampHintMs: timestampHintMs,
+  );
+
   EditTextActionIntent({
     required this.requestId,
     required CanvasElementId elementId,

@@ -5,8 +5,14 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+// This one cohesive runtime fixture observes both the Store pair seam and its
+// existing committed-document preparation trace; a second fixture would hide
+// their required causal order.
+// ignore_for_file: number-of-imports
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
@@ -32,6 +38,7 @@ void main() {
   _testDirectCommandStaleCommitClearsActiveSession();
   _testUnrelatedDocumentRevisionIsObservationOnly();
   _testUnrelatedDocumentRevisionPreservesSuppressionIdentity();
+  _testPreparedTextFactsAreExactBeforeInstall();
   _testFailedPreparePreservesActiveSessionForRetry();
   _testValidationFailurePreservesActiveSession();
   _testSuccessfulLoadClearsActiveSession();
@@ -617,7 +624,10 @@ void _testDirectCommandCommitClearsActiveSession() {
 
 // One route owns the listener, revision, document, and action observations:
 // splitting them would hide that a direct commit has no close side effect.
-// ignore: halstead-volume
+// The direct-command assertion deliberately keeps the prepared-pair observer,
+// commit, and public result together; extracting it would hide the ownership
+// boundary that proves direct TextEdit seals action lengths from that pair.
+// ignore: source-lines-of-code, halstead-volume
 void _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate() {
   test(
     'direct command commit without an active session does not notify close listeners',
@@ -633,12 +643,16 @@ void _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate() {
         final request = await scenario.issueTextRequest();
         final interactionRevisionBeforeCommit =
             scenario.root.state.value.revisions.interaction;
+        final projected = <StoreAffectedElementProjection>[];
 
         expect(scenario.root.textEditing.activeSession.value, isNull);
         expect(
-          scenario.root.commands.commitTextEdit(
-            request.requestId,
-            'direct command update',
+          DocumentStoreKernel.observeAffectedElementProjection(
+            projected.add,
+            () => scenario.root.commands.commitTextEdit(
+              request.requestId,
+              'direct command update',
+            ),
           ),
           isTrue,
         );
@@ -654,7 +668,11 @@ void _testDirectCommandCommitWithoutActiveSessionKeepsCloseStatePrivate() {
         final payload =
             scenario.actions.single.payload as CanvasTextEditActionPayload;
         expect(payload.requestId, request.requestId);
-        expect(payload.nextTextLength, 'direct command update'.length);
+        expect(projected, hasLength(1));
+        final before = _asTextElement(projected.single.before);
+        final after = _asTextElement(projected.single.after);
+        expect(payload.previousTextLength, before.text.length);
+        expect(payload.nextTextLength, after.text.length);
       } finally {
         scenario.root.textEditing.activeSession.removeListener(listener);
         await scenario.dispose();
@@ -883,25 +901,126 @@ void _testUnrelatedDocumentRevisionPreservesSuppressionIdentity() {
   });
 }
 
-void _testFailedPreparePreservesActiveSessionForRetry() {
-  test('failed prepare preserves active session for retry', () async {
-    final scenario = _Scenario.failedTextPrepare();
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(request),
-      );
-      session.updateText('retryable');
+// The projection witness keeps preparation, pre-install state, installed facts,
+// and action sealing in one causal scenario; splitting it would hide the seam.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testPreparedTextFactsAreExactBeforeInstall() {
+  test(
+    'text action sealing reads the exact prepared pair before install',
+    () async {
+      final scenario = _Scenario(document: _richTextDocument());
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        final beforeDocument = scenario.root.readDocument();
+        final beforeRevisions = scenario.root.state.value.revisions;
+        final beforeSelection = scenario.root.selectedElementIds;
+        final before = _textElement(scenario.root);
+        final projected = <StoreAffectedElementProjection>[];
+        final sparseTouchedReads = <(String? subject, String? side)>[];
+        final layoutEvents = <(String, Color)>[];
+        session.updateText('expanded\nprepared text');
 
-      expect(session.commit(timestampMs: 46), isFalse);
-      expect(session.isActive, isTrue);
-      expect(scenario.root.textEditing.activeSession.value, same(session));
-      expect(scenario.root.activeTextEditSuppressionForTesting, isNotNull);
-      _expectRequestFactsLive(scenario.root, request);
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        final didCommit = CommittedDocument.observeSparseCandidateEvents(
+          (event) {
+            if (event.kind.name == 'touchedElementRead') {
+              sparseTouchedReads.add((event.subject, event.side?.name));
+            }
+          },
+          () => FrameTextLayoutMeasurer.observeNewLayoutWork(
+            (text, color) => layoutEvents.add((text, color)),
+            () => DocumentStoreKernel.observeAffectedElementProjection(
+              projected.add,
+              () {
+                final committed = scenario.root.readDocument();
+                expect(committed, same(beforeDocument));
+                expect(scenario.root.state.value.revisions, beforeRevisions);
+                expect(scenario.root.selectedElementIds, beforeSelection);
+                expect(scenario.actions, isEmpty);
+                expect(session.isActive, isTrue);
+                _expectRequestFactsLive(scenario.root, request);
+
+                return session.commit(timestampMs: 61);
+              },
+            ),
+          ),
+        );
+
+        expect(didCommit, isTrue);
+        expect(projected, hasLength(1));
+        final facts = projected.single;
+        final projectedBefore = _asTextElement(facts.before);
+        final projectedAfter = _asTextElement(facts.after);
+        _expectCompleteTextElement(projectedBefore, before);
+        final installed = _textElement(scenario.root);
+        _expectCompleteTextElement(projectedAfter, installed);
+        expect(projectedBefore.id, _textId);
+        expect(projectedAfter.id, _textId);
+        expect(projectedAfter.revision, projectedBefore.revision + 1);
+        expect(projectedAfter.transform, isNot(projectedBefore.transform));
+        expect(sparseTouchedReads, [
+          (_textId.value, 'base'),
+          (_textId.value, 'candidate'),
+        ]);
+        final action =
+            scenario.actions.single.payload as CanvasTextEditActionPayload;
+        expect(action.previousTextLength, projectedBefore.text.length);
+        expect(action.nextTextLength, projectedAfter.text.length);
+        expect(layoutEvents, [
+          ('expanded\nprepared text', const Color(0xB3221144)),
+        ]);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// The failed projection path must compare every still-live session owner before
+// retry, so its assertions remain together rather than duplicating snapshots.
+// ignore: halstead-volume
+void _testFailedPreparePreservesActiveSessionForRetry() {
+  test(
+    'actual candidate projection failure preserves session for retry',
+    () async {
+      final scenario = _Scenario();
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('retryable');
+        final beforeDocument = scenario.root.readDocument();
+        final beforeRevisions = scenario.root.state.value.revisions;
+        final beforeSelection = scenario.root.selectedElementIds;
+        final failure = StateError('prepared text projection failed');
+
+        expect(
+          () => DocumentStoreKernel.injectAffectedElementProjectionFailure(
+            failure,
+            () => session.commit(timestampMs: 46),
+          ),
+          throwsA(same(failure)),
+        );
+        expect(scenario.root.readDocument(), same(beforeDocument));
+        expect(scenario.root.state.value.revisions, beforeRevisions);
+        expect(scenario.root.selectedElementIds, beforeSelection);
+        expect(session.isActive, isTrue);
+        expect(session.liveText, 'retryable');
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        expect(scenario.root.activeTextEditSuppressionForTesting, isNotNull);
+        _expectRequestFactsLive(scenario.root, request);
+        expect(scenario.actions, isEmpty);
+        expect(session.commit(timestampMs: 47), isTrue);
+        expect(_textValue(scenario.root), 'retryable');
+        expect(scenario.actions, hasLength(1));
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 void _testValidationFailurePreservesActiveSession() {
@@ -1163,17 +1282,6 @@ final class _Scenario {
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
 
-  _Scenario.failedTextPrepare()
-    : root = runtimeRootWithCommittedDocumentSeed(
-        _document(),
-        textEditPrepareOverride: (_) {
-          return CommitDeliveryResult(shouldPublishState: false);
-        },
-      ) {
-    actionSubscription = root.actions.listen(actions.add);
-    requestSubscription = root.contextActionRequests.listen(requests.add);
-  }
-
   final RuntimeRoot root;
   late final StreamSubscription<CanvasActionCommitted> actionSubscription;
   late final StreamSubscription<CanvasContextActionRequested>
@@ -1221,6 +1329,10 @@ final class _Scenario {
 }
 
 String _textValue(RuntimeRoot root) {
+  return _textElement(root).text;
+}
+
+CanvasTextElement _textElement(RuntimeRoot root) {
   final text = root
       .readDocument()
       .layers
@@ -1229,7 +1341,45 @@ String _textValue(RuntimeRoot root) {
       .whereType<CanvasTextElement>()
       .singleWhere((element) => element.id == _textId);
 
-  return text.text;
+  return text;
+}
+
+CanvasTextElement _asTextElement(CanvasElement element) {
+  if (element is! CanvasTextElement) {
+    throw StateError('Expected a text element projection.');
+  }
+  return element;
+}
+
+// One complete field comparison prevents a future text request from omitting a
+// common, nullable, formatting, or sizing fact behind smaller partial checks.
+// ignore: halstead-volume
+void _expectCompleteTextElement(
+  CanvasTextElement actual,
+  CanvasTextElement expected,
+) {
+  expect(actual.id, expected.id);
+  expect(actual.revision, expected.revision);
+  expect(actual.transform, expected.transform);
+  expect(actual.opacity, expected.opacity);
+  expect(actual.hitPadding, expected.hitPadding);
+  expect(actual.isVisible, expected.isVisible);
+  expect(actual.isSelectable, expected.isSelectable);
+  expect(actual.isLocked, expected.isLocked);
+  expect(actual.isDeletable, expected.isDeletable);
+  expect(actual.isTransformable, expected.isTransformable);
+  expect(actual.metadata, expected.metadata);
+  expect(actual.text, expected.text);
+  expect(actual.fontSize, expected.fontSize);
+  expect(actual.color, expected.color);
+  expect(actual.align, expected.align);
+  expect(actual.textDirection, expected.textDirection);
+  expect(actual.isBold, expected.isBold);
+  expect(actual.isItalic, expected.isItalic);
+  expect(actual.isUnderline, expected.isUnderline);
+  expect(actual.fontFamily, expected.fontFamily);
+  expect(actual.maxWidth, expected.maxWidth);
+  expect(actual.lineHeight, expected.lineHeight);
 }
 
 bool _containsElement(RuntimeRoot root, CanvasElementId id) {
@@ -1260,6 +1410,53 @@ CanvasDocument _document({
             id: _rectId,
             size: const Size(20, 20),
             transform: CanvasTransform.translation(const Offset(120, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+// This fixture intentionally spells out every persisted text/common field so
+// the prepared pair has an independent complete expected value.
+// ignore: halstead-volume, source-lines-of-code
+CanvasDocument _richTextDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasTextElement(
+            id: _textId,
+            text: 'hello',
+            revision: 7,
+            fontSize: 18,
+            color: const Color(0xFF221144),
+            align: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            isBold: true,
+            isItalic: true,
+            isUnderline: true,
+            fontFamily: 'Inter',
+            maxWidth: null,
+            lineHeight: 1.25,
+            transform: CanvasTransform.translation(const Offset(0, 15)),
+            opacity: 0.7,
+            hitPadding: 3,
+            isVisible: true,
+            isSelectable: true,
+            isLocked: false,
+            isDeletable: false,
+            isTransformable: false,
+            metadata: CanvasMetadata.fromMap({
+              'label': 'rich',
+              'nullable': null,
+            }),
+          ),
+          CanvasRectElement(
+            id: _rectId,
+            size: const Size(20, 20),
+            transform: CanvasTransform.translation(const Offset(220, 0)),
           ),
         ],
       ),

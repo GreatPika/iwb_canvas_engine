@@ -246,8 +246,11 @@ text-input session, not a context menu or app overlay state owner, and not
 boundary. It admits only current text content-action requests, exposes one
 `ValueListenable<CanvasTextEditSession?>`, derives live session geometry from
 the frame-measured text layout source, and commits through the guarded command
-path. It does not own Flutter `EditableText`, app decoration, context menus, or
-visibility hiding; active paint suppression is frame output behavior.
+path. A changed commit obtains its action facts from the prepared Store target
+pair before installation, while its frame and committed layout share the same
+effective color calculation so the existing layout cache can be reused. It does
+not own Flutter `EditableText`, app decoration, context menus, or visibility
+hiding; active paint suppression is frame output behavior.
 
 Composition root:
 

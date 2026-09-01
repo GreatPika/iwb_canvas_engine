@@ -107,6 +107,8 @@ final class EditSession implements CanvasEdit {
   StoreSparseCommit? get materializedEmptyLayerRemovalSparseCommit =>
       _backing?.materializedEmptyLayerRemovalSparseCommit;
   StoreSparseCommit get sparseCommit => _documentBacking.sparseCommit;
+  StoreSparseCommit sparseCommitFor({CanvasElementId? affectedElementId}) =>
+      _documentBacking.sparseCommitFor(affectedElementId: affectedElementId);
   Set<CanvasElementId> get selectedElementIds =>
       _documentBacking.selectedElementIds;
   ReplaceSelectionEffect? get pendingSelectionEffect => _pendingSelectionEffect;
@@ -300,6 +302,7 @@ abstract interface class _EditSessionBacking {
   StoreRevisionDelta get revisionDelta;
   TouchedSet get touchedSet;
   StoreSparseCommit get sparseCommit;
+  StoreSparseCommit sparseCommitFor({CanvasElementId? affectedElementId});
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
   bool ensureLayer(CanvasLayerId id, {int? index});
@@ -363,6 +366,10 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
       'Materialized edit sessions do not expose sparse commits.',
     );
   }
+
+  @override
+  StoreSparseCommit sparseCommitFor({CanvasElementId? affectedElementId}) =>
+      sparseCommit;
 
   @override
   CanvasDocument readDraftDocument() => _draft.readDocument();
@@ -554,13 +561,21 @@ final class _SparseEditBacking implements _EditSessionBacking {
 
   @override
   StoreSparseCommit get sparseCommit {
+    return sparseCommitFor();
+  }
+
+  @override
+  StoreSparseCommit sparseCommitFor({CanvasElementId? affectedElementId}) {
     if (_isMaterialized) {
       throw StateError(
         'Materialized edit sessions do not expose sparse commits.',
       );
     }
 
-    return _mutationJournal.storeSnapshot(revisionDelta: _revisionDelta);
+    return _mutationJournal.storeSnapshot(
+      revisionDelta: _revisionDelta,
+      affectedElementId: affectedElementId,
+    );
   }
 
   @override
@@ -1129,8 +1144,15 @@ final class _SparseMutationJournal {
     _storage.append(mutation);
   }
 
-  StoreSparseCommit storeSnapshot({required StoreRevisionDelta revisionDelta}) {
-    return StoreSparseCommit(mutations: _storage, revisionDelta: revisionDelta);
+  StoreSparseCommit storeSnapshot({
+    required StoreRevisionDelta revisionDelta,
+    CanvasElementId? affectedElementId,
+  }) {
+    return StoreSparseCommit(
+      mutations: _storage,
+      revisionDelta: revisionDelta,
+      affectedElementId: affectedElementId,
+    );
   }
 
   void promoteInto(DraftSparseMutationConsumer target) {
