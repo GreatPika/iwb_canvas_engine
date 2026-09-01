@@ -97,6 +97,6 @@ sequenceDiagram
   Runtime->>Events: emit finalized synchronous action intent
   Runtime->>Effects: notify non-empty CommitEffectObserver
   Runtime->>Runtime: clear delivery guard
-  Note over Runtime,Effects: Resource, frame, state, action, and observer callbacks see installed facts and the closed handle, while their failures retain accepted state according to their owner boundary.
+  Note over Runtime,Effects: Resource references release before fallible frame/state/action/observer notification. Recoverable bridge, notifier/reporter, action-listener, and observer failures retain accepted state, continue later delivery attempts, and still clear the guard.
   EK-->>API: return callback result
   API-->>Caller: callback result

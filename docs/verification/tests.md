@@ -705,6 +705,11 @@ Context benchmark workload permanent artifact admission:
   edit/load/selection/camera/ID/dispose matrix before side effects;
 - proves a Zone-reported throwing synchronous action listener does not prevent
   its peer listener, observer, accepted state, or final guard release.
+- proves a throwing attached frame bridge does not suppress the later public
+  state, action, and observer attempts, preserves the accepted document, and
+  releases the guard for the next public mutation.
+- proves a throwing state listener and its Flutter error reporter still leave
+  the accepted document installed and continue action and observer delivery.
 
 #### `test/smoke/public_incremental_smoke_test.dart`
 - proves an external Flutter consumer can import only the root public barrel,

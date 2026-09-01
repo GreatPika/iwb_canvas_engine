@@ -273,9 +273,12 @@ performs the route-owned `publish: false` InteractionEngine cleanup, merges its
 repaint effect, and only then enters one guarded common delivery. Its exact
 order is spatial -> resource/session release -> root frame -> bridged frame ->
 public state -> synchronous finalized action -> non-empty internal observer ->
-guard release. Every callback sees installed facts and a closed edit handle;
-resource, notifier, action-listener, and observer failures keep the accepted
-state and continue according to their owner failure boundary.
+guard release. Every callback sees installed facts and a closed edit handle.
+Each recoverable frame bridge, notifier/error-reporter, action-listener, and
+observer failure is contained at this one RuntimeRoot delivery boundary, so it
+cannot roll back accepted state or prevent later state, action, and observer
+attempts from the same sealed result. Resource/session release completes before
+those fallible notifications and keeps its existing release containment.
 The observer typedef and delivery payloads are owned by `contracts/internal/**`,
 while edit keeps planning and install details private.
 

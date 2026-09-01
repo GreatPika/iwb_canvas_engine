@@ -256,6 +256,12 @@ it applies spatial and resource/session phases before notifying root and
 bridged frame listeners, public state, synchronous actions, and the non-empty
 effect observer. Neither `CommitApplier`, EditKernel, the surface bridge, nor
 resource/session owners may reconstruct that sequence or prepared state.
+Recoverable frame-bridge, notifier/error-reporter, action-listener, and
+observer failures are contained by this boundary after installation: later
+public delivery attempts continue in their established order and the guard
+always releases. Resource/session references are released before any fallible
+frame or public notification; their existing release failure containment
+remains resource-owned.
 
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only

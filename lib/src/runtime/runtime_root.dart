@@ -2099,6 +2099,7 @@ final class RuntimeRoot
 
   void _publishRuntimeState({
     required _RuntimeSurfaceRepaintTarget? surfaceRepaintTarget,
+    bool continueAfterSurfaceFrameFailure = false,
   }) {
     _runtimeStatePublicationGeneration += 1;
     final publicationGeneration = _runtimeStatePublicationGeneration;
@@ -2116,12 +2117,28 @@ final class RuntimeRoot
       ),
     );
     if (surfaceRepaintTarget != null) {
-      _publishSurfaceFrame(state, surfaceRepaintTarget);
+      if (continueAfterSurfaceFrameFailure) {
+        try {
+          _publishSurfaceFrame(state, surfaceRepaintTarget);
+        } on Object {
+          // Accepted delivery continues with public state after a frame failure.
+        }
+      } else {
+        _publishSurfaceFrame(state, surfaceRepaintTarget);
+      }
     }
     if (publicationGeneration != _runtimeStatePublicationGeneration) {
       return;
     }
-    _state.value = state;
+    if (continueAfterSurfaceFrameFailure) {
+      try {
+        _state.value = state;
+      } on Object {
+        // Accepted delivery continues with actions after a notifier failure.
+      }
+    } else {
+      _state.value = state;
+    }
   }
 
   void _publishSurfaceFrame(
@@ -2518,7 +2535,10 @@ final class RuntimeRoot
           ),
           'runtime common delivery event observation failed',
         );
-        _publishRuntimeState(surfaceRepaintTarget: surfaceRepaintTarget);
+        _publishRuntimeState(
+          surfaceRepaintTarget: surfaceRepaintTarget,
+          continueAfterSurfaceFrameFailure: true,
+        );
         _emitActions(deliveryResult.actionIntents);
       }
       assert(

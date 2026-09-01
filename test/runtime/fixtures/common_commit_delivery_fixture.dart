@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_surface_bridge.dart';
@@ -39,6 +40,14 @@ void main() {
 
   test('throwing action listener keeps common delivery and guard release', () {
     expect(_expectActionListenerFailureIsContained, returnsNormally);
+  });
+
+  test('throwing frame bridge continues accepted delivery', () {
+    expect(_expectFrameBridgeFailureIsContained, returnsNormally);
+  });
+
+  test('throwing state error reporter continues accepted delivery', () {
+    expect(_expectStateErrorReporterFailureIsContained, returnsNormally);
   });
 
   test('real routes compose with common delivery owners', () {
@@ -492,6 +501,102 @@ void _expectActionListenerFailureIsContained() {
     unawaited(throwingSubscription.cancel());
     unawaited(receivingSubscription.cancel());
     root.dispose();
+  }
+}
+
+// A real post-install delivery must not turn an already accepted operation into
+// a failure when the frame bridge throws. The later state/action/observer
+// attempts and a new mutation prove continuation and guard release through the
+// public RuntimeRoot seam.
+// ignore: halstead-volume, source-lines-of-code
+void _expectFrameBridgeFailureIsContained() {
+  final events = <String>[];
+  late RuntimeRoot root;
+  late StreamSubscription<CanvasActionCommitted> subscription;
+  var failFrameBridge = false;
+  root = runtimeRootWithCommittedDocumentSeed(
+    _document(),
+    commitEffectObserver: (_) => events.add('observer'),
+  );
+  root.attachSurface(Object());
+  root.installSurfaceFrameMirror((_) {
+    if (!failFrameBridge) {
+      return;
+    }
+    events.add('frame-bridge');
+    throw StateError('frame bridge failed');
+  });
+  root.state.addListener(() {
+    events.add('state');
+  });
+  subscription = root.actions.listen((_) => events.add('action'));
+  failFrameBridge = true;
+
+  try {
+    final result = root.commands.clearContent(
+      removeUnusedResources: true,
+      timestampMs: 9,
+    );
+
+    expect(result.didClearContent, isTrue);
+    expect(root.readDocument().layers.single.elements, isEmpty);
+    expect(events, ['frame-bridge', 'state', 'action', 'observer']);
+    expect(root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    failFrameBridge = false;
+    unawaited(subscription.cancel());
+    root.dispose();
+  }
+}
+
+// ValueNotifier routes a listener failure through FlutterError. This witness
+// makes the reporter fail too, proving RuntimeRoot still reaches action and
+// observer delivery after the state notification has installed its value.
+// ignore: halstead-volume, source-lines-of-code
+void _expectStateErrorReporterFailureIsContained() {
+  final events = <String>[];
+  final previousOnError = FlutterError.onError;
+  late RuntimeRoot root;
+  late StreamSubscription<CanvasActionCommitted> subscription;
+  void throwingStateListener() {
+    events.add('state-listener');
+    throw StateError('state listener failed');
+  }
+
+  root = runtimeRootWithCommittedDocumentSeed(
+    _document(),
+    commitEffectObserver: (_) => events.add('observer'),
+  );
+  root.state.addListener(throwingStateListener);
+  FlutterError.onError = (_) {
+    events.add('state-error-reporter');
+    throw StateError('state error reporter failed');
+  };
+  subscription = root.actions.listen((_) => events.add('action'));
+
+  try {
+    final result = root.commands.clearContent(
+      removeUnusedResources: true,
+      timestampMs: 10,
+    );
+
+    expect(result.didClearContent, isTrue);
+    expect(root.readDocument().layers.single.elements, isEmpty);
+    expect(events, [
+      'state-listener',
+      'state-error-reporter',
+      'action',
+      'observer',
+    ]);
+    expect(root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    FlutterError.onError = previousOnError;
+    root.state.removeListener(throwingStateListener);
+    unawaited(subscription.cancel());
+    // Flutter's ChangeNotifier keeps its internal notification-depth after a
+    // throwing FlutterError.onError, so disposing this test-local root would
+    // assert inside Flutter rather than exercise RuntimeRoot. The restored,
+    // unreachable root has no active subscription and is left for GC.
   }
 }
 

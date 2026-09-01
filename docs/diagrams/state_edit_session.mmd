@@ -104,7 +104,10 @@ stateDiagram-v2
       RuntimeRoot enters one post-commit guard only after the
       handle closes. It applies spatial, then resource/session
       release, root frame, bridged frame, public state,
-      synchronous action, and non-empty observer delivery.
+      synchronous action, and non-empty observer delivery. Recoverable
+      bridge, notifier/reporter, action-listener, and observer failures
+      retain accepted state, continue later delivery attempts, and still
+      release the guard.
       Low-level CanvasEdit emits no user action event.
     end note
     CloseCommitted --> PostCommitEffects: handle closed
