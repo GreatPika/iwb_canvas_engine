@@ -74,16 +74,14 @@ CommitDeliveryResult _applyPostInstallPlan(
     plan: plan,
     documentInstallers: CommitDocumentInstallers(
       prepareDocumentInstall: (document, {required documentReplaced}) => () {
-        events.add(
-          switch (document) {
-            PreparedMaterializedDocument() =>
-              documentReplaced ? 'replacement' : 'document',
-            PreparedSparseStoreDocument() => 'sparse-document',
-            PreparedMaterializedStoreDocument() =>
-              'prepared-materialized-document',
-            PreparedUnchangedStoreDocument() => 'unchanged-document',
-          },
-        );
+        events.add(switch (document) {
+          PreparedMaterializedDocument() =>
+            documentReplaced ? 'replacement' : 'document',
+          PreparedSparseStoreDocument() => 'sparse-document',
+          PreparedMaterializedStoreDocument() =>
+            'prepared-materialized-document',
+          PreparedUnchangedStoreDocument() => 'unchanged-document',
+        });
       },
     ),
     selectionInstallers: CommitSelectionInstallers(
@@ -129,16 +127,14 @@ void _expectEmptyApplyResult() {
     plan: CommitPlan.empty(),
     documentInstallers: CommitDocumentInstallers(
       prepareDocumentInstall: (document, {required documentReplaced}) => () {
-        events.add(
-          switch (document) {
-            PreparedMaterializedDocument() =>
-              documentReplaced ? 'replacement' : 'document',
-            PreparedSparseStoreDocument() => 'sparse-document',
-            PreparedMaterializedStoreDocument() =>
-              'prepared-materialized-document',
-            PreparedUnchangedStoreDocument() => 'unchanged-document',
-          },
-        );
+        events.add(switch (document) {
+          PreparedMaterializedDocument() =>
+            documentReplaced ? 'replacement' : 'document',
+          PreparedSparseStoreDocument() => 'sparse-document',
+          PreparedMaterializedStoreDocument() =>
+            'prepared-materialized-document',
+          PreparedUnchangedStoreDocument() => 'unchanged-document',
+        });
       },
     ),
     selectionInstallers: CommitSelectionInstallers(

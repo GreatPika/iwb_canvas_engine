@@ -1,3 +1,8 @@
+// The cursor lifecycle fixture names codec import, committed backing, sparse
+// preparation, and all three ID owners directly; an import barrel would hide
+// which boundary supplies each admission route.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui' show Size;
 
 import '../../support/id_admission_work_recorder.dart';

@@ -348,7 +348,7 @@ void _testDeletionResolverDiagnostics() {
 
 // The adapter's two construction phases can fail independently, but both must
 // stay inside the existing Move callback containment boundary.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index
+// ignore: halstead-volume, maintainability-index, maximum-nesting-level, source-lines-of-code
 void _testMoveResolverDiagnosticObservationFailuresAreContained() {
   for (final phase in ResolverCallbackDiagnosticWorkEvent.values) {
     test(

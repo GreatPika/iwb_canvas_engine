@@ -128,6 +128,9 @@ Future<void> _verifyDirectBackgroundRemoval() async {
   expect(lease.abortedCalls, 0);
 }
 
+// Accepted and cancelled direct removal share one complete public scenario so
+// resolver, document, action, and lease observations cannot drift apart.
+// ignore: halstead-volume
 Future<void> _verifyDirectNonDeletableRemoval() async {
   var calls = 0;
   final accepted = _root((_) {
@@ -136,17 +139,29 @@ Future<void> _verifyDirectNonDeletableRemoval() async {
   });
   final actions = <CanvasActionCommitted>[];
   final subscription = accepted.actions.listen(actions.add);
-  addTearDown(() async { await subscription.cancel(); accepted.dispose(); });
-  expect(accepted.commands.removeElement(CanvasElementId('not-deletable')), isTrue);
+  addTearDown(() async {
+    await subscription.cancel();
+    accepted.dispose();
+  });
+  expect(
+    accepted.commands.removeElement(CanvasElementId('not-deletable')),
+    isTrue,
+  );
   await Future<void>.delayed(Duration.zero);
   expect(calls, 1);
   expect(accepted.readDocument().layers.first.elements, hasLength(1));
   expect(actions, hasLength(1));
 
   var cancelledCalls = 0;
-  final cancelled = _root((_) { cancelledCalls += 1; return const CanvasCommitCancel(); });
+  final cancelled = _root((_) {
+    cancelledCalls += 1;
+    return const CanvasCommitCancel();
+  });
   addTearDown(cancelled.dispose);
-  expect(cancelled.commands.removeElement(CanvasElementId('not-deletable')), isFalse);
+  expect(
+    cancelled.commands.removeElement(CanvasElementId('not-deletable')),
+    isFalse,
+  );
   expect(cancelledCalls, 1);
   expect(cancelled.readDocument().layers.first.elements, hasLength(2));
 }

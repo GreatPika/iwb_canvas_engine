@@ -624,9 +624,7 @@ RuntimeRoot _runtimeRoot({
 }) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config:
-        config ??
-        const CanvasRuntimeConfig(commitResolver: acceptCommit),
+    config: config ?? const CanvasRuntimeConfig(commitResolver: acceptCommit),
     commitEffectObserver: commitEffectObserver,
   );
 }

@@ -525,6 +525,9 @@ void _expectSameLayerElementRecreationIsSilent(CanvasDocument document) {
   }
 }
 
+// A single rich document seed makes every unrelated palette, metadata,
+// resource, background, and layer fact distinguishable in the parity proof.
+// ignore: halstead-volume
 CanvasDocument _emptyLayerRemovalDocument() {
   final emptyId = CanvasLayerId('empty');
   final populatedId = CanvasLayerId('populated');
@@ -578,7 +581,7 @@ void _expectEmptyLayerEnvelope(CanvasDocument actual, CanvasDocument expected) {
 
 // The parity trace keeps sparse, promotion, restoration, and selection intent
 // in one observable callback so their shared final candidate remains legible.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _expectSparseAndPromotedEmptyLayerRemoval(CanvasDocument document) {
   final emptyId = CanvasLayerId('empty');
   final populatedId = CanvasLayerId('populated');

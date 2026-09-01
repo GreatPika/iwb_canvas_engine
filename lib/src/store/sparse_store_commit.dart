@@ -39,10 +39,7 @@ final class PreparedSparseStoreCommit {
     required this.document,
     required this.revisionDelta,
     required this.touchedFacts,
-    this.admittedElementIds = const [],
-    this.admittedLayerIds = const [],
-    this.admittedResourceIds = const [],
-    this.idAdmissions,
+    required this.idAdmissions,
     this.affectedElementProjection,
   });
 
@@ -50,9 +47,6 @@ final class PreparedSparseStoreCommit {
   final CommittedDocument document;
   final StoreRevisionDelta revisionDelta;
   final AcceptedStoreTouchedFacts touchedFacts;
-  final List<String> admittedElementIds;
-  final List<String> admittedLayerIds;
-  final List<String> admittedResourceIds;
   final StoreIdAdmissions? idAdmissions;
   final StoreAffectedElementProjection? affectedElementProjection;
 

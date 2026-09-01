@@ -764,6 +764,9 @@ void _expectDrawRequestEnvelope(
   expect(request.createsLayer, createsLayer);
 }
 
+// Cancellation keeps request capture, document identity, selection, cleanup,
+// action silence, and ID reuse in one unapplied-terminal observation.
+// ignore: halstead-volume
 Future<void> _verifyCancelledDrawCommit() async {
   CanvasDrawCommitRequest? request;
   final root = runtimeRootWithCommittedDocumentSeed(

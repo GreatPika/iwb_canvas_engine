@@ -174,10 +174,7 @@ Future<void> _expectTextEditCleanupReentrancyGuard() async {
       everyElement(contains('post-commit effect delivery')),
     );
     expect(sessionCallbackMessages, hasLength(8));
-    expect(
-      sessionCallbackMessages.take(5),
-      everyElement(isNull),
-    );
+    expect(sessionCallbackMessages.take(5), everyElement(isNull));
     expect(
       sessionCallbackMessages.skip(5),
       everyElement(contains('post-commit effect delivery')),

@@ -202,23 +202,13 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     );
   }
 
-  StoreIdAdmissions _admitSparseLedgers(PreparedSparseStoreCommit commit) {
-    return _admitSparseIdLists(
-      elementIds: commit.admittedElementIds,
-      layerIds: commit.admittedLayerIds,
-      resourceIds: commit.admittedResourceIds,
-    );
-  }
-
-  StoreIdAdmissions _admitSparseIdLists({
-    required Iterable<String> elementIds,
-    required Iterable<String> layerIds,
-    required Iterable<String> resourceIds,
-  }) {
+  StoreIdAdmissions _admitSparseAccounting(
+    _SparseTransactionAccounting accounting,
+  ) {
     return StoreIdAdmissions(
-      elements: _elementIds.admitLedger(elementIds),
-      layers: _layerIds.admitLedger(layerIds),
-      resources: _resourceIds.admitLedger(resourceIds),
+      elements: _elementIds.admitLedger(accounting.readAdmittedElementIds()),
+      layers: _layerIds.admitLedger(accounting.readAdmittedLayerIds()),
+      resources: _resourceIds.admitLedger(accounting.readAdmittedResourceIds()),
     );
   }
 
@@ -963,6 +953,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         document: _document,
         revisionDelta: const StoreRevisionDelta(),
         touchedFacts: AcceptedStoreTouchedFacts.empty(),
+        idAdmissions: null,
       );
     }
     if (!providedDelta.hasChanges) {
@@ -1107,6 +1098,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
           document: _document,
           revisionDelta: const StoreRevisionDelta(),
           touchedFacts: AcceptedStoreTouchedFacts.empty(),
+          idAdmissions: null,
         );
       }
       candidate.phase(StoreSparseCandidateEventKind.coverageValidation);
@@ -1145,22 +1137,12 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       final affectedElementProjection = accounting
           .readAcceptedAffectedElementProjection();
       candidate.phase(StoreSparseCandidateEventKind.consume);
-      final admittedElementIds = accounting.readAdmittedElementIds();
-      final admittedLayerIds = accounting.readAdmittedLayerIds();
-      final admittedResourceIds = accounting.readAdmittedResourceIds();
       return PreparedSparseStoreCommit(
         baseRevisions: _document.revisions,
         document: acceptedDocument,
         revisionDelta: acceptedDelta,
         touchedFacts: acceptedTouchedFacts,
-        admittedElementIds: admittedElementIds,
-        admittedLayerIds: admittedLayerIds,
-        admittedResourceIds: admittedResourceIds,
-        idAdmissions: _admitSparseIdLists(
-          elementIds: admittedElementIds,
-          layerIds: admittedLayerIds,
-          resourceIds: admittedResourceIds,
-        ),
+        idAdmissions: _admitSparseAccounting(accounting),
         affectedElementProjection: affectedElementProjection,
       );
     } catch (_) {
@@ -1368,7 +1350,10 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       _throwInjectedDeletionPreparedInstallFailure(),
       'prepared Store installation failure injection did not complete',
     );
-    final admissions = commit.idAdmissions ?? _admitSparseLedgers(commit);
+    final admissions = commit.idAdmissions;
+    if (admissions == null) {
+      throw StateError('A changed sparse Store commit requires ID admissions.');
+    }
     return PreparedStoreDocumentInstall._(
       owner: this,
       baseRevisions: commit.baseRevisions,
@@ -3696,12 +3681,13 @@ final class _SparseTransactionAccounting {
     return _requiredMutationDelta;
   }
 
-  List<String> readAdmittedElementIds() =>
+  Iterable<String> readAdmittedElementIds() =>
       _readAdmissionIds(_admittedElementIds);
 
-  List<String> readAdmittedLayerIds() => _readAdmissionIds(_admittedLayerIds);
+  Iterable<String> readAdmittedLayerIds() =>
+      _readAdmissionIds(_admittedLayerIds);
 
-  List<String> readAdmittedResourceIds() =>
+  Iterable<String> readAdmittedResourceIds() =>
       _readAdmissionIds(_admittedResourceIds);
 
   // Sparse admission must remain exhaustive over the sealed mutation taxonomy.
@@ -3741,9 +3727,9 @@ final class _SparseTransactionAccounting {
     _append(SparseTransactionWorkLedger.requiredDelta);
   }
 
-  List<String> _readAdmissionIds(Set<String> ids) {
+  Iterable<String> _readAdmissionIds(Set<String> ids) {
     _read(SparseTransactionWorkLedger.admission);
-    return List.unmodifiable(ids);
+    return ids;
   }
 
   void _append(

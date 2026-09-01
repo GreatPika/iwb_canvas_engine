@@ -374,9 +374,6 @@ void _usesOneSparseReplayAndAdmitsCompensatedTransientIds() {
     }),
   );
 
-  expect(prepared.admittedElementIds, ['e2', 'e0']);
-  expect(prepared.admittedResourceIds, ['r2', 'r0']);
-  expect(prepared.admittedLayerIds, isEmpty);
   expect(prepared.touchedFacts.addedElementIds, isEmpty);
   expect(prepared.touchedFacts.removedElementIds, isEmpty);
   expect(prepared.touchedFacts.resourceDescriptorChangedIds, isEmpty);
@@ -473,8 +470,6 @@ void _usesOneSparseReplayAndAdmitsCompensatedTransientIds() {
     ),
   );
   expect(noOp.hasChanges, isFalse);
-  expect(noOp.admittedElementIds, isEmpty);
-  expect(noOp.admittedResourceIds, isEmpty);
   expect(noOpStore.generateElementId(), CanvasElementId('e0'));
   expect(noOpStore.generateResourceId(), CanvasResourceId('r0'));
 }

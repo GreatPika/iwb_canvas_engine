@@ -76,7 +76,10 @@ final class InteractionCommitScenario {
         documentInstallers: CommitDocumentInstallers(
           prepareDocumentInstall: (document, {required documentReplaced}) {
             return switch (document) {
-              PreparedMaterializedDocument(:final document, :final revisionDelta) =>
+              PreparedMaterializedDocument(
+                :final document,
+                :final revisionDelta,
+              ) =>
                 (documentReplaced
                         ? store.prepareReplacementDocumentInstall(
                             document,

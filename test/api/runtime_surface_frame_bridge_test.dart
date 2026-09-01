@@ -49,7 +49,7 @@ void main() {
 
 // The three public notifier owners share one Flutter reporting and continuation
 // contract; keeping the loop together avoids three divergent failure fixtures.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void _commonDeliveryNotifierFailuresContinue() {
   for (final failingOwner in _NotifierOwner.values) {
     final events = <String>[];
@@ -92,7 +92,10 @@ void _commonDeliveryNotifierFailuresContinue() {
       }
     });
     final subscription = root.actions.listen((_) => events.add('action'));
-    FlutterError.onError = (details) => reported.add(details.exception);
+    FlutterError.onError = (details) {
+      reported.add(details.exception);
+      throw StateError('error reporter failed');
+    };
     try {
       final result = root.commands.clearContent(
         removeUnusedResources: true,
@@ -113,6 +116,7 @@ void _commonDeliveryNotifierFailuresContinue() {
       expect(() => root.generateElementId(), returnsNormally);
     } finally {
       FlutterError.onError = previousOnError;
+      detachCanvasRuntimeSurfacePort(surfaceRuntime);
       unawaited(subscription.cancel());
       root.dispose();
     }

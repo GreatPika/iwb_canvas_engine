@@ -13,6 +13,9 @@ import '../../support/accept_commit.dart';
 
 final _moveTransform = CanvasTransform.translation(const Offset(3, 4));
 
+// The registration owner keeps the complete selection command matrix visible
+// in one place so a command family cannot disappear behind helper routing.
+// ignore: source-lines-of-code
 void main() {
   test(
     'move validates delta and moves only eligible selected elements',
@@ -62,6 +65,9 @@ void main() {
   );
 }
 
+// Overflow, lease settlement, resolver count, and unchanged public state are
+// one failure contract and must be observed from the same runtime instance.
+// ignore: halstead-volume, source-lines-of-code
 void _acceptedMoveOverflowAbortsLease() {
   final lease = _TransformLease();
   var calls = 0;
@@ -142,7 +148,7 @@ void _selectionDeletionResolverCanCancelThePreparedSet() {
 
 // The scenario keeps eligibility, transform math, validation, and action shape
 // together because they are one public move command contract.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 Future<void> _moveValidatesDeltaAndMovesOnlyEligibleSelectedElements() async {
   final preparedWork = <PreparedInteractionApplyWorkEvent>[];
   final runtime = runtimeWithDocument(
@@ -426,7 +432,7 @@ Future<void> _unifiedTransformRequestsRetainFactsAndLeaseOrder() async {
 
 // Cancellation, callback failure, and a Move-only resolution are the three
 // distinct rejection forms that must not reach Unit-8 installation.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 Future<void> _transformRejectionsLeaveCommittedStateUnchanged() async {
   final cancelledPreparedWork = <PreparedInteractionApplyWorkEvent>[];
   final cancelled = runtimeWithDocument(

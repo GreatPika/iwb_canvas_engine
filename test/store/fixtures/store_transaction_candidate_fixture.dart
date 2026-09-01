@@ -922,9 +922,6 @@ void _candidateAcceptedFactsOracle() {
     layers: {CanvasLayerId('layer-a'), CanvasLayerId('layer-b')},
     backgroundLayerChanged: true,
   );
-  expect(placement.admittedElementIds, ['image-base']);
-  expect(placement.admittedLayerIds, isEmpty);
-  expect(placement.admittedResourceIds, isEmpty);
   expect(
     placement
         .document
@@ -1743,11 +1740,7 @@ void _candidatePublicationWork() {
               event.kind == IdAdmissionWorkKind.sparseLedgerVisit,
         )
         .map((event) => event.subject),
-    [
-      ...prepared.admittedElementIds,
-      ...prepared.admittedLayerIds,
-      ...prepared.admittedResourceIds,
-    ],
+    ['image-added', 'vector-added', 'large-layer', 'r-image'],
   );
   expect(
     prepared.document.resourceDescriptor(CanvasResourceId('r-4095')),

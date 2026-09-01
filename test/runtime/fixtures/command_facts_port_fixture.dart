@@ -105,9 +105,7 @@ void _selectionTransformSkipsSortingForCanonicalSelection() {
 Map<SelectionTransformOrderingWorkEvent, int>
 _canonicalSelectionTransformOrderingWork({CanvasElementId? deselectedId}) {
   final root = RuntimeRoot(
-    config: const CanvasRuntimeConfig(
-      commitResolver: acceptCommit,
-    ),
+    config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
   );
   try {
     root.edits.loadDocumentFromJson(
@@ -199,9 +197,7 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
 
 void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
   final root = RuntimeRoot(
-    config: const CanvasRuntimeConfig(
-      commitResolver: acceptCommit,
-    ),
+    config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
   );
   addTearDown(root.dispose);
   root.edits.loadDocumentFromJson(

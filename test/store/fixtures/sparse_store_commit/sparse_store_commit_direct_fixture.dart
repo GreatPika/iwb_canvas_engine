@@ -1,3 +1,8 @@
+// Direct Store acceptance keeps public values, committed backing, sparse
+// preparation, finalization, and structural work owners explicit in one
+// fixture; hiding them behind an import barrel would obscure this boundary.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -220,9 +225,6 @@ void _expectCompensatingSparseNoOp(StoreSparseCommit commit) {
   expect(prepared.hasChanges, isFalse);
   expect(prepared.revisionDelta, const StoreRevisionDelta());
   expect(prepared.touchedFacts.hasTouches, isFalse);
-  expect(prepared.admittedElementIds, isEmpty);
-  expect(prepared.admittedLayerIds, isEmpty);
-  expect(prepared.admittedResourceIds, isEmpty);
   expect(store.documentRevision, beforeDocumentRevision);
   expect(store.projectionBuildCount, beforeProjectionBuilds);
 }

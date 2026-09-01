@@ -2384,11 +2384,9 @@ final class RuntimeRoot
     );
     if (surfaceRepaintTarget != null) {
       if (continueAfterSurfaceFrameFailure) {
-        try {
-          _publishSurfaceFrame(state, surfaceRepaintTarget);
-        } on Object {
-          // Accepted delivery continues with public state after a frame failure.
-        }
+        _deliverAcceptedNotifierNotification(
+          () => _publishSurfaceFrame(state, surfaceRepaintTarget),
+        );
       } else {
         _publishSurfaceFrame(state, surfaceRepaintTarget);
       }

@@ -477,15 +477,6 @@ void main() {
             .map((id) => id.value),
         ['after-clear'],
       );
-      expect(prepared.admittedLayerIds, ['inserted', 'layer-a', 'layer-b']);
-      expect(prepared.admittedElementIds, [
-        'background-first',
-        'front',
-        'middle',
-        'end',
-        'base-a',
-        'after-clear',
-      ]);
       expect(prepared.touchedFacts.addedElementIds.map((id) => id.value), {
         'background-first',
         'after-clear',
