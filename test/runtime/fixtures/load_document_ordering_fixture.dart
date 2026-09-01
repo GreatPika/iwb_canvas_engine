@@ -175,7 +175,11 @@ Future<void> _expectTextEditCleanupReentrancyGuard() async {
     );
     expect(sessionCallbackMessages, hasLength(8));
     expect(
-      sessionCallbackMessages,
+      sessionCallbackMessages.take(5),
+      everyElement(isNull),
+    );
+    expect(
+      sessionCallbackMessages.skip(5),
       everyElement(contains('post-commit effect delivery')),
     );
     expect(root.readDocument().backgroundElements.single.id.value, 'new');
