@@ -48,7 +48,9 @@ typedef DocumentLoadInstaller = void Function(String json);
 // EditKernel owns the route handoff between public callbacks, sparse session
 // preparation, materialized fallback, and commit delivery; splitting those
 // collaborators would hide the all-or-nothing transaction boundary.
-// ignore: coupling-between-object-classes
+// Its closely related methods stay on this owner so transaction lifecycle
+// cannot drift across helper objects merely to lower a class metric.
+// ignore: coupling-between-object-classes, weighted-methods-per-class
 final class EditKernel {
   EditKernel({
     required ResolverMutationGuard mutationGuard,
@@ -413,6 +415,7 @@ TouchedSet _touchedSetForAcceptedFacts(
     addedElementIds: facts.addedElementIds,
     removedElementIds: facts.removedElementIds,
     updatedElementIds: facts.updatedElementIds,
+    placementElementIds: facts.placementElementIds,
     transformedElementIds: facts.transformedElementIds,
     geometryElementIds: facts.geometryElementIds,
     visualElementIds: facts.visualElementIds,

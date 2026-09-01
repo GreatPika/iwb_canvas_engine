@@ -47,6 +47,7 @@ final class AcceptedStoreTouchedFacts {
     Iterable<CanvasElementId> addedElementIds = const [],
     Iterable<CanvasElementId> removedElementIds = const [],
     Iterable<CanvasElementId> updatedElementIds = const [],
+    Iterable<CanvasElementId> placementElementIds = const [],
     Iterable<CanvasElementId> transformedElementIds = const [],
     Iterable<CanvasElementId> geometryElementIds = const [],
     Iterable<CanvasElementId> visualElementIds = const [],
@@ -62,6 +63,7 @@ final class AcceptedStoreTouchedFacts {
   }) : addedElementIds = Set.unmodifiable(addedElementIds),
        removedElementIds = Set.unmodifiable(removedElementIds),
        updatedElementIds = Set.unmodifiable(updatedElementIds),
+       placementElementIds = Set.unmodifiable(placementElementIds),
        transformedElementIds = Set.unmodifiable(transformedElementIds),
        geometryElementIds = Set.unmodifiable(geometryElementIds),
        visualElementIds = Set.unmodifiable(visualElementIds),
@@ -77,6 +79,7 @@ final class AcceptedStoreTouchedFacts {
   final Set<CanvasElementId> addedElementIds;
   final Set<CanvasElementId> removedElementIds;
   final Set<CanvasElementId> updatedElementIds;
+  final Set<CanvasElementId> placementElementIds;
   final Set<CanvasElementId> transformedElementIds;
   final Set<CanvasElementId> geometryElementIds;
   final Set<CanvasElementId> visualElementIds;
@@ -95,6 +98,7 @@ final class AcceptedStoreTouchedFacts {
           addedElementIds,
           removedElementIds,
           updatedElementIds,
+          placementElementIds,
           transformedElementIds,
           geometryElementIds,
           visualElementIds,

@@ -916,27 +916,37 @@ void _testParticipantChangeCancelsBeforeResolverPublication() {
   );
 }
 
-// Same-ID replacement must include the replacement commit and terminal absence
-// in one witness; separating them would lose its identity-conflict meaning.
+// Same-ID relocation must include the replacement commit and terminal absence
+// in one witness; separating them would lose its placement-conflict meaning.
 // ignore: halstead-volume
 void _testSameIdReplacementCancelsBeforeResolverPublication() {
-  test('same-ID participant replacement clears an active move', () {
+  test('same-ID participant relocation clears an active move', () {
     final scenario = _noCommitScenario();
     final root = scenario.root;
     root.selection.setSelection([CanvasElementId('a')]);
     _startSelectedMove(root);
 
     root.edits.edit((edit) {
+      expect(edit.ensureLayer(CanvasLayerId('layer-b')), isTrue);
       expect(edit.removeElement(CanvasElementId('a')), isTrue);
       edit.addElement(
-        CanvasRectElement(id: CanvasElementId('a'), size: const Size(20, 20)),
-        layerId: CanvasLayerId('layer-a'),
+        CanvasRectElement(id: CanvasElementId('a'), size: const Size(10, 10)),
+        layerId: CanvasLayerId('layer-b'),
       );
     });
 
     expect(root.preview, isA<CanvasNoPreview>());
     expect(root.interactionEngine.activeSession, isNull);
-    expect(_rect(root, 'a').size, const Size(20, 20));
+    expect(
+      root
+          .readDocument()
+          .layers
+          .singleWhere((layer) => layer.id == CanvasLayerId('layer-b'))
+          .elements
+          .single
+          .id,
+      CanvasElementId('a'),
+    );
     root.handlePointer(
       _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );

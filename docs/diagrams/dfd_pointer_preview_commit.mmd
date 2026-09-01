@@ -37,6 +37,7 @@ flowchart LR
   subgraph Runtime["RuntimeRoot"]
     Delivery["Operation-local preparation\nnon-Move: exact candidate before resolver;\nMove: prepare once from accepted final delta"]
     PreparedNonMoveRequest["Frozen non-Move request\nprepared candidate facts; no second resolver"]
+    PreparedConsume["PreparedInteractionCommit.consume()\nsingle-use accepted capability"]
     EditResult["Terminal edit result\nruntime-owned delivery outcome"]
     ClosedDeliveryCleanup["Closed-result cleanup\npublish false and effect augmentation"]
   end
@@ -121,8 +122,9 @@ flowchart LR
   Touched -->|"compile exact effects"| Compiler
   Compiler -->|"non-Move exact prepared request"| PreparedNonMoveRequest
   PreparedNonMoveRequest -->|"one resolver call after preparation"| CommitResolver
-  Compiler -->|"accepted Move candidate only\nno second resolver"| AtomicInstall
-  CommitResolver -->|"compatible accept and lease"| AtomicInstall
+  Compiler -->|"accepted Move candidate only\nno second resolver"| PreparedConsume
+  CommitResolver -->|"compatible non-Move accept and lease"| PreparedConsume
+  PreparedConsume -->|"consume sealed candidate without reconstruction"| AtomicInstall
   AtomicInstall -->|"accepted ledger reserves route ID, replaces committed tables, and invalidates projection revision"| Committed
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
   SelectionEffect -->|"update selected ids/revision"| SelectionFacts

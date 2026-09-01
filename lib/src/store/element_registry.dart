@@ -384,6 +384,7 @@ final class ElementRegistryStructuralEditor {
       throw StateError('current layer order is missing ${id.value}.');
     }
     _discardContentOrder(state);
+    state.contentIsKnownEmpty = true;
     _contentOrderStatesSinceClear.remove(state);
     (_removedLayerIds ??= {}).add(id);
     _changed = true;
@@ -590,12 +591,7 @@ final class ElementRegistryStructuralEditor {
         var baseElementIndex = 0;
         var contentMatchesLayerBase = true;
         final elementIds = <CanvasElementId>[];
-        final contentOrder = state.contentOrder;
-        final contentIds =
-            contentOrder?.orderedValues ??
-            (_contentCleared
-                ? const <CanvasElementId>[]
-                : state.baseRow?.elementIds ?? const <CanvasElementId>[]);
+        final contentIds = _contentIdsFor(state);
         try {
           for (final id in contentIds) {
             _record(
@@ -1025,6 +1021,9 @@ final class ElementRegistryStructuralEditor {
     if (order != null) {
       return order.orderedValues;
     }
+    if (state.contentIsKnownEmpty) {
+      return const <CanvasElementId>[];
+    }
     if (_contentCleared) {
       return const <CanvasElementId>[];
     }
@@ -1134,6 +1133,7 @@ final class _StructuralLayerState {
   final CanvasLayerId id;
   final LayerRow? baseRow;
   final int insertionOrder;
+  bool contentIsKnownEmpty = false;
   IndexedOrderSequence<CanvasElementId, CanvasElementId>? contentOrder;
 }
 

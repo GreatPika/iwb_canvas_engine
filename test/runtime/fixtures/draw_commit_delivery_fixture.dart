@@ -11,6 +11,8 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.da
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
@@ -92,6 +94,7 @@ Future<void> _verifyLeaseCallbackGuardPrecedence() async {
     abortedLease: scenario.abortedLease,
   );
   _expectUnhandledLeaseCallbackRejections();
+  await _expectThrowingLeaseCallbacksAreContained();
 }
 
 _CaughtLeaseScenario _caughtLeaseScenario() {
@@ -155,6 +158,119 @@ void _expectUnhandledLeaseCallbackRejections() {
       _expectUnhandledLeaseCallbackRejection(terminal, operation);
     }
   }
+}
+
+// The terminal/error-kind matrix shares one setup so applied and unapplied
+// finality cannot silently lose parity.
+// ignore: halstead-volume
+Future<void> _expectThrowingLeaseCallbacksAreContained() async {
+  for (final terminal in _LeaseTerminal.values) {
+    for (final thrown in <Object>[
+      StateError('must not appear in diagnostics'),
+      const FormatException('must not appear in diagnostics'),
+      _OrdinaryThrownLeaseObject(),
+    ]) {
+      final lease = _DrawLease();
+      final effectBatches = <List<CommitDeliveryEffect>>[];
+      late RuntimeRoot root;
+      root = runtimeRootWithCommittedDocumentSeed(
+        CanvasDocument(),
+        config: CanvasRuntimeConfig(
+          diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+          commitResolver: (_) => _leaseResolution(terminal, lease),
+        ),
+        commitEffectObserver: effectBatches.add,
+      );
+      final actions = <CanvasActionCommitted>[];
+      final subscription = root.actions.listen(actions.add);
+      _configureThrowingLeaseCallback(terminal, lease, thrown);
+
+      try {
+        _drawPencil(root);
+        await Future<void>.delayed(Duration.zero);
+
+        _expectThrowingLeaseCallbackOutcome(
+          scenario: (
+            root: root,
+            lease: lease,
+            actions: actions,
+            effectBatches: effectBatches,
+          ),
+          terminal: terminal,
+          thrown: thrown,
+        );
+        expect(root.generateElementId(), isNotNull);
+      } finally {
+        await subscription.cancel();
+        root.dispose();
+      }
+    }
+  }
+}
+
+void _configureThrowingLeaseCallback(
+  _LeaseTerminal terminal,
+  _DrawLease lease,
+  Object thrown,
+) {
+  void callback() => _throwLeaseValue(thrown);
+  switch (terminal) {
+    case _LeaseTerminal.committed:
+      lease.onCommitted = callback;
+    case _LeaseTerminal.aborted:
+      lease.onAborted = callback;
+  }
+}
+
+// One assertion block keeps terminal count, bounded diagnostics, and delivery
+// outcome coupled for each matrix entry.
+// ignore: halstead-volume
+void _expectThrowingLeaseCallbackOutcome({
+  required _ThrowingLeaseScenario scenario,
+  required _LeaseTerminal terminal,
+  required Object thrown,
+}) {
+  final root = scenario.root;
+  final lease = scenario.lease;
+  final reason = '${terminal.name}/${thrown.runtimeType}';
+  expect(lease.committedCalls, terminal == _LeaseTerminal.committed ? 1 : 0);
+  expect(lease.abortedCalls, terminal == _LeaseTerminal.aborted ? 1 : 0);
+  expect(root.diagnosticRecords, hasLength(1), reason: reason);
+  final diagnostic = root.diagnosticRecords.single;
+  expect(
+    diagnostic.code,
+    const DiagnosticCode.interaction(
+      InteractionDiagnosticCode.resolverCallbackFailed,
+    ),
+    reason: reason,
+  );
+  expect(diagnostic.severity, DiagnosticSeverity.warning, reason: reason);
+  expect(diagnostic.source, DiagnosticSource.interaction, reason: reason);
+  expect(diagnostic.details, {
+    'operation': terminal == _LeaseTerminal.committed
+        ? 'commitLeaseCommitted'
+        : 'commitLeaseAborted',
+    'errorKind': thrown is Error
+        ? 'error'
+        : thrown is Exception
+        ? 'exception'
+        : 'object',
+  }, reason: reason);
+  expect(diagnostic.path, isNull, reason: reason);
+  expect(diagnostic.revision, isNull, reason: reason);
+  expect(diagnostic.sessionId, isNull, reason: reason);
+  expect(diagnostic.correlationId, isNull, reason: reason);
+
+  final committed = terminal == _LeaseTerminal.committed;
+  expect(root.state.value.summary.elementCount, committed ? 1 : 0);
+  expect(scenario.actions, hasLength(committed ? 1 : 0), reason: reason);
+  expect(scenario.effectBatches, hasLength(committed ? 1 : 0), reason: reason);
+}
+
+void _throwLeaseValue(Object value) {
+  // Ordinary objects are part of the bounded error-kind contract.
+  // ignore: only_throw_errors
+  throw value;
 }
 
 void _expectUnhandledLeaseCallbackRejection(
@@ -248,10 +364,22 @@ void _catchLeaseReentrantOperations(RuntimeRoot root) {
 
 enum _LeaseTerminal { committed, aborted }
 
+final class _OrdinaryThrownLeaseObject {
+  @override
+  String toString() => 'must not appear in diagnostics';
+}
+
 typedef _CaughtLeaseScenario = ({
   RuntimeRoot root,
   _DrawLease committedLease,
   _DrawLease abortedLease,
+});
+
+typedef _ThrowingLeaseScenario = ({
+  RuntimeRoot root,
+  _DrawLease lease,
+  List<CanvasActionCommitted> actions,
+  List<List<CommitDeliveryEffect>> effectBatches,
 });
 
 final _leaseReentrantOperations = <_LeaseReentrantOperation>[

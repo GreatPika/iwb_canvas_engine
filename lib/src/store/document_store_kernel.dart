@@ -2421,7 +2421,9 @@ StoreRevisionDelta _layerRowsRevisionDelta(
   return delta;
 }
 
-// Accepted element touches compare normalized immutable base/final rows only.
+// Accepted row and placement touches share one bounded ID pass so exact Move
+// invalidation does not add a second traversal of the touched element set.
+// ignore: halstead-volume, source-lines-of-code
 _ElementTouchedFacts _elementTouchedFacts(
   CommittedDocument base,
   CommittedDocument candidate, {
@@ -2435,6 +2437,10 @@ _ElementTouchedFacts _elementTouchedFacts(
         ...candidate.elements.frameElementOrder,
       };
   final facts = _ElementTouchedFacts();
+  final comparePlacement = !identical(
+    base.elements.elementLocationFacts,
+    candidate.elements.elementLocationFacts,
+  );
   for (final id in ids) {
     final rows = (
       before: recordSparseReads
@@ -2455,9 +2461,47 @@ _ElementTouchedFacts _elementTouchedFacts(
             ),
     );
     _recordElementTouch(facts, id: id, before: rows.before, after: rows.after);
+    if (comparePlacement) {
+      _recordElementPlacementTouch(
+        facts,
+        id,
+        before: base.elements.elementLocationFacts[id],
+        after: candidate.elements.elementLocationFacts[id],
+        existsBefore: rows.before != null,
+        existsAfter: rows.after != null,
+      );
+    }
   }
 
   return facts;
+}
+
+// Placement is an independent accepted touch: element rows can remain equal
+// while moving the same ID between committed layers.
+// ignore: number-of-parameters
+void _recordElementPlacementTouch(
+  _ElementTouchedFacts facts,
+  CanvasElementId id, {
+  required ElementLocationFacts? before,
+  required ElementLocationFacts? after,
+  required bool existsBefore,
+  required bool existsAfter,
+}) {
+  if (existsBefore &&
+      existsAfter &&
+      !_sameElementLocationFacts(before, after)) {
+    facts.placementElementIds.add(id);
+  }
+}
+
+bool _sameElementLocationFacts(
+  ElementLocationFacts? before,
+  ElementLocationFacts? after,
+) {
+  if (before == null || after == null) {
+    return before == after;
+  }
+  return before.kind == after.kind && before.layerId == after.layerId;
 }
 
 FamilyTablesDecisionResult _elementComparisonResult({
@@ -2848,6 +2892,7 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
     addedElementIds: elementTouches.addedElementIds,
     removedElementIds: elementTouches.removedElementIds,
     updatedElementIds: elementTouches.updatedElementIds,
+    placementElementIds: elementTouches.placementElementIds,
     transformedElementIds: elementTouches.transformedElementIds,
     geometryElementIds: elementTouches.geometryElementIds,
     visualElementIds: elementTouches.visualElementIds,
@@ -3374,6 +3419,7 @@ final class _ElementTouchedFacts {
   final Set<CanvasElementId> addedElementIds = {};
   final Set<CanvasElementId> removedElementIds = {};
   final Set<CanvasElementId> updatedElementIds = {};
+  final Set<CanvasElementId> placementElementIds = {};
   final Set<CanvasElementId> transformedElementIds = {};
   final Set<CanvasElementId> geometryElementIds = {};
   final Set<CanvasElementId> visualElementIds = {};

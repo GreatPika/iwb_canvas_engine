@@ -74,6 +74,46 @@ void _emptyLayerRemovalPreservesStructuralOwnership() {
   _expectMaterializedMovedLayerAndContentAddUsesExactSpatialTouches(document);
   _expectReaddedElementTouchesBothContentLayerPlacements(document);
   _expectSameLayerElementRecreationIsSilent(document);
+  _expectRemovedLastElementLayerRestorationStaysEmpty(document);
+}
+
+// Both storage routes belong in one witness because their final public state
+// must agree after the same remove/recreate sequence.
+// ignore: halstead-volume
+void _expectRemovedLastElementLayerRestorationStaysEmpty(
+  CanvasDocument document,
+) {
+  final populatedLayerId = CanvasLayerId('populated');
+  final removedElementId = CanvasElementId('populated-element');
+
+  for (final materialize in [false, true]) {
+    final root = sparseRuntimeRootWithCommittedDocumentSeed(document);
+    addTearDown(root.dispose);
+
+    root.edits.edit((edit) {
+      if (materialize) {
+        edit.readDraftDocument();
+      }
+      expect(edit.removeElement(removedElementId), isTrue);
+      expect(edit.removeEmptyLayer(populatedLayerId), isTrue);
+      expect(edit.ensureLayer(populatedLayerId, index: 2), isTrue);
+    });
+
+    final restored = root.readDocument();
+    expect(
+      restored.layers.map((layer) => layer.id),
+      document.layers.map((layer) => layer.id),
+      reason: 'materialize=$materialize',
+    );
+    expect(
+      restored.layers
+          .singleWhere((layer) => layer.id == populatedLayerId)
+          .elements,
+      isEmpty,
+      reason: 'materialize=$materialize',
+    );
+    expect(root.state.value.summary.elementCount, 1);
+  }
 }
 
 /// Keeps the public lifetime and atomic-publication oracle in one fixture;

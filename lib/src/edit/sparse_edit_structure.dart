@@ -105,7 +105,8 @@ final class SparseEditStructure {
     if (_openLayerOrder().remove(id) == null) {
       throw StateError('Sparse layer order is missing ${id.value}.');
     }
-    _contentOrders.remove(id)?.discard();
+    // Retain the transaction-local empty order until dispose so restoring this
+    // layer cannot re-read committed members already removed in the same edit.
     return true;
   }
 
