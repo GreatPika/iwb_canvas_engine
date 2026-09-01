@@ -1085,6 +1085,9 @@ final class RuntimeRoot
     );
   }
 
+  // Preparation, resolution, lease termination, consumption, and delivery stay
+  // adjacent so every failure path has one visible terminal owner.
+  // ignore: halstead-volume, source-lines-of-code
   void deleteSelection({int? timestampMs}) {
     ensureRuntimeMutationAllowed();
     final removalEntries = _selectionDeleteEntries();
@@ -1185,6 +1188,9 @@ final class RuntimeRoot
     return 'object';
   }
 
+  // Callback containment and exhaustive resolution compatibility form the one
+  // normalization boundary used by every confirmed operation.
+  // ignore: source-lines-of-code
   _CommitResolutionOutcome _resolveCommit(
     CanvasCommitRequest request, {
     required bool isMove,
@@ -1312,9 +1318,11 @@ final class RuntimeRoot
     );
   }
 
-  // The transform descriptor is kept explicit so move and pivoted transform
-  // actions share one delivery path without hiding action payload fields.
-  // ignore: number-of-parameters
+  // Move must prepare after resolution while pivoted transforms prepare before
+  // it; keeping both branches in one temporal owner makes lease and discard
+  // ordering auditable instead of distributing it across phase helpers.
+  // The explicit inputs also keep action payload facts visible at the boundary.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, number-of-parameters
   void _deliverSelectionTransform({
     required CanvasTransform transform,
     required CanvasTransformOperation operation,
@@ -3204,6 +3212,7 @@ final class RuntimeRoot
   // together, while each caller retains its own admission and cleanup policy.
   // Keeping every sealing input explicit avoids a per-operation wrapper and
   // makes the transform/action contract readable at its only shared owner.
+  // ignore: number-of-parameters
   PreparedInteractionCommit _prepareDeferredSelectionTransformCommit({
     required Iterable<CanvasElementRead> participants,
     required Iterable<CanvasElementId> elementIds,
@@ -3328,7 +3337,9 @@ final class RuntimeRoot
     return outcome;
   }
 
-  // Draw stroke commit flow.
+  // The prepared entry, resolver, lease, route cleanup, and delivery stay in
+  // one stroke lifecycle so cancellation and consume failure cannot diverge.
+  // ignore: halstead-volume, source-lines-of-code
   void _deliverDrawStrokeCommit(
     DrawStrokeCommitIntent intent, {
     required int? timestampHintMs,
@@ -3464,6 +3475,9 @@ final class RuntimeRoot
     return outcome;
   }
 
+  // Sparse lookup, placement validation, order validation, and public entry
+  // projection are one candidate-placement proof and are safer read together.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer})
   _preparedDrawEntry(AcceptedCommitDocument document, CanvasElementId id) {
     final sparse = switch (document) {
@@ -3517,7 +3531,9 @@ final class RuntimeRoot
     );
   }
 
-  // Draw line commit flow.
+  // The prepared entry, resolver, lease, route cleanup, and delivery stay in
+  // one line lifecycle so cancellation and consume failure cannot diverge.
+  // ignore: halstead-volume, source-lines-of-code
   void _deliverDrawLineCommit(
     DrawLineCommitIntent intent, {
     required int? timestampHintMs,

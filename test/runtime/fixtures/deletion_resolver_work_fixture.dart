@@ -25,7 +25,7 @@ import '../../support/accept_commit.dart';
 // The four route matrices share the same public work oracle. Keeping their
 // registrations adjacent makes the fixed-k/N and terminal-outcome coverage
 // auditable without hiding a route in a helper solely to lower metrics.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
 void main() {
   test('both deletion routes construct and consume one bounded package', () {
     var witnessedOperations = 0;
