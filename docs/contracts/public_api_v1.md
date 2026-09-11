@@ -555,14 +555,18 @@ document, action, or Schema v1 payload. A stored non-null family wins; a null
 default preserves Flutter's fallback behavior.
 
 `commitResolver` is required. It receives exactly one fully-qualified request
-for every admitted changed Draw, Delete, Erase, Move, Rotate, Reflect, or Text
-Edit route before installation. It is not called for service edits, replay/load,
-programmatic `CanvasEdit` operations, previews, stale/invalid/no-op terminals,
-ineligible operations, excluded eraser paths, or equal text. The resolver
-returns a generic accept/cancel decision; only Move accepts a replacement delta.
-There is no default-accept, nullable, adapter, precedence, or compatibility
-path. A host that intentionally records no history supplies its own resolver
-that returns `CanvasCommitAccept` with a no-op `CanvasCommitLease`.
+for every admitted changed Draw, Delete, Erase, Move, Rotate, Reflect, Text
+Edit, or Text Create route before installation. It is not called for service
+edits, replay/load, programmatic `CanvasEdit` operations, previews,
+stale/invalid/no-op terminals, ineligible operations, excluded eraser paths,
+or an existing text update whose complete text/B/I/U draft is unchanged. A
+nonempty new draft uses Text Create even when its live text equals the seed
+text. The
+resolver returns a generic accept/cancel decision; only Move accepts a
+replacement delta. There is no default-accept, nullable, adapter, precedence,
+or compatibility path. A host that intentionally records no history supplies
+its own resolver that returns `CanvasCommitAccept` with a no-op
+`CanvasCommitLease`.
 
 ### 4.6 Flutter surface
 

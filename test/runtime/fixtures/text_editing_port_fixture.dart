@@ -346,6 +346,10 @@ void _testNewTextAdmission() {
           layerId: CanvasLayerId('prospective-layer'),
         ),
       );
+      session.updateText('draft before prospective conflict');
+      session.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
+      final prospectiveStyle = session.style;
+      final prospectiveGeometry = session.geometry;
       scenario.root.edits.edit((edit) {
         edit.addElement(
           CanvasRectElement(
@@ -358,9 +362,15 @@ void _testNewTextAdmission() {
       final prospectiveConflictDocument = scenario.root.readDocument();
       expect(session.isStale, isTrue);
       session.updateText('must not mutate retained draft');
-      expect(session.liveText, seed.text);
+      session.updateFormatting(isBold: false, isItalic: false, isUnderline: false);
+      expect(session.liveText, 'draft before prospective conflict');
+      expect(session.style, prospectiveStyle);
+      expect(session.geometry, prospectiveGeometry);
       expect(session.commit(), isFalse);
       expect(session.commit(), isFalse);
+      expect(session.liveText, 'draft before prospective conflict');
+      expect(session.style, prospectiveStyle);
+      expect(session.geometry, prospectiveGeometry);
       expect(scenario.root.textEditing.activeSession.value, same(session));
       expect(_containsElement(scenario.root, seed.id), isFalse);
       expect(scenario.actions, isEmpty);
@@ -374,6 +384,10 @@ void _testNewTextAdmission() {
           layerId: CanvasLayerId('prospective-layer'),
         ),
       );
+      idSession.updateText('draft before occupied-id conflict');
+      idSession.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
+      final idStyle = idSession.style;
+      final idGeometry = idSession.geometry;
       scenario.root.edits.edit((edit) {
         edit.addElement(
           CanvasRectElement(
@@ -386,9 +400,15 @@ void _testNewTextAdmission() {
       final idConflictDocument = scenario.root.readDocument();
       expect(idSession.isStale, isTrue);
       idSession.updateText('must not mutate the occupied-id draft');
-      expect(idSession.liveText, 'seed');
+      idSession.updateFormatting(isBold: false, isItalic: false, isUnderline: false);
+      expect(idSession.liveText, 'draft before occupied-id conflict');
+      expect(idSession.style, idStyle);
+      expect(idSession.geometry, idGeometry);
       expect(idSession.commit(), isFalse);
       expect(idSession.commit(), isFalse);
+      expect(idSession.liveText, 'draft before occupied-id conflict');
+      expect(idSession.style, idStyle);
+      expect(idSession.geometry, idGeometry);
       expect(scenario.actions, isEmpty);
       expect(scenario.root.textEditing.activeSession.value, same(idSession));
       expect(scenario.root.readDocument(), same(idConflictDocument));

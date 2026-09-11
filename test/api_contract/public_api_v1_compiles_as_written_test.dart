@@ -989,6 +989,42 @@ void _exerciseP2ContractSurface() {
   _use(action.type);
   _use(actionPayloads);
   _use(CanvasActionType.values);
+  _use(
+    CanvasActionType.values
+        .map(
+          (type) => switch (type) {
+            CanvasActionType.moveSelection => 'moveSelection',
+            CanvasActionType.selectMarquee => 'selectMarquee',
+            CanvasActionType.transformSelection => 'transformSelection',
+            CanvasActionType.deleteElements => 'deleteElements',
+            CanvasActionType.clearContent => 'clearContent',
+            CanvasActionType.drawPencil => 'drawPencil',
+            CanvasActionType.drawMarker => 'drawMarker',
+            CanvasActionType.drawLine => 'drawLine',
+            CanvasActionType.erase => 'erase',
+            CanvasActionType.editText => 'editText',
+            CanvasActionType.createText => 'createText',
+          },
+        )
+        .toList(),
+  );
+  _use(
+    actionPayloads
+        .map(
+          (payload) => switch (payload) {
+            CanvasTransformActionPayload() => 'transform',
+            CanvasSelectionActionPayload() => 'selection',
+            CanvasDeleteActionPayload() => 'delete',
+            CanvasClearActionPayload() => 'clear',
+            CanvasDrawStrokeActionPayload() => 'stroke',
+            CanvasDrawLineActionPayload() => 'line',
+            CanvasEraseActionPayload() => 'erase',
+            CanvasTextEditActionPayload() => 'textEdit',
+            CanvasTextCreateActionPayload() => 'textCreate',
+          },
+        )
+        .toList(),
+  );
   _use(CanvasTransformOperation.values);
   _use(contextRequest.target);
   _use(emptyTarget);

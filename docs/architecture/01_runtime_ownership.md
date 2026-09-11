@@ -243,15 +243,18 @@ text-input session, not a context menu or app overlay state owner, and not
 `CanvasPreviewState`.
 
 `CanvasTextEditingPort` is the runtime-owned active inline text editing
-boundary. It admits only current text content-action requests, exposes one
-`ValueListenable<CanvasTextEditSession?>`, derives live session geometry from
-the frame-measured text layout source, and asks InteractionEngine's one
-non-consuming issued/current guard comparison for admission and staleness. It
-latches stale sessions without rebasing them, retaining their identity,
-immutable base facts, one live text/B/I/U draft, and last geometry while
-refusing later updates and commits. Its `finishActive` terminal owns
-commit/cancel outcome distinctions; compatible session, dismiss,
-direct-command, and stock-overlay adapters converge there.
+boundary. It admits current text content-action requests, visible existing text
+IDs, and transient new text seeds, while exposing one
+`ValueListenable<CanvasTextEditSession?>` and deriving live session geometry
+from the frame-measured text layout source. Existing text admission and
+staleness use InteractionEngine's one non-consuming issued/current guard
+comparison. New-seed admission retains its interaction-issued creation request
+with captured controller epoch, destination/existence, and unoccupied seed-ID
+facts until completion. It latches stale sessions without rebasing them,
+retaining their identity, immutable base or seed facts, one live text/B/I/U
+draft, and last geometry while refusing later updates and commits. Its
+`finishActive` terminal owns commit/cancel outcome distinctions; compatible
+session, dismiss, direct-command, and stock-overlay adapters converge there.
 Candidate/context admission captures the immutable empty-text policy in that
 same session state. On a trim-empty deleteElement finish, RuntimeRoot selects
 the shared direct-removal preparation with its original Store entry and exact
