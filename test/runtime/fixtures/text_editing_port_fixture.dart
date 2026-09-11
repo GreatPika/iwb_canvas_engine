@@ -341,8 +341,16 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
       );
       session.updateText(' ');
 
-      expect(session.commit(), isFalse);
+      expect(
+        exceptionScenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.rejected,
+      );
       expect(_containsElement(exceptionScenario.root, _textId), isTrue);
+      expect(session.isActive, isTrue);
+      expect(session.isStale, isFalse);
+      expect(session.liveText, ' ');
       expect(exceptionScenario.root.textEditing.activeSession.value, same(session));
       _expectRequestFactsLive(exceptionScenario.root, request);
       expect(exceptionScenario.actions, isEmpty);
@@ -387,13 +395,14 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
   });
 }
 
-// This one public text-session witness holds policy capture, direct-removal
-// facts, and terminal work together so an empty update before deletion cannot
-// pass by final document state alone.
+// These public text-session witnesses keep independent deletion outcomes
+// isolated while preserving the full policy, direct-removal, and terminal-work
+// oracle where an empty update before deletion could otherwise pass by final
+// document state alone.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testEmptyPolicyDeletion() {
   test(
-    'delete policy removes whitespace and originally empty text through one direct deletion',
+    'delete policy removes whitespace through one direct deletion',
     () async {
       CanvasDeleteCommitRequest? whitespaceProposal;
       final whitespaceLease = _TextCommitLease();
@@ -481,62 +490,66 @@ void _testEmptyPolicyDeletion() {
       } finally {
         await whitespaceScenario.dispose();
       }
-
-      CanvasDeleteCommitRequest? emptyProposal;
-      final emptyScenario = _Scenario(
-        document: _document(text: '', isDeletable: false),
-        config: CanvasRuntimeConfig(
-          commitResolver: (request) {
-            emptyProposal = request as CanvasDeleteCommitRequest;
-            return acceptCommit(request);
-          },
-        ),
-      );
-      try {
-        final request = await emptyScenario.issueTextRequest();
-        final session = _expectSession(
-          emptyScenario.root.textEditing.startFromContextAction(
-            request,
-            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
-          ),
-        );
-        final original = _textElement(emptyScenario.root);
-
-        expect(session.commit(), isTrue);
-
-        final proposal = emptyProposal;
-        if (proposal == null) fail('Expected an empty-text deletion proposal.');
-        _expectCompleteTextElement(
-          _asTextElement(proposal.entries.single.element),
-          original,
-        );
-        expect(proposal.entries.single.element.isDeletable, isFalse);
-        expect(_containsElement(emptyScenario.root, _textId), isFalse);
-      } finally {
-        await emptyScenario.dispose();
-      }
-
-      CanvasCommitRequest? keepProposal;
-      final keepScenario = _Scenario(
-        config: CanvasRuntimeConfig(
-          commitResolver: (request) {
-            keepProposal = request;
-            return acceptCommit(request);
-          },
-        ),
-      );
-      try {
-        final session = await _startTextSession(keepScenario);
-        session.updateText(' \n\t');
-
-        expect(session.commit(), isTrue);
-        expect(keepProposal, isA<CanvasTextEditCommitRequest>());
-        expect(_textValue(keepScenario.root), ' \n\t');
-      } finally {
-        await keepScenario.dispose();
-      }
     },
   );
+
+  test('delete policy removes originally empty nondeletable text directly', () async {
+    CanvasDeleteCommitRequest? emptyProposal;
+    final emptyScenario = _Scenario(
+      document: _document(text: '', isDeletable: false),
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          emptyProposal = request as CanvasDeleteCommitRequest;
+          return acceptCommit(request);
+        },
+      ),
+    );
+    try {
+      final request = await emptyScenario.issueTextRequest();
+      final session = _expectSession(
+        emptyScenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      final original = _textElement(emptyScenario.root);
+
+      expect(session.commit(), isTrue);
+
+      final proposal = emptyProposal;
+      if (proposal == null) fail('Expected an empty-text deletion proposal.');
+      _expectCompleteTextElement(
+        _asTextElement(proposal.entries.single.element),
+        original,
+      );
+      expect(proposal.entries.single.element.isDeletable, isFalse);
+      expect(_containsElement(emptyScenario.root, _textId), isFalse);
+    } finally {
+      await emptyScenario.dispose();
+    }
+  });
+
+  test('empty text keeps its element by default', () async {
+    CanvasCommitRequest? keepProposal;
+    final keepScenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          keepProposal = request;
+          return acceptCommit(request);
+        },
+      ),
+    );
+    try {
+      final session = await _startTextSession(keepScenario);
+      session.updateText(' \n\t');
+
+      expect(session.commit(), isTrue);
+      expect(keepProposal, isA<CanvasTextEditCommitRequest>());
+      expect(_textValue(keepScenario.root), ' \n\t');
+    } finally {
+      await keepScenario.dispose();
+    }
+  });
 }
 
 // Direct command input must reach the terminal unchanged, while all committing
