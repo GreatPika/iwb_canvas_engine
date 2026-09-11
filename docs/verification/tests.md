@@ -389,7 +389,11 @@ and resource effects rather than preflight candidates.
 ordinary layer can be removed, absent/nonempty calls are silent, and sparse,
 promoted, and materialized edits preserve final-state equality, atomic
 selection composition, bounded Runtime spatial delivery, and same-ID element
-placement compensation/rebind. The direct Store replay, accepted
+placement compensation/rebind. It also verifies the non-mutating named/last/
+default content-destination result, including changed edit-local order, against
+ordinary materialized, sparse, and Store-replay placement; existing structural
+and LayerTable observations reject projection or order traversal in the pure
+committed query. The direct Store replay, accepted
 layer-location/touched facts, retained background/resources, and bounded versus
 unbounded Store facts remain owned by `test/store/sparse_store_commit_test.dart`.
 

@@ -189,6 +189,10 @@ final class SupportedSizeSparseFacts implements SparseEditSessionFacts {
       Iterable.generate(layerCount, (index) => CanvasLayerId('layer-$index'));
 
   @override
+  CanvasLayerId? get lastContentLayerId =>
+      layerCount == 0 ? null : CanvasLayerId('layer-${layerCount - 1}');
+
+  @override
   Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
     if (id != CanvasLayerId('layer-0')) {
       return const [];
@@ -349,6 +353,12 @@ final class SparseFixtureFacts implements SparseEditSessionFacts {
   @override
   Iterable<CanvasLayerId> get layerIds {
     return [for (final layer in document.layers) layer.id];
+  }
+
+  @override
+  CanvasLayerId? get lastContentLayerId {
+    final layers = document.layers;
+    return layers.isEmpty ? null : layers.last.id;
   }
 
   @override

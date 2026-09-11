@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/public/canvas_ids.dart';
+import '../store/content_layer_destination.dart';
 import '../store/element_registry.dart';
 import '../store/indexed_order_sequence.dart';
 
@@ -12,6 +13,7 @@ import '../store/indexed_order_sequence.dart';
 /// per ID, then its current-location view owns every later sparse decision.
 abstract interface class SparseEditStructureFacts {
   bool hasLayer(CanvasLayerId id);
+  CanvasLayerId? get lastContentLayerId;
   Iterable<CanvasElementId> get backgroundElementIds;
   Iterable<CanvasLayerId> get layerIds;
   Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id);
@@ -110,7 +112,21 @@ final class SparseEditStructure {
     return true;
   }
 
-  CanvasLayerId? lastLayerId() => _openLayerOrder().last;
+  ContentLayerDestination contentLayerDestination(
+    CanvasLayerId? requestedLayerId,
+  ) {
+    if (requestedLayerId != null) {
+      return ContentLayerDestination.resolve(
+        requestedLayerId: requestedLayerId,
+        requestedLayerExists: hasLayer(requestedLayerId),
+      );
+    }
+    final order = _layerOrder;
+    return ContentLayerDestination.resolve(
+      requestedLayerExists: false,
+      lastLayerId: order == null ? _facts.lastContentLayerId : order.last,
+    );
+  }
 
   void addBackground(CanvasElementId id, {int? index}) {
     _openBackgroundOrder().insert(id, index: index);

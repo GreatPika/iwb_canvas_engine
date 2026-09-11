@@ -13,6 +13,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../store/content_layer_destination.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
@@ -191,6 +192,10 @@ final class DraftDocument {
 
     return true;
   }
+
+  ContentLayerDestination contentLayerDestination(
+    CanvasLayerId? requestedLayerId,
+  ) => _structure.contentLayerDestination(requestedLayerId);
 
   bool removeEmptyLayer(CanvasLayerId id) {
     if (!_structure.removeEmptyLayer(id)) {
@@ -606,25 +611,13 @@ final class DraftDocument {
   }
 
   CanvasLayerId _layerForElementAdd(CanvasLayerId? layerId) {
-    if (layerId == null) {
-      final lastLayerId = _structure.lastLayerId;
-      if (lastLayerId == null) {
-        final defaultLayerId = CanvasLayerId('default-layer');
-        _structure.ensureLayer(defaultLayerId);
-        _touchedSet.touchLayer(defaultLayerId);
-        _markStructural();
-        return defaultLayerId;
-      }
-      return lastLayerId;
+    final destination = _structure.contentLayerDestination(layerId);
+    if (!destination.exists) {
+      _structure.ensureLayer(destination.layerId);
+      _touchedSet.touchLayer(destination.layerId);
+      _markStructural();
     }
-
-    if (_structure.hasLayer(layerId)) {
-      return layerId;
-    }
-    _structure.ensureLayer(layerId);
-    _touchedSet.touchLayer(layerId);
-    _markStructural();
-    return layerId;
+    return destination.layerId;
   }
 
   DraftStructureElement? _findElement(CanvasElementId id) =>

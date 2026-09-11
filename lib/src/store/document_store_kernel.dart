@@ -514,6 +514,11 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     return _document.elements.containsLayer(id);
   }
 
+  CanvasLayerId? get lastContentLayerId {
+    final rows = _document.elements.layerTable.rows;
+    return rows.isEmpty ? null : rows.last.id;
+  }
+
   Iterable<CanvasLayerId> get layerIds {
     return LayerTable.withReadScopeIterable<CanvasLayerId>(
       LayerTableReadScope.intentionalIteration,

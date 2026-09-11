@@ -6,6 +6,7 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
+import '../store/content_layer_destination.dart';
 import '../store/indexed_order_sequence.dart';
 
 @visibleForTesting
@@ -101,6 +102,17 @@ final class DraftStructure {
   bool hasElement(CanvasElementId id) => _elementsById.containsKey(id);
 
   CanvasLayerId? get lastLayerId => _layerOrder.last;
+
+  ContentLayerDestination contentLayerDestination(
+    CanvasLayerId? requestedLayerId,
+  ) {
+    return ContentLayerDestination.resolve(
+      requestedLayerId: requestedLayerId,
+      requestedLayerExists:
+          requestedLayerId != null && hasLayer(requestedLayerId),
+      lastLayerId: requestedLayerId == null ? _layerOrder.last : null,
+    );
+  }
 
   bool ensureLayer(
     CanvasLayerId id, {

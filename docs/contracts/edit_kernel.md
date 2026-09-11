@@ -107,7 +107,14 @@ structure now has one owner-local current placement view plus separate lazy
 indexed orders for layers, background elements, and each content layer. Its
 first location read comes from Store's committed `ElementLocationFacts`; local
 add, remove, and clear transitions become authoritative immediately, and opened
-orders are discarded on promotion or session close. Sparse resource decisions
+orders are discarded on promotion or session close.
+Content adds first resolve one Store-owned named, current-last, then default
+destination into a layer ID and existence fact. That read is non-mutating:
+sparse sessions use their already-open edit-local order when present, otherwise
+the Store supplies the committed last-layer fact without opening an order or a
+public projection. Sparse and materialized edits install a missing selected
+layer through their existing paths, while structural replay uses the same rule;
+the sparse journal retains the original optional requested layer ID. Sparse resource decisions
 combine Store's direct committed image/vector counts with session-local
 affected-id deltas. Add, update, remove, remove/re-add, and clear transitions
 update the split deltas immediately; descriptor changes do not. Thus an unused

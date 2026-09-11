@@ -44,6 +44,9 @@ final class StoreSparseFactsForTest implements SparseEditSessionFacts {
   bool hasLayer(CanvasLayerId id) => store.hasLayer(id);
 
   @override
+  CanvasLayerId? get lastContentLayerId => store.lastContentLayerId;
+
+  @override
   Iterable<CanvasElementId> get backgroundElementIds {
     return store.backgroundElementIds;
   }

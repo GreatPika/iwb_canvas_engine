@@ -17,6 +17,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../contracts/internal/touched_set.dart';
+import '../store/content_layer_destination.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
@@ -640,10 +641,15 @@ final class _SparseEditBacking implements _EditSessionBacking {
       );
     }
     _admitSparseElement(element);
-    final targetLayerId = _admitSparseContentLayerForAdd(layerId);
+    final destination = _structure.contentLayerDestination(layerId);
+    _installSparseContentLayer(destination);
     _trackSparseElementAdd(element.id);
     _elementOverrides[element.id] = element;
-    _structure.addContent(element.id, layerId: targetLayerId, index: index);
+    _structure.addContent(
+      element.id,
+      layerId: destination.layerId,
+      index: index,
+    );
     _resourceReferences.recordTransition(after: element);
     _mutationJournal.append(
       StoreSparseAddElement(element: element, layerId: layerId, index: index),
@@ -654,24 +660,10 @@ final class _SparseEditBacking implements _EditSessionBacking {
     return element.id;
   }
 
-  CanvasLayerId _admitSparseContentLayerForAdd(CanvasLayerId? layerId) {
-    if (layerId != null) {
-      if (_admitSparseLayer(layerId)) {
-        _touchedSet.touchLayer(layerId);
-      }
-
-      return layerId;
+  void _installSparseContentLayer(ContentLayerDestination destination) {
+    if (!destination.exists && _admitSparseLayer(destination.layerId)) {
+      _touchedSet.touchLayer(destination.layerId);
     }
-    if (_sparseLayerCount == 0) {
-      final defaultLayerId = CanvasLayerId('default-layer');
-      if (_admitSparseLayer(defaultLayerId)) {
-        _touchedSet.touchLayer(defaultLayerId);
-      }
-
-      return defaultLayerId;
-    }
-
-    return _contentLayerForSparseAdd(null);
   }
 
   @override
@@ -1046,10 +1038,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
     return _structure.ensureLayer(id, index: index);
   }
 
-  int get _sparseLayerCount {
-    return _structure.layerCount(committedCount: _committedSummary.layerCount);
-  }
-
   int get _sparseElementCount {
     return _committedSummary.elementCount +
         _addedElementIds.length -
@@ -1069,21 +1057,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return;
     }
     _addedElementIds.add(id);
-  }
-
-  CanvasLayerId _contentLayerForSparseAdd(CanvasLayerId? requestedLayerId) {
-    if (requestedLayerId != null) {
-      return requestedLayerId;
-    }
-    final layerId = _structure.lastLayerId();
-    if (layerId == null) {
-      final defaultLayerId = CanvasLayerId('default-layer');
-      _structure.ensureLayer(defaultLayerId);
-
-      return defaultLayerId;
-    }
-
-    return layerId;
   }
 
   void _trackSparseResourceUpsert(CanvasResourceId id) {

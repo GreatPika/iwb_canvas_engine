@@ -7,7 +7,10 @@ import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_structure.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
 import 'package:iwb_canvas_engine/src/edit/sparse_edit_structure.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
+import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 
 import 'sparse_edit_session_support.dart';
 
@@ -64,6 +67,331 @@ void registerSparseEditSessionStructureTests() {
     'empty-layer removal composes and publishes final state atomically in sparse and materialized edits',
     () => expect(_materializedEmptyLayerRemovalComposition, returnsNormally),
   );
+  test(
+    'content destination selection is pure',
+    () => expect(_contentDestinationSelectionIsPure, returnsNormally),
+  );
+  test(
+    'ordinary placement consumes the selected content destination',
+    () => expect(_ordinaryPlacementConsumesContentDestination, returnsNormally),
+  );
+}
+
+void _contentDestinationSelectionIsPure() {
+  final firstLayerId = CanvasLayerId('first');
+  final lastLayerId = CanvasLayerId('last');
+  final document = CanvasDocument(
+    layers: [
+      CanvasLayer(id: firstLayerId, elements: [sparseRect('first-existing')]),
+      CanvasLayer(id: lastLayerId),
+    ],
+  );
+  _expectMaterializedDestinationSelectionIsPure(
+    document,
+    firstLayerId,
+    lastLayerId,
+  );
+  _expectCommittedSparseDestinationSelectionIsPure(document, lastLayerId);
+  _expectEditLocalSparseDestinationSelectionIsPure(
+    document,
+    firstLayerId,
+    lastLayerId,
+  );
+  _expectEmptyEditLocalDestinationUsesDefault(firstLayerId, lastLayerId);
+}
+
+void _expectMaterializedDestinationSelectionIsPure(
+  CanvasDocument document,
+  CanvasLayerId firstLayerId,
+  CanvasLayerId lastLayerId,
+) {
+  final absentLayerId = CanvasLayerId('absent');
+  final selectedElementIds = {CanvasElementId('first-existing')};
+  final draft = DraftDocument(document, selectedElementIds: selectedElementIds);
+  final beforeQueryLayerIds = draft
+      .readDocument()
+      .layers
+      .map((layer) => layer.id)
+      .toList();
+  final beforeQueryRevisionDelta = draft.revisionDelta;
+  final beforeQueryElementIds = draft
+      .readDocument()
+      .layers
+      .expand((layer) => layer.elements)
+      .map((element) => element.id)
+      .toList();
+  final namedExistingDestination = draft.contentLayerDestination(firstLayerId);
+  final namedAbsentDestination = draft.contentLayerDestination(absentLayerId);
+  final omittedDestination = draft.contentLayerDestination(null);
+
+  _expectContentDestination(
+    layerId: namedExistingDestination.layerId,
+    exists: namedExistingDestination.exists,
+    expectedLayerId: firstLayerId,
+    expectedExists: true,
+  );
+  _expectContentDestination(
+    layerId: namedAbsentDestination.layerId,
+    exists: namedAbsentDestination.exists,
+    expectedLayerId: absentLayerId,
+    expectedExists: false,
+  );
+  _expectContentDestination(
+    layerId: omittedDestination.layerId,
+    exists: omittedDestination.exists,
+    expectedLayerId: lastLayerId,
+    expectedExists: true,
+  );
+
+  expect(
+    draft.readDocument().layers.map((layer) => layer.id),
+    beforeQueryLayerIds,
+  );
+  expect(
+    draft
+        .readDocument()
+        .layers
+        .expand((layer) => layer.elements)
+        .map((element) => element.id),
+    beforeQueryElementIds,
+  );
+  expect(draft.revisionDelta, same(beforeQueryRevisionDelta));
+  expect(draft.selectedElementIds, selectedElementIds);
+
+  final emptyDraft = DraftDocument(CanvasDocument());
+  final defaultDestination = emptyDraft.contentLayerDestination(null);
+  _expectContentDestination(
+    layerId: defaultDestination.layerId,
+    exists: defaultDestination.exists,
+    expectedLayerId: CanvasLayerId('default-layer'),
+    expectedExists: false,
+  );
+  expect(emptyDraft.didChange, isFalse);
+}
+
+void _expectCommittedSparseDestinationSelectionIsPure(
+  CanvasDocument document,
+  CanvasLayerId lastLayerId,
+) {
+  final sparseFacts = SparseFixtureFacts(document);
+  final sparseStructure = SparseEditStructure(sparseFacts);
+  final sparseStructureEvents = <SparseEditStructureWorkEvent>[];
+  final sparseSequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  observeSparseEditStructureWork(
+    sparseStructureEvents.add,
+    () => IndexedOrderSequence.observeWork(sparseSequenceEvents.add, () {
+      final sparseDestination = sparseStructure.contentLayerDestination(null);
+      _expectContentDestination(
+        layerId: sparseDestination.layerId,
+        exists: sparseDestination.exists,
+        expectedLayerId: lastLayerId,
+        expectedExists: true,
+      );
+    }),
+  );
+  expect(sparseStructureEvents, isEmpty);
+  expect(sparseSequenceEvents, isEmpty);
+  sparseStructure.dispose();
+
+  final store = DocumentStoreKernel.withCommittedDocumentForTesting(
+    CommittedDocument(document),
+  );
+  final layerTableEvents = <LayerTableWorkEvent>[];
+  final projectionBuildCount = store.projectionBuildCount;
+  final committedLastLayerId = LayerTable.observeWork(
+    layerTableEvents.add,
+    () => store.lastContentLayerId,
+  );
+  expect(committedLastLayerId, lastLayerId);
+  expect(layerTableEvents, isEmpty);
+  expect(store.projectionBuildCount, projectionBuildCount);
+}
+
+void _expectEditLocalSparseDestinationSelectionIsPure(
+  CanvasDocument document,
+  CanvasLayerId firstLayerId,
+  CanvasLayerId lastLayerId,
+) {
+  final sparseStructure = SparseEditStructure(SparseFixtureFacts(document));
+  expect(sparseStructure.removeEmptyLayer(lastLayerId), isTrue);
+  expect(sparseStructure.ensureLayer(lastLayerId, index: 0), isTrue);
+  final structureEvents = <SparseEditStructureWorkEvent>[];
+  final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  observeSparseEditStructureWork(
+    structureEvents.add,
+    () => IndexedOrderSequence.observeWork(sequenceEvents.add, () {
+      final destination = sparseStructure.contentLayerDestination(null);
+      _expectContentDestination(
+        layerId: destination.layerId,
+        exists: destination.exists,
+        expectedLayerId: firstLayerId,
+        expectedExists: true,
+      );
+    }),
+  );
+  expect(structureEvents, isEmpty);
+  expect(sequenceEvents, isEmpty);
+  sparseStructure.dispose();
+}
+
+void _expectEmptyEditLocalDestinationUsesDefault(
+  CanvasLayerId firstLayerId,
+  CanvasLayerId lastLayerId,
+) {
+  final document = CanvasDocument(
+    layers: [
+      CanvasLayer(id: firstLayerId),
+      CanvasLayer(id: lastLayerId),
+    ],
+  );
+  final materialized = DraftDocument(document);
+  expect(materialized.removeEmptyLayer(firstLayerId), isTrue);
+  expect(materialized.removeEmptyLayer(lastLayerId), isTrue);
+  final materializedDestination = materialized.contentLayerDestination(null);
+  _expectContentDestination(
+    layerId: materializedDestination.layerId,
+    exists: materializedDestination.exists,
+    expectedLayerId: CanvasLayerId('default-layer'),
+    expectedExists: false,
+  );
+  materialized.addElement(sparseRect('materialized-empty-edit-local'));
+  _expectPlacedInLayer(
+    materialized.readDocument(),
+    CanvasElementId('materialized-empty-edit-local'),
+    CanvasLayerId('default-layer'),
+  );
+
+  final sparse = SparseEditStructure(SparseFixtureFacts(document));
+  expect(sparse.removeEmptyLayer(firstLayerId), isTrue);
+  expect(sparse.removeEmptyLayer(lastLayerId), isTrue);
+  final sparseDestination = sparse.contentLayerDestination(null);
+  _expectContentDestination(
+    layerId: sparseDestination.layerId,
+    exists: sparseDestination.exists,
+    expectedLayerId: CanvasLayerId('default-layer'),
+    expectedExists: false,
+  );
+  sparse.dispose();
+
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  addTearDown(root.dispose);
+  final sparseElement = sparseRect('sparse-empty-edit-local');
+  root.edits.edit((edit) {
+    expect(edit.removeEmptyLayer(firstLayerId), isTrue);
+    expect(edit.removeEmptyLayer(lastLayerId), isTrue);
+    edit.addElement(sparseElement);
+  });
+  _expectPlacedInLayer(
+    root.readDocument(),
+    sparseElement.id,
+    CanvasLayerId('default-layer'),
+  );
+}
+
+void _ordinaryPlacementConsumesContentDestination() {
+  final firstLayerId = CanvasLayerId('first');
+  final lastLayerId = CanvasLayerId('last');
+  final absentLayerId = CanvasLayerId('absent');
+  final document = CanvasDocument(
+    layers: [
+      CanvasLayer(id: firstLayerId),
+      CanvasLayer(id: lastLayerId),
+    ],
+  );
+  _expectOrdinaryDestinationPlacement(
+    document,
+    layerId: firstLayerId,
+    expectedLayerId: firstLayerId,
+  );
+  _expectOrdinaryDestinationPlacement(
+    document,
+    layerId: absentLayerId,
+    expectedLayerId: absentLayerId,
+  );
+  _expectOrdinaryDestinationPlacement(document, expectedLayerId: lastLayerId);
+  _expectOrdinaryDestinationPlacement(
+    CanvasDocument(),
+    expectedLayerId: CanvasLayerId('default-layer'),
+  );
+  _expectEditLocalOrderDestination(firstLayerId, lastLayerId);
+}
+
+void _expectContentDestination({
+  required CanvasLayerId layerId,
+  required bool exists,
+  required CanvasLayerId expectedLayerId,
+  required bool expectedExists,
+}) {
+  expect(layerId, expectedLayerId);
+  expect(exists, expectedExists);
+}
+
+void _expectOrdinaryDestinationPlacement(
+  CanvasDocument document, {
+  required CanvasLayerId expectedLayerId,
+  CanvasLayerId? layerId,
+}) {
+  final materialized = DraftDocument(document);
+  final materializedElement = sparseRect(
+    'materialized-${expectedLayerId.value}',
+  );
+  materialized.addElement(materializedElement, layerId: layerId, index: 0);
+  _expectPlacedInLayer(
+    materialized.readDocument(),
+    materializedElement.id,
+    expectedLayerId,
+  );
+
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  addTearDown(root.dispose);
+  final sparseElement = sparseRect('sparse-${expectedLayerId.value}');
+  root.edits.edit((edit) {
+    edit.addElement(sparseElement, layerId: layerId, index: 0);
+  });
+  _expectPlacedInLayer(root.readDocument(), sparseElement.id, expectedLayerId);
+}
+
+void _expectEditLocalOrderDestination(
+  CanvasLayerId firstLayerId,
+  CanvasLayerId lastLayerId,
+) {
+  final document = CanvasDocument(
+    layers: [
+      CanvasLayer(id: firstLayerId),
+      CanvasLayer(id: lastLayerId),
+    ],
+  );
+  final draft = DraftDocument(document);
+  expect(draft.removeEmptyLayer(lastLayerId), isTrue);
+  expect(draft.ensureLayer(lastLayerId, index: 0), isTrue);
+  final materializedElement = sparseRect('materialized-edit-local');
+  draft.addElement(materializedElement);
+  _expectPlacedInLayer(
+    draft.readDocument(),
+    materializedElement.id,
+    firstLayerId,
+  );
+
+  final root = sparseRuntimeRootWithCommittedDocumentSeed(document);
+  addTearDown(root.dispose);
+  final sparseElement = sparseRect('sparse-edit-local');
+  root.edits.edit((edit) {
+    expect(edit.removeEmptyLayer(lastLayerId), isTrue);
+    expect(edit.ensureLayer(lastLayerId, index: 0), isTrue);
+    edit.addElement(sparseElement);
+  });
+  _expectPlacedInLayer(root.readDocument(), sparseElement.id, firstLayerId);
+}
+
+void _expectPlacedInLayer(
+  CanvasDocument document,
+  CanvasElementId elementId,
+  CanvasLayerId expectedLayerId,
+) {
+  final layer = document.layers.singleWhere(
+    (layer) => layer.id == expectedLayerId,
+  );
+  expect(layer.elements.first.id, elementId);
 }
 
 void _emptyLayerRemovalPreservesStructuralOwnership() {

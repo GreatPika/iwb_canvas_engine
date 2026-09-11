@@ -7,6 +7,7 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
+import 'content_layer_destination.dart';
 import 'family_tables.dart';
 import 'indexed_order_sequence.dart';
 import 'layer_table.dart';
@@ -927,28 +928,30 @@ final class ElementRegistryStructuralEditor {
   }
 
   _StructuralLayerState _targetLayer(CanvasLayerId? requestedLayerId) {
+    final destination = _contentLayerDestination(requestedLayerId);
+    if (!destination.exists) {
+      ensureLayer(destination.layerId);
+    }
+    return _requiredStateForLayer(destination.layerId);
+  }
+
+  ContentLayerDestination _contentLayerDestination(
+    CanvasLayerId? requestedLayerId,
+  ) {
     if (requestedLayerId != null) {
-      if (!containsLayer(requestedLayerId)) {
-        ensureLayer(requestedLayerId);
-      }
-      return _requiredStateForLayer(requestedLayerId);
+      return ContentLayerDestination.resolve(
+        requestedLayerId: requestedLayerId,
+        requestedLayerExists: containsLayer(requestedLayerId),
+      );
     }
     final order = _layerOrder;
-    if (order != null) {
-      final last = order.last;
-      if (last == null) {
-        final defaultLayerId = CanvasLayerId('default-layer');
-        ensureLayer(defaultLayerId);
-        return _requiredStateForLayer(defaultLayerId);
-      }
-      return _requiredStateForLayer(last);
-    }
-    if (_base.layerTable.rows.isEmpty) {
-      final defaultLayerId = CanvasLayerId('default-layer');
-      ensureLayer(defaultLayerId);
-      return _requiredStateForLayer(defaultLayerId);
-    }
-    return _requiredStateForLayer(_base.layerTable.rows.last.id);
+    final rows = _base.layerTable.rows;
+    return ContentLayerDestination.resolve(
+      requestedLayerExists: false,
+      lastLayerId: order == null
+          ? (rows.isEmpty ? null : rows.last.id)
+          : order.last,
+    );
   }
 
   Iterable<CanvasLayerId> _currentLayerIds() {
