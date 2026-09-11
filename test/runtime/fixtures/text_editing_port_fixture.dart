@@ -2753,26 +2753,97 @@ void _testLiveUpdateRemeasuresGeometry() {
 // ignore: halstead-volume, source-lines-of-code, maintainability-index, cyclomatic-complexity
 void _testFormattingDraftCommitsOneCompleteUpdate() {
   const formattingCases =
-      <({String name, bool? isBold, bool? isItalic, bool? isUnderline})>[
-        (name: 'bold', isBold: true, isItalic: null, isUnderline: null),
-        (name: 'italic', isBold: null, isItalic: true, isUnderline: null),
-        (name: 'underline', isBold: null, isItalic: null, isUnderline: true),
+      <
+        ({
+          String name,
+          bool baseIsBold,
+          bool baseIsItalic,
+          bool baseIsUnderline,
+          bool? isBold,
+          bool? isItalic,
+          bool? isUnderline,
+        })
+      >[
+        (
+          name: 'bold',
+          baseIsBold: false,
+          baseIsItalic: false,
+          baseIsUnderline: false,
+          isBold: true,
+          isItalic: null,
+          isUnderline: null,
+        ),
+        (
+          name: 'italic',
+          baseIsBold: false,
+          baseIsItalic: false,
+          baseIsUnderline: false,
+          isBold: null,
+          isItalic: true,
+          isUnderline: null,
+        ),
+        (
+          name: 'underline',
+          baseIsBold: false,
+          baseIsItalic: false,
+          baseIsUnderline: false,
+          isBold: null,
+          isItalic: null,
+          isUnderline: true,
+        ),
         (
           name: 'bold and italic',
+          baseIsBold: false,
+          baseIsItalic: false,
+          baseIsUnderline: false,
           isBold: true,
           isItalic: true,
           isUnderline: null,
+        ),
+        (
+          name: 'clear bold',
+          baseIsBold: true,
+          baseIsItalic: false,
+          baseIsUnderline: false,
+          isBold: false,
+          isItalic: null,
+          isUnderline: null,
+        ),
+        (
+          name: 'clear italic',
+          baseIsBold: false,
+          baseIsItalic: true,
+          baseIsUnderline: false,
+          isBold: null,
+          isItalic: false,
+          isUnderline: null,
+        ),
+        (
+          name: 'clear underline',
+          baseIsBold: false,
+          baseIsItalic: false,
+          baseIsUnderline: true,
+          isBold: null,
+          isItalic: null,
+          isUnderline: false,
         ),
       ];
   for (final formatting in formattingCases) {
     test(
       'style-only ${formatting.name} draft commits one complete text update',
       () async {
-        final expectedIsBold = formatting.isBold ?? false;
-        final expectedIsItalic = formatting.isItalic ?? false;
-        final expectedIsUnderline = formatting.isUnderline ?? false;
+        final expectedIsBold = formatting.isBold ?? formatting.baseIsBold;
+        final expectedIsItalic =
+            formatting.isItalic ?? formatting.baseIsItalic;
+        final expectedIsUnderline =
+            formatting.isUnderline ?? formatting.baseIsUnderline;
         CanvasTextEditCommitRequest? proposal;
         final scenario = _Scenario(
+          document: _document(
+            isBold: formatting.baseIsBold,
+            isItalic: formatting.baseIsItalic,
+            isUnderline: formatting.baseIsUnderline,
+          ),
           config: CanvasRuntimeConfig(
             commitResolver: (request) {
               proposal = request as CanvasTextEditCommitRequest;
@@ -2807,9 +2878,12 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
           expect(session.style.isItalic, expectedIsItalic);
           expect(session.style.isUnderline, expectedIsUnderline);
           expect(_textElement(scenario.root).text, 'hello');
-          expect(_textElement(scenario.root).isBold, isFalse);
-          expect(_textElement(scenario.root).isItalic, isFalse);
-          expect(_textElement(scenario.root).isUnderline, isFalse);
+          expect(_textElement(scenario.root).isBold, formatting.baseIsBold);
+          expect(_textElement(scenario.root).isItalic, formatting.baseIsItalic);
+          expect(
+            _textElement(scenario.root).isUnderline,
+            formatting.baseIsUnderline,
+          );
           expect(
             scenario.root.state.value.revisions.document,
             documentRevision,
@@ -2830,9 +2904,9 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
           );
 
           expect(proposal?.before.text, 'hello');
-          expect(proposal?.before.isBold, isFalse);
-          expect(proposal?.before.isItalic, isFalse);
-          expect(proposal?.before.isUnderline, isFalse);
+          expect(proposal?.before.isBold, formatting.baseIsBold);
+          expect(proposal?.before.isItalic, formatting.baseIsItalic);
+          expect(proposal?.before.isUnderline, formatting.baseIsUnderline);
           expect(proposal?.after.text, 'hello');
           expect(proposal?.after.isBold, expectedIsBold);
           expect(proposal?.after.isItalic, expectedIsItalic);
@@ -2840,9 +2914,12 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
           final projectedBefore = _asTextElement(projections.single.before);
           final projectedAfter = _asTextElement(projections.single.after);
           expect(projectedBefore.text, 'hello');
-          expect(projectedBefore.isBold, isFalse);
-          expect(projectedBefore.isItalic, isFalse);
-          expect(projectedBefore.isUnderline, isFalse);
+          expect(projectedBefore.isBold, formatting.baseIsBold);
+          expect(projectedBefore.isItalic, formatting.baseIsItalic);
+          expect(
+            projectedBefore.isUnderline,
+            formatting.baseIsUnderline,
+          );
           expect(projectedAfter.text, 'hello');
           expect(projectedAfter.isBold, expectedIsBold);
           expect(projectedAfter.isItalic, expectedIsItalic);
@@ -4646,6 +4723,9 @@ CanvasDocument _document({
   double? maxWidth = 120,
   String text = 'hello',
   String? fontFamily,
+  bool isBold = false,
+  bool isItalic = false,
+  bool isUnderline = false,
   bool isDeletable = true,
 }) {
   return CanvasDocument(
@@ -4662,6 +4742,9 @@ CanvasDocument _document({
             align: align,
             fontFamily: fontFamily,
             maxWidth: maxWidth,
+            isBold: isBold,
+            isItalic: isItalic,
+            isUnderline: isUnderline,
             isDeletable: isDeletable,
           ),
           CanvasRectElement(
