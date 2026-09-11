@@ -448,7 +448,12 @@ open a context menu first, call `CanvasRuntime.textEditing.startFromContextActio
 or mount `CanvasTextEditingOverlay` with inline auto-start when the content
 target snapshot is a `CanvasTextElement`.
 
-Context request emission records a live issued request in
+An application may instead call `startForElement` for an addressed existing text
+element. InteractionEngine reads current text guard facts and issues the same
+registry-owned identity without hit testing or emitting a context-action event.
+
+Context request emission and addressed text admission record a live issued
+request in
 `InteractionRequestRegistry` with a generated `CanvasInteractionRequestId`,
 request target kind and controllerEpoch. For content-element targets, the
 registry also stores target element id, element generation, elementRevision, and
@@ -466,7 +471,9 @@ The registry is not itself an active text-input session and not
 CanvasPreviewState. `CanvasTextEditingPort` owns the single active text session
 value. It uses InteractionEngine's one non-consuming issued/current guard
 comparison for session admission and stale observation; the guarded command
-terminal is the only consumer that retires a known invalid request. The
+terminal is the only consumer that retires a known invalid request. Its
+read-only and single-active-element admission policy is shared by ID,
+candidate, context and start adapters. The
 application owns context menus, optional custom editor decoration, IME
 presentation, focus policy choices, accessibility presentation, and text
 selection controls.

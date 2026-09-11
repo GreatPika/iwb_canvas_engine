@@ -24,6 +24,48 @@ enum CanvasTextEditEmptyTextBehavior {
   deleteElement,
 }
 
+/// The reason a requested existing-text editing session was not admitted.
+enum CanvasTextEditStartRefusalReason {
+  /// Editing is disabled for the runtime.
+  readOnly,
+
+  /// A different text editing session already occupies the runtime slot.
+  anotherSessionActive,
+
+  /// The requested target or retained same-target session is no longer current.
+  stale,
+
+  /// No element with the requested identifier exists.
+  notFound,
+
+  /// The requested element exists but is not a text element.
+  unsupportedType,
+
+  /// The requested text element cannot be edited from its current location.
+  unavailable,
+}
+
+/// The typed outcome of admitting an existing text element for editing.
+sealed class CanvasTextEditStartResult {
+  const CanvasTextEditStartResult();
+}
+
+/// A successful existing-text admission.
+final class CanvasTextEditStartSuccess extends CanvasTextEditStartResult {
+  const CanvasTextEditStartSuccess(this.session);
+
+  /// The active runtime-owned session for the admitted element.
+  final CanvasTextEditSession session;
+}
+
+/// An existing-text admission refusal.
+final class CanvasTextEditStartRefusal extends CanvasTextEditStartResult {
+  const CanvasTextEditStartRefusal(this.reason);
+
+  /// The current reason the session was not admitted.
+  final CanvasTextEditStartRefusalReason reason;
+}
+
 /// The observable outcome of completing an active text-editing session.
 enum CanvasTextEditFinishResult {
   /// A changed draft was installed.
@@ -213,21 +255,24 @@ abstract interface class CanvasTextEditingPort {
   ValueListenable<CanvasTextEditSession?> get activeSession;
   bool get readOnly;
 
-  CanvasTextEditSession? sessionCandidateFor(
-    CanvasContextActionRequested request,
-    {
+  /// Admits a visible existing text element without a context-action event.
+  CanvasTextEditStartResult startForElement(
+    CanvasElementId elementId, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
         CanvasTextEditEmptyTextBehavior.keepElement,
-    }
-  );
+  });
+
+  CanvasTextEditSession? sessionCandidateFor(
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  });
   CanvasTextEditSession? start(CanvasTextEditSession session);
   CanvasTextEditSession? startFromContextAction(
-    CanvasContextActionRequested request,
-    {
+    CanvasContextActionRequested request, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
         CanvasTextEditEmptyTextBehavior.keepElement,
-    }
-  );
+  });
   // Positional bool is the locked public API shape for ergonomic
   // runtime.textEditing.setReadOnly(true) calls.
   // ignore: avoid_positional_boolean_parameters

@@ -58,6 +58,7 @@ import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
+import '../interaction/interaction_request_registry.dart';
 import '../interaction/interaction_runtime_intents.dart';
 import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
@@ -4692,20 +4693,107 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   int get candidateStateCount => _ownedStates.length;
 
   @override
-  CanvasTextEditSession? sessionCandidateFor(
-    CanvasContextActionRequested request,
-    {
+  // This keeps the ordered public admission boundary together: active-slot
+  // policy, current frame facts, guard identity, and publication must remain
+  // readable as one sequence. Splitting it would hide their required order.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  CanvasTextEditStartResult startForElement(
+    CanvasElementId elementId, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
         CanvasTextEditEmptyTextBehavior.keepElement,
+  }) {
+    _ensurePublicOperationAllowed();
+    final slot = _admitActiveSlot(elementId);
+    if (slot case _TextEditActiveSlotRefusal(:final reason)) {
+      return CanvasTextEditStartRefusal(reason);
     }
-  ) {
+    if (slot case _TextEditActiveSlotReuse(:final state)) {
+      return CanvasTextEditStartSuccess(state.session);
+    }
+    _pruneExpiredCandidateStates();
+    final candidate = _candidateForElement(elementId);
+    if (candidate != null) {
+      final session = _startState(candidate);
+      if (session != null) {
+        return CanvasTextEditStartSuccess(session);
+      }
+
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+
+    final facts = _root._frameFactsForElement(elementId);
+    if (facts == null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.notFound,
+      );
+    }
+    if (facts.kind != CanvasElementKind.text) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.unsupportedType,
+      );
+    }
+    if (facts.locationKind != FrameElementLocationKind.content ||
+        !facts.isVisible) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.unavailable,
+      );
+    }
+    final guard = _root._interactionEngine.issueTextEditRequestFor(elementId);
+    if (guard == null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+    final state = _candidateStateFor(guard.requestId, emptyTextBehavior);
+    if (state == null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+    _ownedStates.add(state);
+    final session = _startState(state);
+    if (session == null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+
+    return CanvasTextEditStartSuccess(session);
+  }
+
+  @override
+  // Candidate reuse must show active-slot policy and request identity next to
+  // each other. Extracting either branch would obscure the nullable adapter's
+  // ordered admission behavior.
+  // ignore: cyclomatic-complexity, halstead-volume
+  CanvasTextEditSession? sessionCandidateFor(
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }) {
     _ensurePublicOperationAllowed();
     _pruneExpiredCandidateStates();
-    final existing = _stateForRequest(request.requestId);
-    if (existing != null && !_isStale(existing)) {
-      return existing.session;
+    final guard = _root._interactionEngine.requestFactsFor(request.requestId);
+    final targetElementId = guard?.contentElementId;
+    if (guard?.targetKind != InteractionRequestTargetKind.contentElement ||
+        guard?.contentElementKind != CanvasElementKind.text ||
+        targetElementId == null) {
+      return null;
     }
-    final state = _candidateStateFor(request, emptyTextBehavior);
+    final slot = _admitActiveSlot(targetElementId);
+    if (slot case _TextEditActiveSlotRefusal()) {
+      return null;
+    }
+    if (slot case _TextEditActiveSlotReuse(:final state)) {
+      return state.session;
+    }
+    final existing = _stateForRequest(request.requestId);
+    if (existing != null) {
+      return _isStale(existing) ? null : existing.session;
+    }
+    final state = _candidateStateFor(request.requestId, emptyTextBehavior);
     if (state == null) {
       return null;
     }
@@ -4720,44 +4808,46 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   @override
   CanvasTextEditSession? start(CanvasTextEditSession session) {
     _ensurePublicOperationAllowed();
-    _pruneExpiredCandidateStates();
     final state = _stateForSession(session);
-    if (_readOnly || state == null) {
+    if (state == null) {
       return null;
     }
-    final current = _active;
-    if (current != null) {
-      if (identical(current.session, session) ||
-          _sameGuardIdentity(current, state)) {
-        _discardCandidateState(state);
 
-        return current.session;
-      }
+    return _startState(state);
+  }
+
+  CanvasTextEditSession? _startState(
+    _RuntimeTextEditSessionState candidateState,
+  ) {
+    final slot = _admitActiveSlot(candidateState.elementId);
+    if (slot case _TextEditActiveSlotRefusal()) {
+      return null;
+    }
+    if (slot case _TextEditActiveSlotReuse(:final state)) {
+      _discardCandidateState(candidateState);
+
+      return state.session;
+    }
+    if (_isStale(candidateState)) {
+      _discardCandidateState(candidateState);
 
       return null;
     }
-    if (_isStale(state)) {
-      _discardCandidateState(state);
-
-      return null;
-    }
-    state.active = true;
-    _active = state;
-    _suppressionToken = _TextEditSuppressionToken.fromState(state);
-    _activeSession.value = state.session;
+    candidateState.active = true;
+    _active = candidateState;
+    _suppressionToken = _TextEditSuppressionToken.fromState(candidateState);
+    _activeSession.value = candidateState.session;
     _root._publishTextEditInteractionState();
 
-    return state.session;
+    return candidateState.session;
   }
 
   @override
   CanvasTextEditSession? startFromContextAction(
-    CanvasContextActionRequested request,
-    {
+    CanvasContextActionRequested request, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
         CanvasTextEditEmptyTextBehavior.keepElement,
-    }
-  ) {
+  }) {
     final candidate = sessionCandidateFor(
       request,
       emptyTextBehavior: emptyTextBehavior,
@@ -4917,16 +5007,16 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   // start/commit cannot mix guard identities or draft bases.
   // ignore: halstead-volume, source-lines-of-code, maintainability-index
   _RuntimeTextEditSessionState? _candidateStateFor(
-    CanvasContextActionRequested request,
+    CanvasInteractionRequestId requestId,
     CanvasTextEditEmptyTextBehavior emptyTextBehavior,
   ) {
     final observation = _root._interactionEngine.textEditGuardValidity(
-      request.requestId,
+      requestId,
     );
     final guard = observation.guard;
     if (observation.kind != TextEditGuardValidityKind.accepted ||
         guard == null ||
-        guard.requestId != request.requestId) {
+        guard.requestId != requestId) {
       return null;
     }
     final targetElementId = guard.contentElementId as CanvasElementId;
@@ -5042,6 +5132,40 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     }
 
     return null;
+  }
+
+  _RuntimeTextEditSessionState? _candidateForElement(CanvasElementId elementId) {
+    for (final state in _ownedStates) {
+      if (!identical(_active, state) && state.elementId == elementId) {
+        return state;
+      }
+    }
+
+    return null;
+  }
+
+  _TextEditActiveSlotAdmission _admitActiveSlot(CanvasElementId elementId) {
+    if (_readOnly) {
+      return const _TextEditActiveSlotRefusal(
+        CanvasTextEditStartRefusalReason.readOnly,
+      );
+    }
+    final active = _active;
+    if (active == null) {
+      return const _TextEditActiveSlotAvailable();
+    }
+    if (active.elementId != elementId) {
+      return const _TextEditActiveSlotRefusal(
+        CanvasTextEditStartRefusalReason.anotherSessionActive,
+      );
+    }
+    if (_isStale(active)) {
+      return const _TextEditActiveSlotRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+
+    return _TextEditActiveSlotReuse(active);
   }
 
   bool _isStale(_RuntimeTextEditSessionState state) {
@@ -5214,6 +5338,26 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       lineHeight: facts.lineHeight,
     );
   }
+}
+
+sealed class _TextEditActiveSlotAdmission {
+  const _TextEditActiveSlotAdmission();
+}
+
+final class _TextEditActiveSlotAvailable extends _TextEditActiveSlotAdmission {
+  const _TextEditActiveSlotAvailable();
+}
+
+final class _TextEditActiveSlotReuse extends _TextEditActiveSlotAdmission {
+  const _TextEditActiveSlotReuse(this.state);
+
+  final _RuntimeTextEditSessionState state;
+}
+
+final class _TextEditActiveSlotRefusal extends _TextEditActiveSlotAdmission {
+  const _TextEditActiveSlotRefusal(this.reason);
+
+  final CanvasTextEditStartRefusalReason reason;
 }
 
 final class _RuntimeTextEditSessionState {

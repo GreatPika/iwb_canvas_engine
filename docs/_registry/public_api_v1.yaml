@@ -66,6 +66,10 @@ public_exports:
   - CanvasTextEditEmptyTextBehavior
   - CanvasTextEditFinishIntent
   - CanvasTextEditFinishResult
+  - CanvasTextEditStartRefusalReason
+  - CanvasTextEditStartResult
+  - CanvasTextEditStartSuccess
+  - CanvasTextEditStartRefusal
   - CanvasTextEditingPort
   - CanvasTextEditingOverlay
   - CanvasResourcePort

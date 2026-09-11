@@ -4,6 +4,10 @@ export '../contracts/public/canvas_text_editing.dart'
         CanvasTextEditEmptyTextBehavior,
         CanvasTextEditFinishIntent,
         CanvasTextEditFinishResult,
+        CanvasTextEditStartRefusal,
+        CanvasTextEditStartRefusalReason,
+        CanvasTextEditStartResult,
+        CanvasTextEditStartSuccess,
         CanvasTextEditSession,
         CanvasTextEditStyle,
         CanvasTextEditingPort;

@@ -184,6 +184,14 @@ final class PublicIntegrationCompileFixture {
     final port = PublicIntegrationTextEditingPort();
     port.setReadOnly(false);
 
+    final result = port.startForElement(CanvasElementId('text-id'));
+    switch (result) {
+      case CanvasTextEditStartSuccess(:final session):
+        _use(session);
+      case CanvasTextEditStartRefusal(:final reason):
+        _use(reason);
+    }
+
     return port.finishActive(CanvasTextEditFinishIntent.cancel);
   }
 
@@ -199,6 +207,19 @@ final class PublicIntegrationTextEditingPort implements CanvasTextEditingPort {
 
   @override
   bool get readOnly => false;
+
+  @override
+  CanvasTextEditStartResult startForElement(
+    CanvasElementId elementId, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }) {
+    _use((elementId, emptyTextBehavior));
+
+    return const CanvasTextEditStartRefusal(
+      CanvasTextEditStartRefusalReason.notFound,
+    );
+  }
 
   @override
   void dismissActive() => _use(null);

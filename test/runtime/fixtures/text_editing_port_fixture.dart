@@ -33,6 +33,7 @@ void main() {
   _testNonTextCandidateLookup();
   _testReadOnlyAdmission();
   _testSingleActiveAdmission();
+  _testIdAdmission();
   _testLiveUpdateRemeasuresGeometry();
   _testFormattingDraftCommitsOneCompleteUpdate();
   _testFormattingNoOpAndCancelAreSilent();
@@ -832,20 +833,49 @@ void _testNonTextCandidateLookup() {
   });
 }
 
+// One scenario must retain every public admission route and its shared guard
+// facts; splitting it would hide cross-route policy disagreement.
+// ignore: halstead-volume, source-lines-of-code
 void _testReadOnlyAdmission() {
-  test('read-only admission preserves request facts', () async {
+  test('read-only admission refuses every text admission route', () async {
     final scenario = _Scenario();
     try {
-      scenario.root.textEditing.setReadOnly(true);
       final readOnlyRequest = await scenario.issueTextRequest();
-      final readOnlyCandidate = scenario.root.textEditing.sessionCandidateFor(
-        readOnlyRequest,
+      final candidate = _expectSession(
+        scenario.root.textEditing.sessionCandidateFor(readOnlyRequest),
+      );
+      scenario.root.textEditing.setReadOnly(true);
+      expect(
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.start(candidate),
+        ),
+        isNull,
       );
       expect(
-        scenario.root.textEditing.start(_expectSession(readOnlyCandidate)),
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startForElement(_textId),
+          reason: CanvasTextEditStartRefusalReason.readOnly,
+        ),
+        isA<CanvasTextEditStartRefusal>(),
+      );
+      expect(
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.sessionCandidateFor(readOnlyRequest),
+        ),
+        isNull,
+      );
+      expect(
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startFromContextAction(readOnlyRequest),
+        ),
         isNull,
       );
       expect(scenario.root.textEditing.activeSession.value, isNull);
+      expect(scenario.root.textEditCandidateStateCountForTesting, 1);
       _expectRequestFactsLive(scenario.root, readOnlyRequest);
     } finally {
       await scenario.dispose();
@@ -867,6 +897,252 @@ void _testSingleActiveAdmission() {
       expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
       expect(_textValue(scenario.root), 'hello');
       expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+}
+
+// ID admission must classify actual addressed frame facts and share the active
+// slot policy with context candidates without fabricating a context event.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testIdAdmission() {
+  test('ID admission returns typed outcomes and retains valid session policy', () async {
+    final scenario = _Scenario();
+    try {
+      final beforeDocument = scenario.root.readDocument();
+      final first = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.startForElement(
+            _textId,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        ),
+      );
+      expect(scenario.requests, isEmpty);
+      expect(scenario.root.textEditing.activeSession.value, same(first));
+      expect(first.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+      await Future<void>.delayed(Duration.zero);
+      expect(scenario.requests, isEmpty);
+      expect(scenario.actions, isEmpty);
+
+      first.updateText('ID-origin draft');
+      first.updateFormatting(isBold: true);
+      final repeated = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      expect(repeated, same(first));
+      expect(repeated.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+      expect(repeated.liveText, 'ID-origin draft');
+      expect(repeated.style.isBold, isTrue);
+      expect(scenario.root.readDocument(), same(beforeDocument));
+      expect(scenario.requests, isEmpty);
+      await Future<void>.delayed(Duration.zero);
+      expect(scenario.requests, isEmpty);
+      expect(scenario.actions, isEmpty);
+      expect(first.commit(), isTrue);
+      expect(_textValue(scenario.root), 'ID-origin draft');
+
+      await _observeAdmissionRefusal(
+        scenario,
+        () => scenario.root.textEditing.startForElement(CanvasElementId('missing')),
+        reason: CanvasTextEditStartRefusalReason.notFound,
+      );
+      await _observeAdmissionRefusal(
+        scenario,
+        () => scenario.root.textEditing.startForElement(_rectId),
+        reason: CanvasTextEditStartRefusalReason.unsupportedType,
+      );
+
+      scenario.root.edits.edit(
+        (edit) => edit.updateElement(
+          CanvasTextElementUpdate(
+            id: _textId,
+            isVisible: const CanvasFieldSet(false),
+          ),
+        ),
+      );
+      await _observeAdmissionRefusal(
+        scenario,
+        () => scenario.root.textEditing.startForElement(_textId),
+        reason: CanvasTextEditStartRefusalReason.unavailable,
+      );
+
+      scenario.root.edits.edit((edit) {
+        edit.removeElement(_textId);
+        edit.addBackgroundElement(
+          CanvasTextElement(
+            id: _textId,
+            text: 'background text',
+            fontSize: 16,
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+          ),
+        );
+      });
+      await _observeAdmissionRefusal(
+        scenario,
+        () => scenario.root.textEditing.startForElement(_textId),
+        reason: CanvasTextEditStartRefusalReason.unavailable,
+      );
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('ID admission retains stale and other active sessions', () async {
+    final staleScenario = _Scenario();
+    try {
+      final stale = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          staleScenario.root,
+          () => staleScenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      stale.updateText('retained stale draft');
+      stale.updateFormatting(isItalic: true);
+      _makeTextRequestStale(staleScenario);
+
+      await _observeAdmissionRefusal(
+        staleScenario,
+        () => staleScenario.root.textEditing.startForElement(_textId),
+        reason: CanvasTextEditStartRefusalReason.stale,
+        expectedActive: stale,
+      );
+      expect(staleScenario.root.textEditing.activeSession.value, same(stale));
+      expect(stale.liveText, 'retained stale draft');
+      expect(stale.style.isItalic, isTrue);
+      expect(staleScenario.requests, isEmpty);
+    } finally {
+      await staleScenario.dispose();
+    }
+
+    final otherScenario = _Scenario();
+    try {
+      otherScenario.addSecondTextElement();
+      final active = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          otherScenario.root,
+          () => otherScenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      await _observeAdmissionRefusal(
+        otherScenario,
+        () => otherScenario.root.textEditing.startForElement(_secondTextId),
+        reason: CanvasTextEditStartRefusalReason.anotherSessionActive,
+        expectedActive: active,
+      );
+      _makeTextRequestStale(otherScenario);
+      await _observeAdmissionRefusal(
+        otherScenario,
+        () => otherScenario.root.textEditing.startForElement(_secondTextId),
+        reason: CanvasTextEditStartRefusalReason.anotherSessionActive,
+        expectedActive: active,
+      );
+      expect(otherScenario.root.textEditing.activeSession.value, same(active));
+      expect(otherScenario.requests, isEmpty);
+    } finally {
+      await otherScenario.dispose();
+    }
+  });
+
+  test('context candidate and start reuse the active ID session', () async {
+    final scenario = _Scenario();
+    try {
+      final active = _expectStartSuccess(
+        scenario.root.textEditing.startForElement(
+          _textId,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      final request = await scenario.issueTextRequest();
+      expect(scenario.root.textEditing.sessionCandidateFor(request), same(active));
+      expect(scenario.root.textEditing.startFromContextAction(request), same(active));
+      expect(active.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+      await Future<void>.delayed(Duration.zero);
+      expect(scenario.requests, isEmpty);
+      expect(scenario.actions, isEmpty);
+      _expectRequestFactsLive(scenario.root, request);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('ID start reuses a valid context candidate and its captured policy', () async {
+    final scenario = _Scenario();
+    try {
+      final request = await scenario.issueTextRequest();
+      final candidate = _expectSession(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.sessionCandidateFor(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        ),
+      );
+      final started = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      expect(started, same(candidate));
+      expect(started.requestId, request.requestId);
+      expect(started.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+      await Future<void>.delayed(Duration.zero);
+      expect(scenario.requests, isEmpty);
+      expect(scenario.actions, isEmpty);
+      started.updateText('candidate ID commit');
+      expect(started.commit(), isTrue);
+      expect(_textValue(scenario.root), 'candidate ID commit');
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('ID admission discards an expired inactive context candidate', () async {
+    final scenario = _Scenario();
+    try {
+      final request = await scenario.issueTextRequest();
+      final candidate = _expectSession(
+        scenario.root.textEditing.sessionCandidateFor(request),
+      );
+      _makeTextRequestStale(scenario);
+
+      final started = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      expect(started, isNot(same(candidate)));
+      expect(started.requestId, isNot(request.requestId));
+      expect(started.isStale, isFalse);
+      expect(scenario.root.textEditing.activeSession.value, same(started));
+      await Future<void>.delayed(Duration.zero);
+      expect(scenario.requests, isEmpty);
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('ID admission accepts visible empty text', () async {
+    final scenario = _Scenario(document: _document(text: ''));
+    try {
+      final session = _expectStartSuccess(
+        _observeNoTextAdmissionWork(
+          scenario.root,
+          () => scenario.root.textEditing.startForElement(_textId),
+        ),
+      );
+      expect(session.initialText, isEmpty);
+      session.dismiss();
     } finally {
       await scenario.dispose();
     }
@@ -1945,7 +2221,7 @@ void _testStaleCommitRetainsDraft() {
         expect(session.commit(timestampMs: 44), isFalse);
         expect(session.liveText, 'retained draft');
         expect(session.isActive, isTrue);
-        expect(scenario.root.textEditing.start(session), same(session));
+        expect(scenario.root.textEditing.start(session), isNull);
         expect(
           scenario.root.textEditing.startFromContextAction(request),
           isNull,
@@ -2626,6 +2902,75 @@ CanvasTextEditSession _expectSession(CanvasTextEditSession? session) {
   return session as CanvasTextEditSession;
 }
 
+CanvasTextEditSession _expectStartSuccess(CanvasTextEditStartResult result) {
+  expect(result, isA<CanvasTextEditStartSuccess>());
+
+  return (result as CanvasTextEditStartSuccess).session;
+}
+
+T _observeNoTextAdmissionWork<T>(RuntimeRoot root, T Function() operation) {
+  final projectionBuildCount = root.projectionBuildCount;
+  final projections = <StoreAffectedElementProjection>[];
+  final work = <PreparedInteractionApplyWorkEvent>[];
+  final result = CommitApplier.observePreparedInteractionWork(
+    work.add,
+    () => DocumentStoreKernel.observeAffectedElementProjection(
+      projections.add,
+      operation,
+    ),
+  );
+
+  expect(root.projectionBuildCount, projectionBuildCount);
+  expect(projections, isEmpty);
+  expect(work, isEmpty);
+
+  return result;
+}
+
+// One observation must retain the complete no-effect boundary across an async
+// turn; splitting it would separate the evidence from the rejected operation.
+// ignore: halstead-volume
+Future<T> _observeAdmissionRefusal<T>(
+  _Scenario scenario,
+  T Function() operation, {
+  CanvasTextEditStartRefusalReason? reason,
+  CanvasTextEditSession? expectedActive,
+}) async {
+  final documentBefore = scenario.root.readDocument();
+  final revisionsBefore = scenario.root.state.value.revisions;
+  final activeBefore = expectedActive ?? scenario.root.textEditing.activeSession.value;
+  final draftTextBefore = activeBefore?.liveText;
+  final draftStyleBefore = activeBefore?.style;
+  final actionCountBefore = scenario.actions.length;
+  final requestCountBefore = scenario.requests.length;
+  final result = _observeNoTextAdmissionWork(scenario.root, operation);
+  if (reason != null) {
+    _expectStartRefusal(result as CanvasTextEditStartResult, reason);
+  }
+
+  await Future<void>.delayed(Duration.zero);
+
+  expect(scenario.root.readDocument(), same(documentBefore));
+  expect(scenario.root.state.value.revisions, revisionsBefore);
+  expect(scenario.actions, hasLength(actionCountBefore));
+  expect(scenario.requests, hasLength(requestCountBefore));
+  expect(scenario.root.textEditing.activeSession.value, same(activeBefore));
+  if (activeBefore != null) {
+    expect(activeBefore.liveText, draftTextBefore);
+    expect(activeBefore.style, draftStyleBefore);
+  }
+
+  return result;
+}
+
+void _expectStartRefusal(
+  CanvasTextEditStartResult result,
+  CanvasTextEditStartRefusalReason reason,
+) {
+  expect(result, isA<CanvasTextEditStartRefusal>());
+  expect((result as CanvasTextEditStartRefusal).reason, reason);
+}
+
 Future<CanvasTextEditSession> _startTextSession(_Scenario scenario) async {
   final request = await scenario.issueTextRequest();
   final session = _expectSession(
@@ -2673,9 +3018,11 @@ Future<void> _expectCompetingRequestRejected(
   _Scenario scenario,
   CanvasTextEditSession activeSession,
 ) async {
-  final request = await scenario.issueTextRequest();
+  scenario.addSecondTextElement();
+  final request = await scenario.issueSecondTextRequest();
   final candidate = scenario.root.textEditing.sessionCandidateFor(request);
-  expect(scenario.root.textEditing.start(_expectSession(candidate)), isNull);
+  expect(candidate, isNull);
+  expect(scenario.root.textEditing.startFromContextAction(request), isNull);
   expect(scenario.root.textEditing.activeSession.value, same(activeSession));
   _expectRequestFactsLive(scenario.root, request);
 }
@@ -2760,6 +3107,27 @@ final class _Scenario {
     root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
 
     return _takeRequest();
+  }
+
+  Future<CanvasContextActionRequested> issueSecondTextRequest() {
+    root.handleDoubleTap(position: const Offset(240, 0), timestampMs: 1);
+
+    return _takeRequest();
+  }
+
+  void addSecondTextElement() {
+    root.edits.edit((edit) {
+      edit.addElement(
+        CanvasTextElement(
+          id: _secondTextId,
+          text: 'second',
+          fontSize: 16,
+          color: const Color(0xFF111111),
+          textDirection: TextDirection.ltr,
+          transform: CanvasTransform.translation(const Offset(240, 0)),
+        ),
+      );
+    });
   }
 
   Future<CanvasContextActionRequested> issueRectRequest() {
@@ -3049,6 +3417,7 @@ CanvasDocument _invalidReplacementDocument() {
 }
 
 final _textId = CanvasElementId('text-a');
+final _secondTextId = CanvasElementId('text-b');
 final _replacementTextId = CanvasElementId('replacement-text');
 final _rectId = CanvasElementId('rect-a');
 final _listenerNestedRectId = CanvasElementId('listener-nested-rect');

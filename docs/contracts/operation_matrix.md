@@ -173,6 +173,15 @@ Notes:
   commits do nothing; frame suppression ends. Explicit dismissal, read-only,
   successful load, and disposal clear that transient session, while failed load
   preserves it.
+- `CanvasTextEditingPort.startForElement` first applies shared read-only and
+  single-active-element admission. It classifies addressed current frame facts
+  as not-found, unsupported type, unavailable location/visibility, or eligible
+  text and asks InteractionEngine to issue one guarded request. Eligible ID
+  admission emits no context-action request and performs no document
+  projection, preparation, installation, or action work. A valid same-element
+  session retains its captured empty-text policy; stale same-element and all
+  other active sessions refuse without replacement. Nullable candidate/context/
+  start adapters return null for those refusals.
 - `commitTextEdit` validates `newText` before request consumption and before
   draft mutation. For a changed text candidate, it projects the addressed
   committed-before and normalized-candidate-after text rows before installation

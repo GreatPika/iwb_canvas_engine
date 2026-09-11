@@ -34,9 +34,7 @@ final class InteractionRequestRegistry {
   InteractionRequestGuardFacts issueContextRequest(
     ContextTargetReadFacts target,
   ) {
-    final requestId = CanvasInteractionRequestId('request-${_nextRequestId++}');
-    final facts = InteractionRequestGuardFacts(
-      requestId: requestId,
+    return _issue(
       targetKind: switch (target.kind) {
         ContextActionReadTargetKind.contentElement =>
           InteractionRequestTargetKind.contentElement,
@@ -49,6 +47,45 @@ final class InteractionRequestRegistry {
       contentElementKind: target.elementKind,
       generation: target.generation,
       elementRevision: target.elementRevision,
+    );
+  }
+
+  InteractionRequestGuardFacts issueTextEditRequest(
+    TextCommitGuardReadFacts target,
+  ) {
+    return _issue(
+      targetKind: InteractionRequestTargetKind.contentElement,
+      controllerEpoch: target.controllerEpoch,
+      documentRevision: target.documentRevision,
+      contentElementId: target.targetElementId,
+      contentElementKind: target.targetKind,
+      generation: target.generation,
+      elementRevision: target.elementRevision,
+    );
+  }
+
+  // Guard facts must cross the registry as one immutable capture. Packing them
+  // into a second mutable request DTO would obscure the sole issuance owner.
+  // ignore: number-of-parameters
+  InteractionRequestGuardFacts _issue({
+    required InteractionRequestTargetKind targetKind,
+    required int controllerEpoch,
+    required int documentRevision,
+    required CanvasElementId? contentElementId,
+    required CanvasElementKind? contentElementKind,
+    required int? generation,
+    required int? elementRevision,
+  }) {
+    final requestId = CanvasInteractionRequestId('request-${_nextRequestId++}');
+    final facts = InteractionRequestGuardFacts(
+      requestId: requestId,
+      targetKind: targetKind,
+      controllerEpoch: controllerEpoch,
+      documentRevision: documentRevision,
+      contentElementId: contentElementId,
+      contentElementKind: contentElementKind,
+      generation: generation,
+      elementRevision: elementRevision,
     );
     _facts[requestId] = facts;
 

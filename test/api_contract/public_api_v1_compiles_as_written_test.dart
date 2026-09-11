@@ -1134,6 +1134,15 @@ void _exerciseInlineTextEditingContractSurface(
   _use(textEditing.sessionCandidateFor);
   _use(textEditing.start);
   _use(textEditing.startFromContextAction);
+  final CanvasTextEditStartResult startResult =
+      textEditing.startForElement(elementId);
+  switch (startResult) {
+    case CanvasTextEditStartSuccess(:final session):
+      _use(session);
+    case CanvasTextEditStartRefusal(:final reason):
+      _use(reason);
+  }
+  _use(CanvasTextEditStartRefusalReason.values);
   _use(CanvasTextEditEmptyTextBehavior.values);
   textEditing.setReadOnly(true);
   _use(

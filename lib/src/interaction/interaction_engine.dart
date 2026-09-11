@@ -248,6 +248,24 @@ final class InteractionEngine {
     );
   }
 
+  /// Issues one real text-edit guard without constructing a context event.
+  InteractionRequestGuardFacts? issueTextEditRequestFor(
+    CanvasElementId targetElementId,
+  ) {
+    final current = readPort.textCommitGuardFacts(
+      TextCommitGuardReadRequest(targetElementId: targetElementId),
+    );
+    if (!current.exists ||
+        current.targetKind != CanvasElementKind.text ||
+        current.currentText == null ||
+        current.generation == null ||
+        current.elementRevision == null) {
+      return null;
+    }
+
+    return _requestRegistry.issueTextEditRequest(current);
+  }
+
   bool consumeTextEditRequest(CanvasInteractionRequestId requestId) {
     return _requestRegistry.consume(requestId) != null;
   }

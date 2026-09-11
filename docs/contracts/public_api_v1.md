@@ -2773,6 +2773,15 @@ Context-action and text editing model:
   committed, unchanged, cancelled, rejected, stale, or noActiveSession;
   rejected keeps a retryable draft, stale retains its readable draft, and
   cancellation closes even a stale draft without requiring a valid guard;
+- CanvasTextEditingPort.startForElement(elementId, emptyTextBehavior: ...) admits
+  a visible content CanvasTextElement by identifier without hit testing or a
+  CanvasContextActionRequested event. It returns CanvasTextEditStartSuccess
+  with the active session, or CanvasTextEditStartRefusal with readOnly,
+  anotherSessionActive, stale, notFound, unsupportedType, or unavailable. A
+  valid same-element request returns the active session with its captured
+  empty-text policy; stale same-element and different active sessions refuse
+  without replacement. Candidate/context/start adapters retain nullable forms
+  and use the same read-only and active-slot policy;
 - after guard and validation, a deleteElement session whose draft text is empty
   after trim submits one CanvasDeleteCommitRequest from the existing direct
   removal preparation. Its entry contains the original complete element and
@@ -2858,6 +2867,27 @@ enum CanvasTextEditFinishIntent { commit, cancel }
 
 enum CanvasTextEditEmptyTextBehavior { keepElement, deleteElement }
 
+enum CanvasTextEditStartRefusalReason {
+  readOnly,
+  anotherSessionActive,
+  stale,
+  notFound,
+  unsupportedType,
+  unavailable,
+}
+
+sealed class CanvasTextEditStartResult { const CanvasTextEditStartResult(); }
+
+final class CanvasTextEditStartSuccess extends CanvasTextEditStartResult {
+  const CanvasTextEditStartSuccess(this.session);
+  final CanvasTextEditSession session;
+}
+
+final class CanvasTextEditStartRefusal extends CanvasTextEditStartResult {
+  const CanvasTextEditStartRefusal(this.reason);
+  final CanvasTextEditStartRefusalReason reason;
+}
+
 enum CanvasTextEditFinishResult {
   committed,
   unchanged,
@@ -2894,6 +2924,12 @@ final class CanvasTextEditSession {
 abstract interface class CanvasTextEditingPort {
   ValueListenable<CanvasTextEditSession?> get activeSession;
   bool get readOnly;
+
+  CanvasTextEditStartResult startForElement(
+    CanvasElementId elementId, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  });
 
   CanvasTextEditSession? sessionCandidateFor(
     CanvasContextActionRequested request, {
@@ -2947,8 +2983,10 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 // CanvasTextEditingPort get textEditing;
 ```
 
-Port implementers add `finishActive` and the optional empty-text behavior on
-candidate/context admission; existing callers may retain
+Port implementers add `finishActive`, `startForElement`, and the optional
+empty-text behavior on ID/candidate/context admission. ID consumers branch on
+CanvasTextEditStartSuccess and CanvasTextEditStartRefusal through the root
+barrel; existing callers may retain
 `CanvasTextEditSession.commit`, `CanvasTextEditSession.dismiss`, and
 `CanvasTextEditingPort.dismissActive`. Consumers that need the terminal outcome
 call `finishActive(CanvasTextEditFinishIntent.commit)` or `.cancel` and branch
