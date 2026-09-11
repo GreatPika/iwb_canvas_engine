@@ -1444,14 +1444,25 @@ void _testRejectedEmptyPolicyDeletionRetainsDraft() {
   });
 }
 
-// Resolver exception and incompatible acceptance share one pre-install
-// terminal invariant: neither may install or lose the retryable draft.
-// ignore: halstead-volume, source-lines-of-code
+// Resolver exception and incompatible acceptance each retain a retryable draft
+// through one same-session retry and its lease facts. Keeping those causal
+// traces together preserves their terminal invariant more clearly than splitting
+// either failure from its successful retry solely for a metric.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
   test('deletion resolver exception and incompatible acceptance discard before install', () async {
+    var exceptionAcceptsRetry = false;
+    CanvasTextEditCommitRequest? exceptionRetryProposal;
+    final exceptionRetryLease = _TextCommitLease();
     final exceptionScenario = _Scenario(
       config: CanvasRuntimeConfig(
-        commitResolver: (_) => throw StateError('deletion resolver failed'),
+        commitResolver: (request) {
+          if (!exceptionAcceptsRetry) {
+            throw StateError('deletion resolver failed');
+          }
+          exceptionRetryProposal = request as CanvasTextEditCommitRequest;
+          return CanvasCommitAccept(lease: exceptionRetryLease);
+        },
       ),
     );
     try {
@@ -1462,7 +1473,15 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
           emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
         ),
       );
-      session.updateText(' ');
+      final original = _textElement(exceptionScenario.root);
+      final documentBeforeFailure = exceptionScenario.root.readDocument();
+      final revisionBeforeFailure =
+          exceptionScenario.root.state.value.revisions.document;
+      session.updateText(' \n');
+      session.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
+      final retainedText = session.liveText;
+      final retainedStyle = session.style;
+      final retainedGeometry = session.geometry;
 
       expect(
         exceptionScenario.root.textEditing.finishActive(
@@ -1473,21 +1492,68 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
       expect(_containsElement(exceptionScenario.root, _textId), isTrue);
       expect(session.isActive, isTrue);
       expect(session.isStale, isFalse);
-      expect(session.liveText, ' ');
+      expect(session.liveText, retainedText);
+      expect(session.style, retainedStyle);
+      expect(session.geometry, retainedGeometry);
       expect(exceptionScenario.root.textEditing.activeSession.value, same(session));
       _expectRequestFactsLive(exceptionScenario.root, request);
+      expect(exceptionScenario.root.readDocument(), same(documentBeforeFailure));
+      expect(
+        exceptionScenario.root.state.value.revisions.document,
+        revisionBeforeFailure,
+      );
       expect(exceptionScenario.actions, isEmpty);
+
+      exceptionAcceptsRetry = true;
+      const retryText = 'retried after exception';
+      session.updateText(retryText);
+      expect(session.style, retainedStyle);
+      expect(
+        exceptionScenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.committed,
+      );
+      final proposal = exceptionRetryProposal;
+      if (proposal == null) fail('Expected an exception retry text proposal.');
+      _expectCompleteTextElement(proposal.before, original);
+      expect(proposal.after.text, retryText);
+      expect(proposal.after.isBold, isTrue);
+      expect(proposal.after.isItalic, isTrue);
+      expect(proposal.after.isUnderline, isTrue);
+      _expectCompleteTextElement(_textElement(exceptionScenario.root), proposal.after);
+      expect(
+        exceptionScenario.root.state.value.revisions.document,
+        revisionBeforeFailure + 1,
+      );
+      expect(exceptionRetryLease.committedCalls, 1);
+      expect(exceptionRetryLease.abortedCalls, 0);
+      expect(exceptionScenario.actions, hasLength(1));
+      expect(exceptionScenario.actions.single.type, CanvasActionType.editText);
+      final exceptionAction =
+          exceptionScenario.actions.single.payload as CanvasTextEditActionPayload;
+      expect(exceptionAction.requestId, request.requestId);
+      expect(exceptionScenario.root.textEditing.activeSession.value, isNull);
     } finally {
       await exceptionScenario.dispose();
     }
 
-    final lease = _TextCommitLease();
+    var incompatibleAcceptsRetry = false;
+    CanvasTextEditCommitRequest? incompatibleRetryProposal;
+    final rejectedLease = _TextCommitLease();
+    final incompatibleRetryLease = _TextCommitLease();
     final incompatibleScenario = _Scenario(
       config: CanvasRuntimeConfig(
-        commitResolver: (_) => CanvasMoveCommitAccept(
-          delta: const Offset(1, 0),
-          lease: lease,
-        ),
+        commitResolver: (request) {
+          if (!incompatibleAcceptsRetry) {
+            return CanvasMoveCommitAccept(
+              delta: const Offset(1, 0),
+              lease: rejectedLease,
+            );
+          }
+          incompatibleRetryProposal = request as CanvasTextEditCommitRequest;
+          return CanvasCommitAccept(lease: incompatibleRetryLease);
+        },
       ),
     );
     try {
@@ -1498,7 +1564,15 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
           emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
         ),
       );
-      session.updateText(' ');
+      final original = _textElement(incompatibleScenario.root);
+      final documentBeforeFailure = incompatibleScenario.root.readDocument();
+      final revisionBeforeFailure =
+          incompatibleScenario.root.state.value.revisions.document;
+      session.updateText(' \n');
+      session.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
+      final retainedText = session.liveText;
+      final retainedStyle = session.style;
+      final retainedGeometry = session.geometry;
 
       expect(
         incompatibleScenario.root.textEditing.finishActive(
@@ -1507,11 +1581,57 @@ void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
         CanvasTextEditFinishResult.rejected,
       );
       expect(_containsElement(incompatibleScenario.root, _textId), isTrue);
+      expect(session.isActive, isTrue);
+      expect(session.isStale, isFalse);
+      expect(session.liveText, retainedText);
+      expect(session.style, retainedStyle);
+      expect(session.geometry, retainedGeometry);
       expect(incompatibleScenario.root.textEditing.activeSession.value, same(session));
       _expectRequestFactsLive(incompatibleScenario.root, request);
-      expect(lease.committedCalls, 0);
-      expect(lease.abortedCalls, 1);
+      expect(incompatibleScenario.root.readDocument(), same(documentBeforeFailure));
+      expect(
+        incompatibleScenario.root.state.value.revisions.document,
+        revisionBeforeFailure,
+      );
+      expect(rejectedLease.committedCalls, 0);
+      expect(rejectedLease.abortedCalls, 1);
       expect(incompatibleScenario.actions, isEmpty);
+
+      incompatibleAcceptsRetry = true;
+      const retryText = 'retried after incompatible acceptance';
+      session.updateText(retryText);
+      expect(session.style, retainedStyle);
+      expect(
+        incompatibleScenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.committed,
+      );
+      final proposal = incompatibleRetryProposal;
+      if (proposal == null) fail('Expected an incompatible retry text proposal.');
+      _expectCompleteTextElement(proposal.before, original);
+      expect(proposal.after.text, retryText);
+      expect(proposal.after.isBold, isTrue);
+      expect(proposal.after.isItalic, isTrue);
+      expect(proposal.after.isUnderline, isTrue);
+      _expectCompleteTextElement(
+        _textElement(incompatibleScenario.root),
+        proposal.after,
+      );
+      expect(
+        incompatibleScenario.root.state.value.revisions.document,
+        revisionBeforeFailure + 1,
+      );
+      expect(rejectedLease.committedCalls, 0);
+      expect(rejectedLease.abortedCalls, 1);
+      expect(incompatibleRetryLease.committedCalls, 1);
+      expect(incompatibleRetryLease.abortedCalls, 0);
+      expect(incompatibleScenario.actions, hasLength(1));
+      expect(incompatibleScenario.actions.single.type, CanvasActionType.editText);
+      final incompatibleAction =
+          incompatibleScenario.actions.single.payload as CanvasTextEditActionPayload;
+      expect(incompatibleAction.requestId, request.requestId);
+      expect(incompatibleScenario.root.textEditing.activeSession.value, isNull);
     } finally {
       await incompatibleScenario.dispose();
     }
