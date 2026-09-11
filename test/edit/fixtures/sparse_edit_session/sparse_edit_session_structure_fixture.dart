@@ -169,17 +169,44 @@ void _expectMaterializedDestinationSelectionIsPure(
   expect(emptyDraft.didChange, isFalse);
 }
 
+// This single witness connects queried destinations with the absence of owner
+// work and structural changes; splitting those assertions would hide the
+// observable purity contract across helpers.
+// ignore: halstead-volume, source-lines-of-code
 void _expectCommittedSparseDestinationSelectionIsPure(
   CanvasDocument document,
   CanvasLayerId lastLayerId,
 ) {
+  final absentLayerId = CanvasLayerId('absent');
   final sparseFacts = SparseFixtureFacts(document);
   final sparseStructure = SparseEditStructure(sparseFacts);
   final sparseStructureEvents = <SparseEditStructureWorkEvent>[];
   final sparseSequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  final beforeQueryLayerCount = sparseStructure.layerCount(
+    committedCount: document.layers.length,
+  );
+  expect(sparseStructure.hasLayer(absentLayerId), isFalse);
   observeSparseEditStructureWork(
     sparseStructureEvents.add,
     () => IndexedOrderSequence.observeWork(sparseSequenceEvents.add, () {
+      final namedExistingDestination = sparseStructure.contentLayerDestination(
+        lastLayerId,
+      );
+      _expectContentDestination(
+        layerId: namedExistingDestination.layerId,
+        exists: namedExistingDestination.exists,
+        expectedLayerId: lastLayerId,
+        expectedExists: true,
+      );
+      final namedAbsentDestination = sparseStructure.contentLayerDestination(
+        absentLayerId,
+      );
+      _expectContentDestination(
+        layerId: namedAbsentDestination.layerId,
+        exists: namedAbsentDestination.exists,
+        expectedLayerId: absentLayerId,
+        expectedExists: false,
+      );
       final sparseDestination = sparseStructure.contentLayerDestination(null);
       _expectContentDestination(
         layerId: sparseDestination.layerId,
@@ -191,6 +218,11 @@ void _expectCommittedSparseDestinationSelectionIsPure(
   );
   expect(sparseStructureEvents, isEmpty);
   expect(sparseSequenceEvents, isEmpty);
+  expect(sparseStructure.hasLayer(absentLayerId), isFalse);
+  expect(
+    sparseStructure.layerCount(committedCount: document.layers.length),
+    beforeQueryLayerCount,
+  );
   sparseStructure.dispose();
 
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(
@@ -207,19 +239,53 @@ void _expectCommittedSparseDestinationSelectionIsPure(
   expect(store.projectionBuildCount, projectionBuildCount);
 }
 
+// This single witness connects queried destinations with the absence of owner
+// work and structural changes; splitting those assertions would hide the
+// observable purity contract across helpers.
+// ignore: halstead-volume, source-lines-of-code
 void _expectEditLocalSparseDestinationSelectionIsPure(
   CanvasDocument document,
   CanvasLayerId firstLayerId,
   CanvasLayerId lastLayerId,
 ) {
+  final absentLayerId = CanvasLayerId('absent');
   final sparseStructure = SparseEditStructure(SparseFixtureFacts(document));
   expect(sparseStructure.removeEmptyLayer(lastLayerId), isTrue);
   expect(sparseStructure.ensureLayer(lastLayerId, index: 0), isTrue);
   final structureEvents = <SparseEditStructureWorkEvent>[];
   final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  final beforeQueryLayerCount = sparseStructure.layerCount(
+    committedCount: document.layers.length,
+  );
+  final beforeQueryDestination = sparseStructure.contentLayerDestination(null);
+  _expectContentDestination(
+    layerId: beforeQueryDestination.layerId,
+    exists: beforeQueryDestination.exists,
+    expectedLayerId: firstLayerId,
+    expectedExists: true,
+  );
+  expect(sparseStructure.hasLayer(absentLayerId), isFalse);
   observeSparseEditStructureWork(
     structureEvents.add,
     () => IndexedOrderSequence.observeWork(sequenceEvents.add, () {
+      final namedExistingDestination = sparseStructure.contentLayerDestination(
+        firstLayerId,
+      );
+      _expectContentDestination(
+        layerId: namedExistingDestination.layerId,
+        exists: namedExistingDestination.exists,
+        expectedLayerId: firstLayerId,
+        expectedExists: true,
+      );
+      final namedAbsentDestination = sparseStructure.contentLayerDestination(
+        absentLayerId,
+      );
+      _expectContentDestination(
+        layerId: namedAbsentDestination.layerId,
+        exists: namedAbsentDestination.exists,
+        expectedLayerId: absentLayerId,
+        expectedExists: false,
+      );
       final destination = sparseStructure.contentLayerDestination(null);
       _expectContentDestination(
         layerId: destination.layerId,
@@ -230,7 +296,26 @@ void _expectEditLocalSparseDestinationSelectionIsPure(
     }),
   );
   expect(structureEvents, isEmpty);
-  expect(sequenceEvents, isEmpty);
+  expect(sequenceEvents, hasLength(2));
+  expect(
+    indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.membershipLookup,
+    ),
+    2,
+  );
+  expect(sparseStructure.hasLayer(absentLayerId), isFalse);
+  expect(
+    sparseStructure.layerCount(committedCount: document.layers.length),
+    beforeQueryLayerCount,
+  );
+  final afterQueryDestination = sparseStructure.contentLayerDestination(null);
+  _expectContentDestination(
+    layerId: afterQueryDestination.layerId,
+    exists: afterQueryDestination.exists,
+    expectedLayerId: firstLayerId,
+    expectedExists: true,
+  );
   sparseStructure.dispose();
 }
 
