@@ -469,7 +469,12 @@ fixture also uses real external text/style, visibility, kind, relocation,
 removal, and same-ID replacement changes to prove stale draft identity/text/
 style/geometry retention, immutable retries, resolver/action/revision silence,
 and explicit dismissal; it observes stale cleanup without addressed candidate
-projection. `test.runtime.text_edit_paint_suppression` proves the corresponding
+projection. Its empty-policy cases capture deleteElement once across repeated
+admission, prove whitespace and originally-empty deletion requests retain the
+complete original entry and placement (including the direct-route
+non-deletable behavior), observe one projection/request-copy/prepared consume,
+and prove resolver rejection keeps the original retryable draft without an
+empty update or action. `test.runtime.text_edit_paint_suppression` proves the corresponding
 committed-frame paint restoration.
 
 `test.guardrails.text_surface_guardrail_checks` proves the runner-backed

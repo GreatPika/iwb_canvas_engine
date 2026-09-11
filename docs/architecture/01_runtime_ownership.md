@@ -56,7 +56,7 @@ Runtime responsibilities are split as follows:
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
 | InteractionEngine | pointer sessions, immutable selected-move participant basis/conflict state, tools, preview state, terminal commit requests, one non-consuming issued/current text-guard comparison, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
-| CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, permanently latched stale-draft retention, and typed commit/cancel terminal lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, duplicate the interaction guard comparison, or replace context-action ownership |
+| CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, captured empty-text policy, live text geometry/style projection, permanently latched stale-draft retention, and typed commit/cancel terminal lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, duplicate the interaction guard comparison, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image/vector references, or committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset resolution, resolver budget, same-frame null-result suppression, bounded placeholders, and synchronous cache/suppression wrapper-borrow retirement before its narrow retained-output release callback | own committed descriptors, public runtime state, Flutter widget lifecycle, or application assets/Pictures |
@@ -252,6 +252,11 @@ immutable base facts, one live text/B/I/U draft, and last geometry while
 refusing later updates and commits. Its `finishActive` terminal owns
 commit/cancel outcome distinctions; compatible session, dismiss,
 direct-command, and stock-overlay adapters converge there.
+Candidate/context admission captures the immutable empty-text policy in that
+same session state. On a trim-empty deleteElement finish, RuntimeRoot selects
+the shared direct-removal preparation with its original Store entry and exact
+placement before equality or update preparation; the normal guarded terminal
+then owns resolution, installation, delivery, and matching-session closure.
 The command terminal alone retires a known invalid request. A changed commit
 obtains its action facts from the prepared Store target pair before installation,
 while its frame and committed layout use the same complete text/B/I/U candidate

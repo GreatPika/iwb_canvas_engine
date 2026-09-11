@@ -1134,6 +1134,7 @@ void _exerciseInlineTextEditingContractSurface(
   _use(textEditing.sessionCandidateFor);
   _use(textEditing.start);
   _use(textEditing.startFromContextAction);
+  _use(CanvasTextEditEmptyTextBehavior.values);
   textEditing.setReadOnly(true);
   _use(
     textEditing.finishActive(
@@ -1151,6 +1152,7 @@ void _exerciseInlineTextEditingContractSurface(
   _use(session?.elementRevision);
   _use(session?.generation);
   _use(session?.initialText);
+  _use(session?.emptyTextBehavior);
   _use(session?.liveText);
   _use(session?.isActive);
   _use(session?.isStale);

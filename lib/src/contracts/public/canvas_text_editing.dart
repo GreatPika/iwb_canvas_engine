@@ -15,6 +15,15 @@ enum CanvasTextEditFinishIntent {
   cancel,
 }
 
+/// The terminal behavior for an existing text draft whose text is empty.
+enum CanvasTextEditEmptyTextBehavior {
+  /// Retains the element and commits an empty text update when it changed.
+  keepElement,
+
+  /// Removes the element through the existing deletion confirmation route.
+  deleteElement,
+}
+
 /// The observable outcome of completing an active text-editing session.
 enum CanvasTextEditFinishResult {
   /// A changed draft was installed.
@@ -143,6 +152,7 @@ final class CanvasTextEditSession {
     required this.elementRevision,
     required this.generation,
     required this.initialText,
+    required this.emptyTextBehavior,
     required String Function() liveText,
     required CanvasTextEditGeometry Function() geometry,
     required CanvasTextEditStyle Function() style,
@@ -180,6 +190,7 @@ final class CanvasTextEditSession {
   final int elementRevision;
   final int generation;
   final String initialText;
+  final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   String get liveText => _liveText();
   CanvasTextEditGeometry get geometry => _geometry();
   CanvasTextEditStyle get style => _style();
@@ -204,10 +215,18 @@ abstract interface class CanvasTextEditingPort {
 
   CanvasTextEditSession? sessionCandidateFor(
     CanvasContextActionRequested request,
+    {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+    }
   );
   CanvasTextEditSession? start(CanvasTextEditSession session);
   CanvasTextEditSession? startFromContextAction(
     CanvasContextActionRequested request,
+    {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+    }
   );
   // Positional bool is the locked public API shape for ergonomic
   // runtime.textEditing.setReadOnly(true) calls.
@@ -230,6 +249,7 @@ CanvasTextEditSession canvasTextEditSessionForRuntime({
   required int elementRevision,
   required int generation,
   required String initialText,
+  required CanvasTextEditEmptyTextBehavior emptyTextBehavior,
   required String Function() liveText,
   required CanvasTextEditGeometry Function() geometry,
   required CanvasTextEditStyle Function() style,
@@ -248,6 +268,7 @@ CanvasTextEditSession canvasTextEditSessionForRuntime({
     elementRevision: elementRevision,
     generation: generation,
     initialText: initialText,
+    emptyTextBehavior: emptyTextBehavior,
     liveText: liveText,
     geometry: geometry,
     style: style,

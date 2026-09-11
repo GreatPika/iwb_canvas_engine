@@ -215,8 +215,14 @@ final class PublicIntegrationTextEditingPort implements CanvasTextEditingPort {
 
   @override
   CanvasTextEditSession? sessionCandidateFor(
-    CanvasContextActionRequested request,
-  ) => null;
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }) {
+    _use((request, emptyTextBehavior));
+
+    return null;
+  }
 
   @override
   void setReadOnly(bool value) => _use(value);
@@ -226,8 +232,14 @@ final class PublicIntegrationTextEditingPort implements CanvasTextEditingPort {
 
   @override
   CanvasTextEditSession? startFromContextAction(
-    CanvasContextActionRequested request,
-  ) => null;
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }) {
+    _use((request, emptyTextBehavior));
+
+    return null;
+  }
 }
 
 final class PublicIntegrationResourceResolver

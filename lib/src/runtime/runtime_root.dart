@@ -222,16 +222,24 @@ final class _CommitLeaseAttempt {
   }
 }
 
-final class _PreparedTextEditCommit {
-  const _PreparedTextEditCommit({
+final class _PreparedTextTerminalCommit {
+  const _PreparedTextTerminalCommit({
     required this.prepared,
-    required this.before,
-    required this.after,
+    required this.request,
   });
 
   final PreparedInteractionCommit prepared;
-  final CanvasTextElement before;
-  final CanvasTextElement after;
+  final CanvasCommitRequest request;
+}
+
+final class _PreparedElementRemoval {
+  const _PreparedElementRemoval({
+    required this.prepared,
+    required this.request,
+  });
+
+  final PreparedInteractionCommit prepared;
+  final CanvasDeleteCommitRequest request;
 }
 
 // Common delivery has public callback seams for resource, frame, state, action,
@@ -1458,9 +1466,37 @@ final class RuntimeRoot
   // Command operations.
   bool removeElementByCommand(CanvasElementId id, {int? timestampMs}) {
     ensureRuntimeMutationAllowed();
+    final removal = _prepareElementRemoval(id, timestampMs: timestampMs);
+    if (removal == null) {
+      return false;
+    }
+    final resolution = _resolveCommit(removal.request, isMove: false);
+    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
+    if (!resolution.accepted) {
+      removal.prepared.discard();
+      leaseAttempt.aborted(this);
+      return false;
+    }
+    late CommitDeliveryResult applyResult;
+    try {
+      applyResult = removal.prepared.consume();
+    } on Object {
+      leaseAttempt.aborted(this);
+      rethrow;
+    }
+    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
+    return true;
+  }
+
+  // Direct command and policy-selected text deletion share this one exact
+  // Store-entry projection and closed deferred removal package.
+  _PreparedElementRemoval? _prepareElementRemoval(
+    CanvasElementId id, {
+    int? timestampMs,
+  }) {
     final entries = _store.projectDeletionEntries([id]).entries;
     if (entries.length != 1) {
-      return false;
+      return null;
     }
     final prepared = _editKernel.prepareDeferredInteractionCommit(
       (edit) {
@@ -1470,22 +1506,10 @@ final class RuntimeRoot
         RemoveElementActionIntent(elementId: id, timestampHintMs: timestampMs),
       ]),
     );
-    final resolution = _resolveCommit(_deleteRequest(entries), isMove: false);
-    final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
-    if (!resolution.accepted) {
-      prepared.discard();
-      leaseAttempt.aborted(this);
-      return false;
-    }
-    late CommitDeliveryResult applyResult;
-    try {
-      applyResult = prepared.consume();
-    } on Object {
-      leaseAttempt.aborted(this);
-      rethrow;
-    }
-    _deliverEditCommitResult(applyResult, leaseAttempt: leaseAttempt);
-    return true;
+    return _PreparedElementRemoval(
+      prepared: prepared,
+      request: _deleteRequest(entries),
+    );
   }
 
   CanvasClearResult clearContentByCommand({
@@ -1577,46 +1601,55 @@ final class RuntimeRoot
           ? CanvasTextEditFinishResult.rejected
           : CanvasTextEditFinishResult.stale;
     }
-    final isUnchanged = completingSession == null
-        ? previousText == newText
-        : _isTextDraftEqualToBase(completingSession, newText, formatting);
-    if (isUnchanged) {
-      _interactionEngine.consumeTextEditRequest(requestId);
-      _textEditingPort.clearAcceptedSession(completingSession);
+    final deletesEmptyText =
+        completingSession?.emptyTextBehavior ==
+            CanvasTextEditEmptyTextBehavior.deleteElement &&
+        newText.trim().isEmpty;
+    final _PreparedTextTerminalCommit? preparedTerminal;
+    if (deletesEmptyText) {
+      final removal = _prepareElementRemoval(
+        targetElementId,
+        timestampMs: timestampMs,
+      );
+      preparedTerminal = removal == null
+          ? null
+          : _PreparedTextTerminalCommit(
+              prepared: removal.prepared,
+              request: removal.request,
+            );
+    } else {
+      final isUnchanged = completingSession == null
+          ? previousText == newText
+          : _isTextDraftEqualToBase(completingSession, newText, formatting);
+      if (isUnchanged) {
+        _interactionEngine.consumeTextEditRequest(requestId);
+        _textEditingPort.clearAcceptedSession(completingSession);
 
-      return CanvasTextEditFinishResult.unchanged;
+        return CanvasTextEditFinishResult.unchanged;
+      }
+      preparedTerminal = _prepareTextEditCommit((
+        requestId: requestId,
+        targetElementId: targetElementId,
+        newText: newText,
+        isBold: formatting.isBold,
+        isItalic: formatting.isItalic,
+        isUnderline: formatting.isUnderline,
+        timestampMs: timestampMs,
+      ));
     }
-    final preparedText = _prepareTextEditCommit((
-      requestId: requestId,
-      targetElementId: targetElementId,
-      newText: newText,
-      isBold: formatting.isBold,
-      isItalic: formatting.isItalic,
-      isUnderline: formatting.isUnderline,
-      timestampMs: timestampMs,
-    ));
-    if (preparedText == null) {
+    if (preparedTerminal == null) {
       return CanvasTextEditFinishResult.rejected;
     }
-    final resolution = _resolveCommit(
-      CanvasTextEditCommitRequest(
-        documentSummary: _documentSummary(),
-        documentRevision: _store.documentRevision,
-        selectedElementIdsBefore: _selection.selectedElementIds,
-        before: preparedText.before,
-        after: preparedText.after,
-      ),
-      isMove: false,
-    );
+    final resolution = _resolveCommit(preparedTerminal.request, isMove: false);
     final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
     if (!resolution.accepted) {
-      preparedText.prepared.discard();
+      preparedTerminal.prepared.discard();
       leaseAttempt.aborted(this);
       return CanvasTextEditFinishResult.rejected;
     }
     final CommitDeliveryResult applyResult;
     try {
-      applyResult = preparedText.prepared.consume();
+      applyResult = preparedTerminal.prepared.consume();
     } on Object {
       leaseAttempt.aborted(this);
       rethrow;
@@ -1641,8 +1674,12 @@ final class RuntimeRoot
 
   // The complete candidate fields stay beside the one update construction so
   // text, B/I/U, and anchor cannot diverge across a second preparation path.
-  // ignore: halstead-volume
-  _PreparedTextEditCommit? _prepareTextEditCommit(TextEditPrepareInput input) {
+  // The closed package keeps candidate preparation and exact public request
+  // construction together so their accepted facts cannot diverge.
+  // ignore: halstead-volume, source-lines-of-code
+  _PreparedTextTerminalCommit? _prepareTextEditCommit(
+    TextEditPrepareInput input,
+  ) {
     final prepareOverride = _textEditPrepareOverride;
     if (prepareOverride != null) {
       final result = prepareOverride(input);
@@ -1674,14 +1711,19 @@ final class RuntimeRoot
       },
       affectedElementId: input.targetElementId,
     );
-    return _PreparedTextEditCommit(
+    return _PreparedTextTerminalCommit(
       prepared: prepared,
-      before:
-          before ??
-          (throw StateError('Text edit lost its prepared before value.')),
-      after:
-          after ??
-          (throw StateError('Text edit lost its prepared after value.')),
+      request: CanvasTextEditCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: _selection.selectedElementIds,
+        before:
+            before ??
+            (throw StateError('Text edit lost its prepared before value.')),
+        after:
+            after ??
+            (throw StateError('Text edit lost its prepared after value.')),
+      ),
     );
   }
 
@@ -4652,6 +4694,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   @override
   CanvasTextEditSession? sessionCandidateFor(
     CanvasContextActionRequested request,
+    {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+    }
   ) {
     _ensurePublicOperationAllowed();
     _pruneExpiredCandidateStates();
@@ -4659,7 +4705,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     if (existing != null && !_isStale(existing)) {
       return existing.session;
     }
-    final state = _candidateStateFor(request);
+    final state = _candidateStateFor(request, emptyTextBehavior);
     if (state == null) {
       return null;
     }
@@ -4707,8 +4753,15 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   @override
   CanvasTextEditSession? startFromContextAction(
     CanvasContextActionRequested request,
+    {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+    }
   ) {
-    final candidate = sessionCandidateFor(request);
+    final candidate = sessionCandidateFor(
+      request,
+      emptyTextBehavior: emptyTextBehavior,
+    );
 
     return candidate == null ? null : start(candidate);
   }
@@ -4865,6 +4918,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   // ignore: halstead-volume, source-lines-of-code, maintainability-index
   _RuntimeTextEditSessionState? _candidateStateFor(
     CanvasContextActionRequested request,
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior,
   ) {
     final observation = _root._interactionEngine.textEditGuardValidity(
       request.requestId,
@@ -4892,6 +4946,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       generation: guard.generation as int,
       initialText: initialText,
       liveText: initialText,
+      emptyTextBehavior: emptyTextBehavior,
       baseFacts: facts,
       isBold: facts.isBold ?? false,
       isItalic: facts.isItalic ?? false,
@@ -4903,6 +4958,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
         elementRevision: guard.elementRevision as int,
         generation: guard.generation as int,
         initialText: initialText,
+        emptyTextBehavior: emptyTextBehavior,
         liveText: () {
           _ensurePublicReadAllowed();
 
@@ -5171,6 +5227,7 @@ final class _RuntimeTextEditSessionState {
     required this.generation,
     required this.initialText,
     required this.liveText,
+    required this.emptyTextBehavior,
     required this.baseFacts,
     required this.isBold,
     required this.isItalic,
@@ -5187,6 +5244,7 @@ final class _RuntimeTextEditSessionState {
   final int generation;
   final String initialText;
   String liveText;
+  final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   final FrameElementFacts baseFacts;
   final CanvasTextEditSession session;
   bool isBold;

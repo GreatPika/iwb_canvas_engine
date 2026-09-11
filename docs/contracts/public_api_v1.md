@@ -2736,6 +2736,10 @@ Context-action and text editing model:
   current text content-target requests and returns null for empty-canvas,
   non-text, stale, family-mismatched, read-only, unknown, or already-consumed
   requests;
+- sessionCandidateFor and startFromContextAction accept an optional
+  CanvasTextEditEmptyTextBehavior that defaults to keepElement. The runtime
+  captures it in the candidate/session once; repeated candidate or start calls
+  reuse that captured value rather than replacing it;
 - active editing suppresses the original frame text paint through frame output
   and must not mutate CanvasTextElement.isVisible, remove the element from hit
   or context membership, or change document visibility as a hide/show bridge;
@@ -2769,6 +2773,13 @@ Context-action and text editing model:
   committed, unchanged, cancelled, rejected, stale, or noActiveSession;
   rejected keeps a retryable draft, stale retains its readable draft, and
   cancellation closes even a stale draft without requiring a valid guard;
+- after guard and validation, a deleteElement session whose draft text is empty
+  after trim submits one CanvasDeleteCommitRequest from the existing direct
+  removal preparation. Its entry contains the original complete element and
+  exact placement; it does not install an empty text update first or remove an
+  empty layer. A rejected deletion retains the original element and draft.
+  keepElement preserves the existing text update/no-op behavior, and nonempty
+  text is never trimmed before storage;
 - request facts are live and consumed/removed once rather than kept as durable
   registry state. A command terminal retires a known invalid request, but stale
   retention never recreates it; unknown and already-consumed ids are no-effect
@@ -2845,6 +2856,8 @@ final class CanvasTextEditStyle {
 
 enum CanvasTextEditFinishIntent { commit, cancel }
 
+enum CanvasTextEditEmptyTextBehavior { keepElement, deleteElement }
+
 enum CanvasTextEditFinishResult {
   committed,
   unchanged,
@@ -2861,6 +2874,7 @@ final class CanvasTextEditSession {
   final int elementRevision;
   final int generation;
   final String initialText;
+  final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   String get liveText;
   CanvasTextEditGeometry get geometry;
   CanvasTextEditStyle get style;
@@ -2882,11 +2896,17 @@ abstract interface class CanvasTextEditingPort {
   bool get readOnly;
 
   CanvasTextEditSession? sessionCandidateFor(
-    CanvasContextActionRequested request,
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }
   );
   CanvasTextEditSession? start(CanvasTextEditSession session);
   CanvasTextEditSession? startFromContextAction(
-    CanvasContextActionRequested request,
+    CanvasContextActionRequested request, {
+    CanvasTextEditEmptyTextBehavior emptyTextBehavior =
+        CanvasTextEditEmptyTextBehavior.keepElement,
+  }
   );
   void setReadOnly(bool value);
   CanvasTextEditFinishResult finishActive(
@@ -2927,7 +2947,8 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 // CanvasTextEditingPort get textEditing;
 ```
 
-Port implementers add `finishActive`; existing callers may retain
+Port implementers add `finishActive` and the optional empty-text behavior on
+candidate/context admission; existing callers may retain
 `CanvasTextEditSession.commit`, `CanvasTextEditSession.dismiss`, and
 `CanvasTextEditingPort.dismissActive`. Consumers that need the terminal outcome
 call `finishActive(CanvasTextEditFinishIntent.commit)` or `.cancel` and branch

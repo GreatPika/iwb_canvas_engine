@@ -19,8 +19,17 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import '../../support/accept_commit.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
+// The fixture's one registration point lists every public text-session witness
+// so its coverage boundary remains explicit rather than hidden in test glue.
+// ignore: source-lines-of-code
 void main() {
   _testCandidateLookup();
+  _testEmptyPolicyDeletion();
+  _testRejectedEmptyPolicyDeletionRetainsDraft();
+  _testEmptyPolicyDeletionResolverFailuresRetainDraft();
+  _testEmptyPolicyDeletionPreparationFailureRetainsDraft();
+  _testEmptyPolicyDeletionDelivery();
+  _testEmptyPolicyDeletionCloseFailureRemainsCommitted();
   _testNonTextCandidateLookup();
   _testReadOnlyAdmission();
   _testSingleActiveAdmission();
@@ -57,6 +66,475 @@ void main() {
   _testFailedLoadPreservesActiveSession();
   _testDisposedRuntimeRejectsTextEditingPortOperations();
   _testDisposedRuntimeRejectsTextEditingSessionCallbacks();
+}
+
+// The accepted deletion, fallible close notifier, and committed lease are one
+// failure boundary, so keeping their assertions together is clearer.
+// ignore: halstead-volume
+void _testEmptyPolicyDeletionCloseFailureRemainsCommitted() {
+  test('deletion close notification failure cannot abort accepted deletion', () async {
+    final errors = <FlutterErrorDetails>[];
+    final previousErrorHandler = FlutterError.onError;
+    final lease = _TextCommitLease();
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) => CanvasCommitAccept(lease: lease),
+      ),
+    );
+    void onClose() {
+      if (scenario.root.textEditing.activeSession.value == null) {
+        throw StateError('deletion close listener failed');
+      }
+    }
+
+    scenario.root.textEditing.activeSession.addListener(onClose);
+    FlutterError.onError = errors.add;
+    try {
+      final request = await scenario.issueTextRequest();
+      final session = _expectSession(
+        scenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      session.updateText(' ');
+
+      expect(session.commit(), isTrue);
+      expect(_containsElement(scenario.root, _textId), isFalse);
+      expect(session.isActive, isFalse);
+      expect(lease.committedCalls, 1);
+      expect(lease.abortedCalls, 0);
+      expect(scenario.actions.single.type, CanvasActionType.deleteElements);
+      expect(errors.single.exception, isA<StateError>());
+    } finally {
+      FlutterError.onError = previousErrorHandler;
+      scenario.root.textEditing.activeSession.removeListener(onClose);
+      await scenario.dispose();
+    }
+  });
+}
+
+// This pre-install failure keeps all retained-draft assertions at the one
+// request-construction seam instead of scattering partial snapshots.
+// ignore: halstead-volume
+void _testEmptyPolicyDeletionPreparationFailureRetainsDraft() {
+  test('deletion request preparation failure keeps original draft and state', () async {
+    final scenario = _Scenario();
+    try {
+      final request = await scenario.issueTextRequest();
+      final session = _expectSession(
+        scenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      final failure = StateError('deletion request construction failed');
+      final beforeRevisions = scenario.root.state.value.revisions;
+      session.updateText('\n');
+
+      RuntimeRoot.injectDeletionRequestPreparationFailure(
+        RuntimeDeletionRequestPreparationPhase.requestConstruction,
+        failure,
+        () => expect(session.commit, throwsA(same(failure))),
+      );
+
+      expect(_containsElement(scenario.root, _textId), isTrue);
+      expect(scenario.root.state.value.revisions, beforeRevisions);
+      expect(session.liveText, '\n');
+      expect(scenario.root.textEditing.activeSession.value, same(session));
+      _expectRequestFactsLive(scenario.root, request);
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+}
+
+// Resolver guard, accepted delivery, and close replacement are one causal
+// runtime behavior, so this deletion witness retains their observable order.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testEmptyPolicyDeletionDelivery() {
+  test(
+    'empty deletion guards callbacks then delivers state lease action observer and close',
+    () async {
+      final trace = <String>[];
+      final lease = _TextCommitLease();
+      late final RuntimeRoot root;
+      var committing = false;
+      root = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            expect(request, isA<CanvasDeleteCommitRequest>());
+            expect(_textValue(root), 'hello');
+            expect(
+              () => root.commands.removeElement(_rectId),
+              throwsA(isA<StateError>()),
+            );
+            return CanvasCommitAccept(lease: lease);
+          },
+        ),
+        commitEffectObserver: (_) {
+          if (committing) trace.add('observer');
+        },
+      );
+      final requests = <CanvasContextActionRequested>[];
+      final requestSubscription = root.contextActionRequests.listen(requests.add);
+      final actionSubscription = root.actions.listen((_) {
+        if (committing) trace.add('action');
+      });
+      void onState() {
+        if (committing) trace.add('state');
+      }
+
+      root.state.addListener(onState);
+      try {
+        root.edits.edit((edit) {
+          edit.addElement(
+            CanvasTextElement(
+              id: _replacementTextId,
+              text: 'replacement',
+              fontSize: 16,
+              color: const Color(0xFF111111),
+              textDirection: TextDirection.ltr,
+              transform: CanvasTransform.translation(const Offset(200, 0)),
+            ),
+          );
+        });
+        root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+        await Future<void>.delayed(Duration.zero);
+        final outerRequest = requests.single;
+        requests.clear();
+        root.handleDoubleTap(position: const Offset(200, 0), timestampMs: 2);
+        await Future<void>.delayed(Duration.zero);
+        final replacementRequest = requests.single;
+        final outer = _expectSession(
+          root.textEditing.startFromContextAction(
+            outerRequest,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        CanvasTextEditSession? replacement;
+        void onClose() {
+          if (root.textEditing.activeSession.value != null) return;
+          trace.add('close');
+          replacement = _expectSession(
+            root.textEditing.startFromContextAction(replacementRequest),
+          );
+        }
+
+        root.textEditing.activeSession.addListener(onClose);
+        try {
+          outer.updateText(' ');
+          lease.onCommitted = () {
+            trace.add('lease');
+            expect(
+              () => root.commands.removeElement(_rectId),
+              throwsA(isA<StateError>()),
+            );
+          };
+          committing = true;
+          expect(outer.commit(timestampMs: 104), isTrue);
+          committing = false;
+        } finally {
+          root.textEditing.activeSession.removeListener(onClose);
+        }
+
+        expect(trace, [
+          'state',
+          'lease',
+          'action',
+          'observer',
+          'close',
+          'state',
+        ]);
+        expect(_containsElement(root, _textId), isFalse);
+        expect(outer.isActive, isFalse);
+        expect(root.textEditing.activeSession.value, same(replacement));
+        expect(lease.committedCalls, 1);
+        expect(lease.abortedCalls, 0);
+      } finally {
+        root.state.removeListener(onState);
+        await actionSubscription.cancel();
+        await requestSubscription.cancel();
+        root.dispose();
+      }
+    },
+  );
+}
+
+// The rejection and retry stay on the public session seam so a deletion route
+// cannot discard the draft merely because its prepared package was rejected.
+// Rejection, discard, and retry are one public terminal behavior and remain
+// together so a lost draft cannot hide behind the retry result.
+// ignore: halstead-volume, source-lines-of-code
+void _testRejectedEmptyPolicyDeletionRetainsDraft() {
+  test('rejected empty deletion retains its draft and request for retry', () async {
+    var accept = false;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) => accept
+            ? acceptCommit(request)
+            : const CanvasCommitCancel(),
+      ),
+    );
+    try {
+      final request = await scenario.issueTextRequest();
+      final session = _expectSession(
+        scenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      final work = <PreparedInteractionApplyWorkEvent>[];
+      session.updateText('  ');
+
+      expect(
+        CommitApplier.observePreparedInteractionWork(
+          work.add,
+          () => scenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+        ),
+        CanvasTextEditFinishResult.rejected,
+      );
+      expect(_containsElement(scenario.root, _textId), isTrue);
+      expect(session.liveText, '  ');
+      expect(scenario.root.textEditing.activeSession.value, same(session));
+      _expectRequestFactsLive(scenario.root, request);
+      expect(scenario.actions, isEmpty);
+      expect(work, [
+        PreparedInteractionApplyWorkEvent.prepared,
+        PreparedInteractionApplyWorkEvent.ownershipReleased,
+        PreparedInteractionApplyWorkEvent.discarded,
+      ]);
+
+      accept = true;
+      expect(session.commit(), isTrue);
+      expect(_containsElement(scenario.root, _textId), isFalse);
+      expect(scenario.actions, hasLength(1));
+    } finally {
+      await scenario.dispose();
+    }
+  });
+}
+
+// Resolver exception and incompatible acceptance share one pre-install
+// terminal invariant: neither may install or lose the retryable draft.
+// ignore: halstead-volume, source-lines-of-code
+void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
+  test('deletion resolver exception and incompatible acceptance discard before install', () async {
+    final exceptionScenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) => throw StateError('deletion resolver failed'),
+      ),
+    );
+    try {
+      final request = await exceptionScenario.issueTextRequest();
+      final session = _expectSession(
+        exceptionScenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      session.updateText(' ');
+
+      expect(session.commit(), isFalse);
+      expect(_containsElement(exceptionScenario.root, _textId), isTrue);
+      expect(exceptionScenario.root.textEditing.activeSession.value, same(session));
+      _expectRequestFactsLive(exceptionScenario.root, request);
+      expect(exceptionScenario.actions, isEmpty);
+    } finally {
+      await exceptionScenario.dispose();
+    }
+
+    final lease = _TextCommitLease();
+    final incompatibleScenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) => CanvasMoveCommitAccept(
+          delta: const Offset(1, 0),
+          lease: lease,
+        ),
+      ),
+    );
+    try {
+      final request = await incompatibleScenario.issueTextRequest();
+      final session = _expectSession(
+        incompatibleScenario.root.textEditing.startFromContextAction(
+          request,
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        ),
+      );
+      session.updateText(' ');
+
+      expect(
+        incompatibleScenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.rejected,
+      );
+      expect(_containsElement(incompatibleScenario.root, _textId), isTrue);
+      expect(incompatibleScenario.root.textEditing.activeSession.value, same(session));
+      _expectRequestFactsLive(incompatibleScenario.root, request);
+      expect(lease.committedCalls, 0);
+      expect(lease.abortedCalls, 1);
+      expect(incompatibleScenario.actions, isEmpty);
+    } finally {
+      await incompatibleScenario.dispose();
+    }
+  });
+}
+
+// This one public text-session witness holds policy capture, direct-removal
+// facts, and terminal work together so an empty update before deletion cannot
+// pass by final document state alone.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testEmptyPolicyDeletion() {
+  test(
+    'delete policy removes whitespace and originally empty text through one direct deletion',
+    () async {
+      CanvasDeleteCommitRequest? whitespaceProposal;
+      final whitespaceLease = _TextCommitLease();
+      final whitespaceScenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            whitespaceProposal = request as CanvasDeleteCommitRequest;
+            return CanvasCommitAccept(lease: whitespaceLease);
+          },
+        ),
+      );
+      try {
+        final request = await whitespaceScenario.issueTextRequest();
+        final session = _expectSession(
+          whitespaceScenario.root.textEditing.sessionCandidateFor(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        expect(session.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+        expect(
+          whitespaceScenario.root.textEditing.sessionCandidateFor(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.keepElement,
+          ),
+          same(session),
+        );
+        expect(whitespaceScenario.root.textEditing.start(session), same(session));
+        expect(
+          whitespaceScenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.keepElement,
+          ),
+          same(session),
+        );
+        final original = _textElement(whitespaceScenario.root);
+        final work = <PreparedInteractionApplyWorkEvent>[];
+        var projectionCount = 0;
+        final construction = <RuntimeDeletionRouteConstructionKind>[];
+        final requestWork = <RuntimeDeletionRequestWorkEvent>[];
+
+        session.updateFormatting(isBold: true);
+        session.updateText(' \n\t');
+
+        expect(
+          DocumentStoreKernel.observeDeletionEntryProjection(
+            (_) => projectionCount += 1,
+            () => RuntimeRoot.observeDeletionRouteConstruction(
+              construction.add,
+              () => RuntimeRoot.observeDeletionRequestWork(
+                requestWork.add,
+                () => CommitApplier.observePreparedInteractionWork(
+                  work.add,
+                  () => session.commit(timestampMs: 103),
+                ),
+              ),
+            ),
+          ),
+          isTrue,
+        );
+
+        final proposal = whitespaceProposal;
+        if (proposal == null) fail('Expected a deletion proposal.');
+        expect(proposal.entries, hasLength(1));
+        final entry = proposal.entries.single;
+        _expectCompleteTextElement(_asTextElement(entry.element), original);
+        expect(entry.layerId, CanvasLayerId('layer-a'));
+        expect(entry.elementIndex, 0);
+        expect(_containsElement(whitespaceScenario.root, _textId), isFalse);
+        expect(work, [
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.ownershipReleased,
+          PreparedInteractionApplyWorkEvent.consumed,
+        ]);
+        expect(whitespaceLease.committedCalls, 1);
+        expect(whitespaceLease.abortedCalls, 0);
+        expect(projectionCount, 1);
+        expect(construction, [RuntimeDeletionRouteConstructionKind.request]);
+        expect(requestWork, [RuntimeDeletionRequestWorkEvent.entryCopied]);
+        expect(whitespaceScenario.actions, hasLength(1));
+        expect(
+          whitespaceScenario.actions.single.type,
+          CanvasActionType.deleteElements,
+        );
+      } finally {
+        await whitespaceScenario.dispose();
+      }
+
+      CanvasDeleteCommitRequest? emptyProposal;
+      final emptyScenario = _Scenario(
+        document: _document(text: '', isDeletable: false),
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            emptyProposal = request as CanvasDeleteCommitRequest;
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final request = await emptyScenario.issueTextRequest();
+        final session = _expectSession(
+          emptyScenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        final original = _textElement(emptyScenario.root);
+
+        expect(session.commit(), isTrue);
+
+        final proposal = emptyProposal;
+        if (proposal == null) fail('Expected an empty-text deletion proposal.');
+        _expectCompleteTextElement(
+          _asTextElement(proposal.entries.single.element),
+          original,
+        );
+        expect(proposal.entries.single.element.isDeletable, isFalse);
+        expect(_containsElement(emptyScenario.root, _textId), isFalse);
+      } finally {
+        await emptyScenario.dispose();
+      }
+
+      CanvasCommitRequest? keepProposal;
+      final keepScenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            keepProposal = request;
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final session = await _startTextSession(keepScenario);
+        session.updateText(' \n\t');
+
+        expect(session.commit(), isTrue);
+        expect(keepProposal, isA<CanvasTextEditCommitRequest>());
+        expect(_textValue(keepScenario.root), ' \n\t');
+      } finally {
+        await keepScenario.dispose();
+      }
+    },
+  );
 }
 
 // Direct command input must reach the terminal unchanged, while all committing
@@ -2396,11 +2874,15 @@ bool _containsElement(RuntimeRoot root, CanvasElementId id) {
   );
 }
 
+/// This fixture needs the complete original text entry for deletion assertions.
+/// Keeping its construction inputs together makes that expected entry readable.
+// ignore: number-of-parameters, reason: The one fixture helper keeps complete original deletion facts legible.
 CanvasDocument _document({
   TextAlign align = TextAlign.left,
   double? maxWidth = 120,
   String text = 'hello',
   String? fontFamily,
+  bool isDeletable = true,
 }) {
   return CanvasDocument(
     layers: [
@@ -2416,6 +2898,7 @@ CanvasDocument _document({
             align: align,
             fontFamily: fontFamily,
             maxWidth: maxWidth,
+            isDeletable: isDeletable,
           ),
           CanvasRectElement(
             id: _rectId,

@@ -280,6 +280,13 @@ not change the ordinary edit rollback boundary before any accepted install.
 orchestrates the accepted result. For changed request-originated text, the
 typed `CanvasTextEditingPort.finishActive` terminal and its compatible command
 and session adapters use this same prepared package and delivery sequence.
+When a session captured `deleteElement` and confirms trim-empty text,
+RuntimeRoot chooses the shared direct-removal preparation before equality. The
+closed package carries one `CanvasDeleteCommitRequest` with the original Store
+entry and exact placement, then uses the same resolver, discard, consume,
+lease, delivery, and identity-safe session-close sequence as a text update.
+Rejection or preparation failure leaves the original element and retryable
+draft intact.
 RuntimeRoot consumes the request, silently clears only a matching active session
 and its owned suppression/candidate state, and records the outer interaction
 revision before capture. It completes outer common delivery, releases its guard,
