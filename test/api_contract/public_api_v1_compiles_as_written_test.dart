@@ -1049,9 +1049,11 @@ void _exerciseP2ContractSurface() {
     gridStyle: CanvasGridStyle(strokeWidth: 0.5),
     interactive: false,
   );
-  final Widget textEditingOverlay = CanvasTextEditingOverlay(
+  final CanvasTextEditingOverlay textEditingOverlay =
+      CanvasTextEditingOverlay(
     runtime: runtime,
     inlineEditOnDoubleTap: true,
+    emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
     maxEditorHeight: 120,
     cursorColor: const Color(0xFF1565C0),
     selectionColor: const Color(0x331565C0),
@@ -1059,6 +1061,11 @@ void _exerciseP2ContractSurface() {
     commitOnFocusLoss: false,
     dismissOnEscape: true,
   );
+  final CanvasTextEditingOverlay defaultTextEditingOverlay =
+      CanvasTextEditingOverlay(
+        runtime: runtime,
+        inlineEditOnDoubleTap: true,
+      );
   final selectionStyle = CanvasSelectionStyle(
     color: const Color(0xFF1565C0),
     strokeWidth: 1,
@@ -1068,6 +1075,8 @@ void _exerciseP2ContractSurface() {
   _use(selectionStyle);
   _use(surface);
   _use(textEditingOverlay);
+  _use(textEditingOverlay.emptyTextBehavior);
+  _use(defaultTextEditingOverlay.emptyTextBehavior);
 }
 
 void _exerciseVectorContractSurface(

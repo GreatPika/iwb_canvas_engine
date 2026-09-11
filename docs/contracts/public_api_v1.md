@@ -2800,8 +2800,12 @@ Context-action and text editing model:
   edits do not reject a still-current text edit;
 - CanvasTextEditingOverlay is a public Flutter helper owned by surface; it uses
   EditableText, consumes CanvasTextEditingPort.activeSession, supports
-  configurable auto-start, max-height scroll, cursor/selection hooks, escape
-  dismissal, focus-loss commit, and multiline growth from session geometry;
+  configurable auto-start, emptyTextBehavior for double-tap admission,
+  max-height scroll, cursor/selection hooks, escape dismissal, focus-loss
+  commit, and multiline growth from session geometry. Its default
+  emptyTextBehavior is keepElement; the current property is forwarded only
+  when a double-tap request starts, and the runtime keeps an active session's
+  captured policy;
 - while an inline text session is active, CanvasTextEditSession.geometry
   preserves the session-start resolved horizontal text anchor and the top edge
   of the edit bounds as live text width or line count changes; committing the
@@ -2956,6 +2960,7 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
   const CanvasTextEditingOverlay({
     required this.runtime,
     this.inlineEditOnDoubleTap = false,
+    this.emptyTextBehavior = CanvasTextEditEmptyTextBehavior.keepElement,
     this.maxEditorHeight,
     this.cursorColor = const Color(0xFF1565C0),
     this.selectionColor = const Color(0x331565C0),
@@ -2969,6 +2974,7 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 
   final CanvasRuntime runtime;
   final bool inlineEditOnDoubleTap;
+  final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   final double? maxEditorHeight;
   final Color cursorColor;
   final Color selectionColor;

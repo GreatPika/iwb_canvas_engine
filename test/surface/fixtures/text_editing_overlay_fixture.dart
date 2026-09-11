@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'package:iwb_canvas_engine/src/surface/text_editing_overlay.dart';
+import '../../support/accept_commit.dart';
 import '../../support/runtime_with_document.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
   _testOverlayAnchorsLiveWidthToTextAlignment();
   _testOverlayAppliesSessionTransform();
   _testAutoStartPolicy();
+  _testOverlayEmptyTextPolicyCapture();
   _testReadOnlyPolicy();
   _testCameraPanRepositionsActiveEditor();
   _testCommitAndDismiss();
@@ -343,6 +345,222 @@ void _testAutoStartPolicy() {
   });
 }
 
+// This follows the stock double-tap stream through widget replacement and
+// completion, because a direct session start cannot show whether the overlay
+// forwards its current configuration or overwrites an admitted session.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testOverlayEmptyTextPolicyCapture() {
+  testWidgets(
+    'overlay captures configured empty policy across widget updates and repeat starts',
+    (tester) async {
+      final resolverRequests = <CanvasCommitRequest>[];
+      late final _OverlayScenario scenario;
+      scenario = _OverlayScenario(
+        inlineEditOnDoubleTap: true,
+        emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            resolverRequests.add(request);
+            expect(_textElement(scenario.runtime).text, 'hello');
+            return const CanvasCommitAccept(lease: testAcceptingCommitLease);
+          },
+        ),
+      );
+      addTearDown(scenario.dispose);
+      final documentRevision = scenario.runtime.state.value.revisions.document;
+
+      await scenario.pump(tester);
+      await scenario.doubleTapText(tester);
+      final session = scenario.activeSession;
+      final editable = tester.widget<EditableText>(_editableTextFinder());
+      final controller = editable.controller;
+      final focusNode = editable.focusNode;
+      expect(
+        session.emptyTextBehavior,
+        CanvasTextEditEmptyTextBehavior.deleteElement,
+      );
+
+      await scenario.pump(
+        tester,
+        emptyTextBehavior: CanvasTextEditEmptyTextBehavior.keepElement,
+      );
+      await scenario.doubleTapText(tester);
+
+      expect(scenario.activeSession, same(session));
+      expect(
+        scenario.activeSession.emptyTextBehavior,
+        CanvasTextEditEmptyTextBehavior.deleteElement,
+      );
+      expect(
+        tester.widget<EditableText>(_editableTextFinder()).controller,
+        same(controller),
+      );
+      expect(
+        tester.widget<EditableText>(_editableTextFinder()).focusNode,
+        same(focusNode),
+      );
+
+      await tester.enterText(_editableTextFinder(), ' \n\t');
+      await tester.pump();
+
+      expect(_textElement(scenario.runtime).text, 'hello');
+      expect(scenario.runtime.state.value.revisions.document, documentRevision);
+      expect(resolverRequests, isEmpty);
+      expect(scenario.actions, isEmpty);
+
+      tester
+          .widget<EditableText>(_editableTextFinder())
+          .onEditingComplete
+          ?.call();
+      await tester.pump();
+
+      expect(resolverRequests, hasLength(1));
+      expect(resolverRequests.single, isA<CanvasDeleteCommitRequest>());
+      expect(scenario.runtime.readDocument().layers.single.elements, isEmpty);
+      expect(
+        scenario.runtime.state.value.revisions.document,
+        documentRevision + 1,
+      );
+      expect(scenario.actions, hasLength(1));
+      expect(scenario.actions.single.type, CanvasActionType.deleteElements);
+    },
+  );
+
+  testWidgets(
+    'overlay reads changed empty policy for a later stock admission',
+    (tester) async {
+      final resolverRequests = <CanvasCommitRequest>[];
+      final scenario = _OverlayScenario(
+        inlineEditOnDoubleTap: true,
+        emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            resolverRequests.add(request);
+            return const CanvasCommitAccept(lease: testAcceptingCommitLease);
+          },
+        ),
+      );
+      addTearDown(scenario.dispose);
+
+      await scenario.pump(tester);
+      await scenario.doubleTapText(tester);
+      final initialSession = scenario.activeSession;
+      expect(
+        initialSession.emptyTextBehavior,
+        CanvasTextEditEmptyTextBehavior.deleteElement,
+      );
+
+      await scenario.pump(
+        tester,
+        emptyTextBehavior: CanvasTextEditEmptyTextBehavior.keepElement,
+      );
+      initialSession.dismiss();
+      await tester.pump();
+      expect(scenario.runtime.textEditing.activeSession.value, isNull);
+
+      await scenario.doubleTapText(tester);
+      final laterSession = scenario.activeSession;
+      expect(laterSession, isNot(same(initialSession)));
+      expect(
+        laterSession.emptyTextBehavior,
+        CanvasTextEditEmptyTextBehavior.keepElement,
+      );
+      await tester.enterText(_editableTextFinder(), ' \n\t');
+      await tester.pump();
+      tester
+          .widget<EditableText>(_editableTextFinder())
+          .onEditingComplete
+          ?.call();
+      await tester.pump();
+
+      expect(resolverRequests, hasLength(1));
+      expect(resolverRequests.single, isA<CanvasTextEditCommitRequest>());
+      expect(_textElement(scenario.runtime).text, ' \n\t');
+      expect(scenario.actions.single.type, CanvasActionType.editText);
+    },
+  );
+
+  test(
+    'explicit ID admission with delete policy matches stock deletion',
+    () async {
+      final resolverRequests = <CanvasCommitRequest>[];
+      final scenario = _OverlayScenario(
+        inlineEditOnDoubleTap: false,
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            resolverRequests.add(request);
+            return const CanvasCommitAccept(lease: testAcceptingCommitLease);
+          },
+        ),
+      );
+      try {
+        final documentRevision =
+            scenario.runtime.state.value.revisions.document;
+        final result = scenario.runtime.textEditing.startForElement(
+          CanvasElementId('text-a'),
+          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+        );
+        final session = switch (result) {
+          CanvasTextEditStartSuccess(:final session) => session,
+          CanvasTextEditStartRefusal(:final reason) => throw StateError(
+            'Expected text session, got $reason.',
+          ),
+        };
+
+        session.updateText(' \n\t');
+        expect(_textElement(scenario.runtime).text, 'hello');
+        expect(
+          scenario.runtime.state.value.revisions.document,
+          documentRevision,
+        );
+        expect(session.commit(), isTrue);
+
+        expect(resolverRequests, hasLength(1));
+        expect(resolverRequests.single, isA<CanvasDeleteCommitRequest>());
+        expect(scenario.runtime.readDocument().layers.single.elements, isEmpty);
+        expect(scenario.actions.single.type, CanvasActionType.deleteElements);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  testWidgets('omitted overlay empty policy keeps the whitespace text block', (
+    tester,
+  ) async {
+    final resolverRequests = <CanvasCommitRequest>[];
+    final scenario = _OverlayScenario(
+      inlineEditOnDoubleTap: true,
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          resolverRequests.add(request);
+          return const CanvasCommitAccept(lease: testAcceptingCommitLease);
+        },
+      ),
+    );
+    addTearDown(scenario.dispose);
+
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    expect(
+      scenario.activeSession.emptyTextBehavior,
+      CanvasTextEditEmptyTextBehavior.keepElement,
+    );
+    await tester.enterText(_editableTextFinder(), ' \n\t');
+    await tester.pump();
+    tester
+        .widget<EditableText>(_editableTextFinder())
+        .onEditingComplete
+        ?.call();
+    await tester.pump();
+
+    expect(resolverRequests, hasLength(1));
+    expect(resolverRequests.single, isA<CanvasTextEditCommitRequest>());
+    expect(_textElement(scenario.runtime).text, ' \n\t');
+    expect(scenario.actions.single.type, CanvasActionType.editText);
+  });
+}
+
 void _testReadOnlyPolicy() {
   testWidgets('overlay observes runtime read-only policy', (tester) async {
     final readOnlyStart = _OverlayScenario(inlineEditOnDoubleTap: true);
@@ -584,16 +802,19 @@ final class _OverlayScenario {
   _OverlayScenario({
     required this.inlineEditOnDoubleTap,
     CanvasDocument? document,
+    this.emptyTextBehavior,
     this.maxEditorHeight,
     this.autofocus = false,
     this.commitOnFocusLoss = false,
     this.trailingFocusNode,
-  }) : runtime = runtimeWithDocument(document ?? _document()) {
+    CanvasRuntimeConfig? config,
+  }) : runtime = _runtimeWithOptionalConfig(document, config) {
     actionSubscription = runtime.actions.listen(actions.add);
   }
 
   final CanvasRuntime runtime;
   final bool inlineEditOnDoubleTap;
+  final CanvasTextEditEmptyTextBehavior? emptyTextBehavior;
   final double? maxEditorHeight;
   final bool autofocus;
   final bool commitOnFocusLoss;
@@ -610,7 +831,28 @@ final class _OverlayScenario {
     return session;
   }
 
-  Future<void> pump(WidgetTester tester) {
+  Future<void> pump(
+    WidgetTester tester, {
+    CanvasTextEditEmptyTextBehavior? emptyTextBehavior,
+  }) {
+    final configuredEmptyTextBehavior =
+        emptyTextBehavior ?? this.emptyTextBehavior;
+    final overlay = configuredEmptyTextBehavior == null
+        ? CanvasTextEditingOverlay(
+            runtime: runtime,
+            inlineEditOnDoubleTap: inlineEditOnDoubleTap,
+            maxEditorHeight: maxEditorHeight,
+            autofocus: autofocus,
+            commitOnFocusLoss: commitOnFocusLoss,
+          )
+        : CanvasTextEditingOverlay(
+            runtime: runtime,
+            inlineEditOnDoubleTap: inlineEditOnDoubleTap,
+            emptyTextBehavior: configuredEmptyTextBehavior,
+            maxEditorHeight: maxEditorHeight,
+            autofocus: autofocus,
+            commitOnFocusLoss: commitOnFocusLoss,
+          );
     return tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
@@ -620,13 +862,7 @@ final class _OverlayScenario {
           child: Stack(
             children: [
               CanvasSurface(runtime: runtime, interactive: false),
-              CanvasTextEditingOverlay(
-                runtime: runtime,
-                inlineEditOnDoubleTap: inlineEditOnDoubleTap,
-                maxEditorHeight: maxEditorHeight,
-                autofocus: autofocus,
-                commitOnFocusLoss: commitOnFocusLoss,
-              ),
+              overlay,
               if (trailingFocusNode case final focusNode?)
                 Focus(
                   focusNode: focusNode,
@@ -652,6 +888,18 @@ final class _OverlayScenario {
     await actionSubscription.cancel();
     runtime.dispose();
   }
+}
+
+CanvasRuntime _runtimeWithOptionalConfig(
+  CanvasDocument? document,
+  CanvasRuntimeConfig? config,
+) {
+  final initialDocument = document ?? _document();
+  if (config == null) {
+    return runtimeWithDocument(initialDocument);
+  }
+
+  return runtimeWithDocument(initialDocument, config: config);
 }
 
 Finder _editableTextFinder() {

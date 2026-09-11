@@ -29,6 +29,7 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
   const CanvasTextEditingOverlay({
     required this.runtime,
     this.inlineEditOnDoubleTap = false,
+    this.emptyTextBehavior = CanvasTextEditEmptyTextBehavior.keepElement,
     this.maxEditorHeight,
     this.cursorColor = const Color(0xFF1565C0),
     this.selectionColor = const Color(0x331565C0),
@@ -42,6 +43,7 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 
   final CanvasRuntime runtime;
   final bool inlineEditOnDoubleTap;
+  final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   final double? maxEditorHeight;
   final Color cursorColor;
   final Color selectionColor;
@@ -226,7 +228,10 @@ final class _CanvasTextEditingOverlayState
     _contextSubscription = widget.runtime.contextActionRequests.listen((
       request,
     ) {
-      widget.runtime.textEditing.startFromContextAction(request);
+      widget.runtime.textEditing.startFromContextAction(
+        request,
+        emptyTextBehavior: widget.emptyTextBehavior,
+      );
     });
   }
 

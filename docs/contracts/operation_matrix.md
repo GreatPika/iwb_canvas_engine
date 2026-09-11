@@ -155,7 +155,11 @@ Notes:
   rejected reads record none. Accepted request delivery is suppressed if
   load/dispose cleanup runs before the scheduled stream emission. Request
   delivery itself has no document, selection, preview, repaint, spatial,
-  projection, resource, or action effect.
+  projection, resource, or action effect. When its configurable auto-start is
+  enabled, `CanvasTextEditingOverlay` forwards its current
+  `emptyTextBehavior` to that request's text admission; the runtime captures
+  the policy for the admitted session, so later widget updates and repeated
+  admission do not replace it.
 - `commitTextEdit` rejects stale request ids by request id, controller epoch,
   target kind, element generation, elementRevision, missing element,
   empty-canvas target, vector/non-text target, and current text-kind mismatch.

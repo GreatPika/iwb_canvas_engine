@@ -36,10 +36,21 @@ final class PublicIntegrationCompileFixture {
     return CanvasTextEditingOverlay(
       runtime: runtime,
       inlineEditOnDoubleTap: true,
+      emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
       maxEditorHeight: 160,
       autofocus: false,
       commitOnFocusLoss: false,
     );
+  }
+
+  CanvasTextEditingOverlay createDefaultTextEditingOverlay() {
+    final overlay = CanvasTextEditingOverlay(
+      runtime: runtime,
+      inlineEditOnDoubleTap: true,
+    );
+    _use(overlay.emptyTextBehavior);
+
+    return overlay;
   }
 
   CanvasDocument observeDocumentAndState() {
@@ -184,7 +195,10 @@ final class PublicIntegrationCompileFixture {
     final port = PublicIntegrationTextEditingPort();
     port.setReadOnly(false);
 
-    final result = port.startForElement(CanvasElementId('text-id'));
+    final result = port.startForElement(
+      CanvasElementId('text-id'),
+      emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+    );
     switch (result) {
       case CanvasTextEditStartSuccess(:final session):
         _use(session);
