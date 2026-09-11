@@ -266,7 +266,22 @@ final class InteractionEngine {
     return _requestRegistry.issueTextEditRequest(current);
   }
 
+  /// Issues a real registry identity for a runtime-owned text creation draft.
+  InteractionRequestGuardFacts issueTextCreationRequest({
+    required int controllerEpoch,
+    required int documentRevision,
+  }) {
+    return _requestRegistry.issueTextCreationRequest(
+      controllerEpoch: controllerEpoch,
+      documentRevision: documentRevision,
+    );
+  }
+
   bool consumeTextEditRequest(CanvasInteractionRequestId requestId) {
+    return _requestRegistry.consume(requestId) != null;
+  }
+
+  bool consumeTextCreationRequest(CanvasInteractionRequestId requestId) {
     return _requestRegistry.consume(requestId) != null;
   }
 

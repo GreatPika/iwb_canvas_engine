@@ -292,6 +292,11 @@ not change the ordinary edit rollback boundary before any accepted install.
 orchestrates the accepted result. For changed request-originated text, the
 typed `CanvasTextEditingPort.finishActive` terminal and its compatible command
 and session adapters use this same prepared package and delivery sequence.
+For a nonempty `startNew` draft, RuntimeRoot supplies the seed-derived final
+text element and retained raw placement to the same closed insertion handoff;
+the resulting `CanvasTextCreateCommitRequest` exposes only its prepared entry,
+layer index and creates-layer facts before resolver acceptance. Trim-empty new
+drafts close before preparation.
 When a session captured `deleteElement` and confirms trim-empty text,
 RuntimeRoot chooses the shared direct-removal preparation before equality. The
 closed package carries one `CanvasDeleteCommitRequest` with the original Store

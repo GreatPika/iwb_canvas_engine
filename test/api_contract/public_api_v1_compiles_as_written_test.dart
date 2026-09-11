@@ -959,6 +959,10 @@ void _exerciseP2ContractSurface() {
       previousTextLength: 1,
       nextTextLength: 2,
     ),
+    CanvasTextCreateActionPayload(
+      requestId: requestId,
+      createdTextLength: 2,
+    ),
   ];
   final action = CanvasActionCommitted(
     actionId: actionId,
@@ -1153,7 +1157,25 @@ void _exerciseInlineTextEditingContractSurface(
     case CanvasTextEditStartRefusal(:final reason):
       _use(reason);
   }
+  final CanvasTextEditStartResult newResult = textEditing.startNew(
+    CanvasTextElement(
+      id: CanvasElementId('new-text'),
+      revision: 3,
+      text: 'new',
+      color: const Color(0xFF000000),
+      textDirection: TextDirection.ltr,
+    ),
+    layerId: CanvasLayerId('new-layer'),
+    index: 2,
+  );
+  switch (newResult) {
+    case CanvasTextEditStartSuccess(:final session):
+      _use(session.origin);
+    case CanvasTextEditStartRefusal(:final reason):
+      _use(reason);
+  }
   _use(CanvasTextEditStartRefusalReason.values);
+  _use(CanvasTextEditOrigin.values);
   _use(CanvasTextEditEmptyTextBehavior.values);
   textEditing.setReadOnly(true);
   _use(

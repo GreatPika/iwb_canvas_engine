@@ -18,6 +18,7 @@ enum CommitActionIntentKind {
   drawLine,
   erase,
   editText,
+  createText,
 }
 
 sealed class CommitActionIntent {
@@ -237,6 +238,29 @@ final class EditTextActionIntent extends CommitActionIntent {
   final CanvasInteractionRequestId requestId;
   final int previousTextLength;
   final int nextTextLength;
+}
+
+final class CreateTextActionIntent extends CommitActionIntent {
+  static int lengthFor(CanvasTextElement element) => element.text.length;
+
+  CreateTextActionIntent({
+    required this.requestId,
+    required CanvasElementId elementId,
+    required int createdTextLength,
+    super.timestampHintMs,
+  }) : createdTextLength = _validateTextLength(
+         createdTextLength,
+         'createdTextLength',
+       ),
+       elementIds = List.unmodifiable([elementId]);
+
+  @override
+  CommitActionIntentKind get kind => CommitActionIntentKind.createText;
+
+  @override
+  final List<CanvasElementId> elementIds;
+  final CanvasInteractionRequestId requestId;
+  final int createdTextLength;
 }
 
 int? _validateTimestampHint(int? timestampHintMs) {

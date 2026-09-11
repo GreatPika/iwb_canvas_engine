@@ -464,7 +464,7 @@ final class _Record {
 
 void _apply(CanvasEdit edit, _Record record, {required bool undo}) {
   switch (record.request) {
-    case CanvasDrawCommitRequest(:final entry, :final layerIndex, :final createsLayer, :final selectedElementIdsBefore):
+    case CanvasDrawCommitRequest(:final entry, :final layerIndex, :final createsLayer, :final selectedElementIdsBefore) || CanvasTextCreateCommitRequest(:final entry, :final layerIndex, :final createsLayer, :final selectedElementIdsBefore):
       if (undo) {
         edit.removeElement(entry.element.id);
         if (createsLayer && entry.layerId != null) {

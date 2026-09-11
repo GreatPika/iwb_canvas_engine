@@ -66,6 +66,7 @@ import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import '../store/committed_document.dart';
+import '../store/content_layer_destination.dart';
 import '../store/element_registry.dart';
 import '../store/layer_table.dart';
 import '../store/resource_table.dart';
@@ -1304,6 +1305,7 @@ final class RuntimeRoot
     CanvasRotateCommitRequest() => 'rotate',
     CanvasReflectCommitRequest() => 'reflect',
     CanvasTextEditCommitRequest() => 'textEdit',
+    CanvasTextCreateCommitRequest() => 'textCreate',
   };
 
   void _invokeCommitLease(CanvasCommitLease lease, {required bool committed}) {
@@ -1607,62 +1609,85 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     _validateTextEditCommandInput(requestId, newText, timestampMs);
 
-    final guard = _interactionEngine.textEditGuardDecision(requestId);
-    if (guard.kind != TextEditGuardDecisionKind.accepted ||
-        completingSession?.stale == true) {
-      _textEditingPort.clearConsumedRequest(requestId);
-
-      return completingSession == null
-          ? CanvasTextEditFinishResult.rejected
-          : CanvasTextEditFinishResult.stale;
-    }
-    final targetElementId = guard.targetElementId as CanvasElementId;
-    final previousText = guard.currentText as String;
-    final formatting = completingSession == null
-        ? _textFormattingForElement(targetElementId)
-        : _textFormattingForSession(completingSession);
-    if (formatting == null) {
-      _textEditingPort.clearConsumedRequest(requestId);
-
-      return completingSession == null
-          ? CanvasTextEditFinishResult.rejected
-          : CanvasTextEditFinishResult.stale;
-    }
-    final deletesEmptyText =
-        completingSession?.emptyTextBehavior ==
-            CanvasTextEditEmptyTextBehavior.deleteElement &&
-        newText.trim().isEmpty;
     final _PreparedTextTerminalCommit? preparedTerminal;
-    if (deletesEmptyText) {
-      final removal = _prepareElementRemoval(
-        targetElementId,
-        timestampMs: timestampMs,
-      );
-      preparedTerminal = removal == null
-          ? null
-          : _PreparedTextTerminalCommit(
-              prepared: removal.prepared,
-              request: removal.request,
-            );
-    } else {
-      final isUnchanged = completingSession == null
-          ? previousText == newText
-          : _isTextDraftEqualToBase(completingSession, newText, formatting);
-      if (isUnchanged) {
-        _interactionEngine.consumeTextEditRequest(requestId);
-        _textEditingPort.clearAcceptedSession(completingSession);
-
+    final creationState =
+        completingSession?.origin == CanvasTextEditOrigin.newElement
+        ? completingSession
+        : null;
+    final isCreation = creationState != null;
+    if (creationState != null) {
+      final state = creationState;
+      if (_textEditingPort.isStale(state)) {
+        _interactionEngine.consumeTextCreationRequest(state.requestId);
+        return CanvasTextEditFinishResult.stale;
+      }
+      if (newText.trim().isEmpty) {
+        _interactionEngine.consumeTextCreationRequest(state.requestId);
+        _textEditingPort.clearAcceptedSession(state);
         return CanvasTextEditFinishResult.unchanged;
       }
-      preparedTerminal = _prepareTextEditCommit((
-        requestId: requestId,
-        targetElementId: targetElementId,
-        newText: newText,
-        isBold: formatting.isBold,
-        isItalic: formatting.isItalic,
-        isUnderline: formatting.isUnderline,
+      preparedTerminal = _prepareTextCreateCommit(
+        state,
+        newText,
         timestampMs: timestampMs,
-      ));
+      );
+    } else {
+      final guard = _interactionEngine.textEditGuardDecision(requestId);
+      if (guard.kind != TextEditGuardDecisionKind.accepted ||
+          completingSession?.stale == true) {
+        _textEditingPort.clearConsumedRequest(requestId);
+
+        return completingSession == null
+            ? CanvasTextEditFinishResult.rejected
+            : CanvasTextEditFinishResult.stale;
+      }
+      final targetElementId = guard.targetElementId as CanvasElementId;
+      final previousText = guard.currentText as String;
+      final formatting = completingSession == null
+          ? _textFormattingForElement(targetElementId)
+          : _textFormattingForSession(completingSession);
+      if (formatting == null) {
+        _textEditingPort.clearConsumedRequest(requestId);
+
+        return completingSession == null
+            ? CanvasTextEditFinishResult.rejected
+            : CanvasTextEditFinishResult.stale;
+      }
+      final deletesEmptyText =
+          completingSession?.emptyTextBehavior ==
+              CanvasTextEditEmptyTextBehavior.deleteElement &&
+          newText.trim().isEmpty;
+      if (deletesEmptyText) {
+        final removal = _prepareElementRemoval(
+          targetElementId,
+          timestampMs: timestampMs,
+        );
+        preparedTerminal = removal == null
+            ? null
+            : _PreparedTextTerminalCommit(
+                prepared: removal.prepared,
+                request: removal.request,
+              );
+      } else {
+        final isUnchanged = completingSession == null
+            ? previousText == newText
+            : _isTextDraftEqualToBase(completingSession, newText, formatting);
+        if (isUnchanged) {
+          _interactionEngine.consumeTextEditRequest(requestId);
+          _textEditingPort.clearAcceptedSession(completingSession);
+
+          return CanvasTextEditFinishResult.unchanged;
+        }
+        preparedTerminal = _prepareTextEditCommit((
+          requestId: requestId,
+          targetElementId: targetElementId,
+          newText: newText,
+          isBold: formatting.isBold,
+          isItalic: formatting.isItalic,
+          isUnderline: formatting.isUnderline,
+          timestampMs: timestampMs,
+        ));
+      }
     }
     if (preparedTerminal == null) {
       return CanvasTextEditFinishResult.rejected;
@@ -1681,7 +1706,11 @@ final class RuntimeRoot
       leaseAttempt.aborted(this);
       rethrow;
     }
-    _interactionEngine.consumeTextEditRequest(requestId);
+    if (isCreation) {
+      _interactionEngine.consumeTextCreationRequest(requestId);
+    } else {
+      _interactionEngine.consumeTextEditRequest(requestId);
+    }
     final didClearTextEditSuppression = _textEditingPort.clearAcceptedSession(
       completingSession,
       publishState: false,
@@ -1697,6 +1726,75 @@ final class RuntimeRoot
     }
 
     return CanvasTextEditFinishResult.committed;
+  }
+
+  _PreparedTextTerminalCommit? _prepareTextCreateCommit(
+    _RuntimeTextEditSessionState state,
+    String newText, {
+    required int? timestampMs,
+  }) {
+    final creation = state.creation;
+    if (creation == null) {
+      return null;
+    }
+    final element = _createdTextElementFor(state, newText);
+    final insertion = _prepareInsertion(
+      element: element,
+      actionIntent: CreateTextActionIntent(
+        requestId: state.requestId,
+        elementId: element.id,
+        createdTextLength: CreateTextActionIntent.lengthFor(element),
+        timestampHintMs: timestampMs,
+      ),
+      layerId: creation.destination.layerId,
+      index: creation.index,
+    );
+    return _PreparedTextTerminalCommit(
+      prepared: insertion.prepared,
+      request: CanvasTextCreateCommitRequest(
+        documentSummary: _documentSummary(),
+        documentRevision: _store.documentRevision,
+        selectedElementIdsBefore: _selection.selectedElementIds,
+        requestId: state.requestId,
+        entry: insertion.entry,
+        layerIndex: insertion.layerIndex,
+        createsLayer: insertion.createsLayer,
+      ),
+    );
+  }
+
+  CanvasTextElement _createdTextElementFor(
+    _RuntimeTextEditSessionState state,
+    String text,
+  ) {
+    final seed = state.creation?.seed;
+    if (seed == null) {
+      throw StateError('Text creation lost its immutable seed.');
+    }
+    return CanvasTextElement(
+      id: seed.id,
+      revision: seed.revision,
+      text: text,
+      fontSize: seed.fontSize,
+      color: seed.color,
+      textDirection: seed.textDirection,
+      align: seed.align,
+      isBold: state.isBold,
+      isItalic: state.isItalic,
+      isUnderline: state.isUnderline,
+      fontFamily: seed.fontFamily,
+      maxWidth: seed.maxWidth,
+      lineHeight: seed.lineHeight,
+      transform: _textEditingPort.geometryFor(state).transform,
+      opacity: seed.opacity,
+      hitPadding: seed.hitPadding,
+      isVisible: seed.isVisible,
+      isSelectable: seed.isSelectable,
+      isLocked: seed.isLocked,
+      isDeletable: seed.isDeletable,
+      isTransformable: seed.isTransformable,
+      metadata: seed.metadata,
+    );
   }
 
   // The complete candidate fields stay beside the one update construction so
@@ -4760,6 +4858,48 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }
 
   @override
+  CanvasTextEditStartResult startNew(
+    CanvasTextElement seed, {
+    CanvasLayerId? layerId,
+    int? index,
+  }) {
+    _ensurePublicOperationAllowed();
+    final slot = _admitActiveSlot(seed.id, allowReuse: false);
+    if (slot case _TextEditActiveSlotRefusal(:final reason)) {
+      return CanvasTextEditStartRefusal(reason);
+    }
+    if (_root._frameFactsForElement(seed.id) != null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.alreadyExists,
+      );
+    }
+    final destination = ContentLayerDestination.resolve(
+      requestedLayerExists: layerId != null && _root._store.hasLayer(layerId),
+      requestedLayerId: layerId,
+      lastLayerId: _root._store.lastContentLayerId,
+    );
+    final guard = _root._interactionEngine.issueTextCreationRequest(
+      controllerEpoch: _root._epochRevision,
+      documentRevision: _root._store.documentRevision,
+    );
+    final state = _newCandidateStateFor(
+      seed: seed,
+      guard: guard,
+      destination: destination,
+      index: index,
+    );
+    _ownedStates.add(state);
+    final session = _startState(state);
+    if (session == null) {
+      return const CanvasTextEditStartRefusal(
+        CanvasTextEditStartRefusalReason.stale,
+      );
+    }
+
+    return CanvasTextEditStartSuccess(session);
+  }
+
+  @override
   // Candidate reuse must show active-slot policy and request identity next to
   // each other. Extracting either branch would obscure the nullable adapter's
   // ordered admission behavior.
@@ -4831,7 +4971,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     }
     candidateState.active = true;
     _active = candidateState;
-    _suppressionToken = _TextEditSuppressionToken.fromState(candidateState);
+    _suppressionToken = candidateState.origin == CanvasTextEditOrigin.existing
+        ? _TextEditSuppressionToken.fromState(candidateState)
+        : null;
     _activeSession.value = candidateState.session;
     _root._publishTextEditInteractionState();
 
@@ -4939,6 +5081,11 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _activeSession.notifyValueChanged();
   }
 
+  bool isStale(_RuntimeTextEditSessionState state) => _isStale(state);
+
+  CanvasTextEditGeometry geometryFor(_RuntimeTextEditSessionState state) =>
+      _geometryFor(state);
+
   void _ensurePublicOperationAllowed() {
     _root.ensureRuntimeMutationAllowed();
   }
@@ -5021,8 +5168,8 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       return null;
     }
     final initialText = observation.currentText as String;
-    late final _RuntimeTextEditSessionState state;
-    state = _RuntimeTextEditSessionState(
+    return _sessionState(
+      origin: CanvasTextEditOrigin.existing,
       requestId: guard.requestId,
       elementId: targetElementId,
       documentRevision: guard.documentRevision,
@@ -5031,18 +5178,122 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       elementRevision: guard.elementRevision as int,
       generation: guard.generation as int,
       initialText: initialText,
-      liveText: initialText,
       emptyTextBehavior: emptyTextBehavior,
       baseFacts: facts,
-      isBold: facts.isBold ?? false,
-      isItalic: facts.isItalic ?? false,
-      isUnderline: facts.isUnderline ?? false,
+    );
+  }
+
+  _RuntimeTextEditSessionState _newCandidateStateFor({
+    required CanvasTextElement seed,
+    required InteractionRequestGuardFacts guard,
+    required ContentLayerDestination destination,
+    required int? index,
+  }) {
+    final baseFacts = _frameFactsForNewTextSeed(seed, destination);
+    return _sessionState(
+      origin: CanvasTextEditOrigin.newElement,
+      requestId: guard.requestId,
+      elementId: seed.id,
+      documentRevision: guard.documentRevision,
+      elementKind: CanvasElementKind.text,
+      controllerEpoch: guard.controllerEpoch,
+      elementRevision: seed.revision,
+      generation: 0,
+      initialText: seed.text,
+      emptyTextBehavior: CanvasTextEditEmptyTextBehavior.keepElement,
+      baseFacts: baseFacts,
+      creation: _TextCreationSessionFacts(
+        seed: seed,
+        destination: destination,
+        index: index,
+      ),
+    );
+  }
+
+  FrameElementFacts _frameFactsForNewTextSeed(
+    CanvasTextElement seed,
+    ContentLayerDestination destination,
+  ) {
+    final base = FrameElementFacts(
+      id: seed.id,
+      kind: CanvasElementKind.text,
+      revision: seed.revision,
+      generation: 0,
+      orderToken: 0,
+      locationKind: FrameElementLocationKind.content,
+      transform: seed.transform,
+      opacity: seed.opacity,
+      hitPadding: seed.hitPadding,
+      isVisible: seed.isVisible,
+      isSelectable: seed.isSelectable,
+      isLocked: seed.isLocked,
+      isDeletable: seed.isDeletable,
+      isTransformable: seed.isTransformable,
+      metadata: seed.metadata,
+      layerId: destination.layerId,
+      text: seed.text,
+      fontSize: seed.fontSize,
+      textColor: seed.color,
+      textAlign: seed.align,
+      textDirection: seed.textDirection,
+      isBold: seed.isBold,
+      isItalic: seed.isItalic,
+      isUnderline: seed.isUnderline,
+      fontFamily: _root._effectiveTextFontFamily(seed.fontFamily),
+      maxWidth: seed.maxWidth,
+      lineHeight: seed.lineHeight,
+    );
+    return _root._textFrameFactsWithLiveText(
+      base,
+      seed.text,
+      isBold: seed.isBold,
+      isItalic: seed.isItalic,
+      isUnderline: seed.isUnderline,
+    );
+  }
+
+  // Existing and new origins share every session callback so their draft,
+  // focus, formatting, and terminal lifetimes cannot drift.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index, number-of-parameters
+  _RuntimeTextEditSessionState _sessionState({
+    required CanvasTextEditOrigin origin,
+    required CanvasInteractionRequestId requestId,
+    required CanvasElementId elementId,
+    required int documentRevision,
+    required CanvasElementKind elementKind,
+    required int controllerEpoch,
+    required int elementRevision,
+    required int generation,
+    required String initialText,
+    required CanvasTextEditEmptyTextBehavior emptyTextBehavior,
+    required FrameElementFacts baseFacts,
+    _TextCreationSessionFacts? creation,
+  }) {
+    late final _RuntimeTextEditSessionState state;
+    state = _RuntimeTextEditSessionState(
+      origin: origin,
+      requestId: requestId,
+      elementId: elementId,
+      documentRevision: documentRevision,
+      elementKind: elementKind,
+      controllerEpoch: controllerEpoch,
+      elementRevision: elementRevision,
+      generation: generation,
+      initialText: initialText,
+      liveText: initialText,
+      emptyTextBehavior: emptyTextBehavior,
+      baseFacts: baseFacts,
+      creation: creation,
+      isBold: baseFacts.isBold ?? false,
+      isItalic: baseFacts.isItalic ?? false,
+      isUnderline: baseFacts.isUnderline ?? false,
       session: canvasTextEditSessionForRuntime(
-        elementId: targetElementId,
-        requestId: guard.requestId,
-        documentRevision: guard.documentRevision,
-        elementRevision: guard.elementRevision as int,
-        generation: guard.generation as int,
+        origin: origin,
+        elementId: elementId,
+        requestId: requestId,
+        documentRevision: documentRevision,
+        elementRevision: elementRevision,
+        generation: generation,
         initialText: initialText,
         emptyTextBehavior: emptyTextBehavior,
         liveText: () {
@@ -5130,9 +5381,13 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return null;
   }
 
-  _RuntimeTextEditSessionState? _candidateForElement(CanvasElementId elementId) {
+  _RuntimeTextEditSessionState? _candidateForElement(
+    CanvasElementId elementId,
+  ) {
     for (final state in _ownedStates) {
-      if (!identical(_active, state) && state.elementId == elementId) {
+      if (!identical(_active, state) &&
+          state.origin == CanvasTextEditOrigin.existing &&
+          state.elementId == elementId) {
         return state;
       }
     }
@@ -5140,7 +5395,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return null;
   }
 
-  _TextEditActiveSlotAdmission _admitActiveSlot(CanvasElementId elementId) {
+  _TextEditActiveSlotAdmission _admitActiveSlot(
+    CanvasElementId elementId, {
+    bool allowReuse = true,
+  }) {
     if (_readOnly) {
       return const _TextEditActiveSlotRefusal(
         CanvasTextEditStartRefusalReason.readOnly,
@@ -5160,6 +5418,11 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
         CanvasTextEditStartRefusalReason.stale,
       );
     }
+    if (!allowReuse || active.origin != CanvasTextEditOrigin.existing) {
+      return const _TextEditActiveSlotRefusal(
+        CanvasTextEditStartRefusalReason.anotherSessionActive,
+      );
+    }
 
     return _TextEditActiveSlotReuse(active);
   }
@@ -5169,10 +5432,13 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       return true;
     }
 
-    final observation = _root._interactionEngine.textEditGuardValidity(
-      state.requestId,
-    );
-    if (observation.kind == TextEditGuardValidityKind.accepted) {
+    final isCurrent = switch (state.origin) {
+      CanvasTextEditOrigin.existing =>
+        _root._interactionEngine.textEditGuardValidity(state.requestId).kind ==
+            TextEditGuardValidityKind.accepted,
+      CanvasTextEditOrigin.newElement => _isNewCreationCurrent(state),
+    };
+    if (isCurrent) {
       return false;
     }
     state.stale = true;
@@ -5180,11 +5446,28 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return true;
   }
 
+  bool _isNewCreationCurrent(_RuntimeTextEditSessionState state) {
+    final creation = state.creation;
+    final guard = _root._interactionEngine.requestFactsFor(state.requestId);
+    if (creation == null ||
+        guard == null ||
+        guard.targetKind != InteractionRequestTargetKind.textCreation ||
+        guard.controllerEpoch != _root._epochRevision ||
+        _root._frameFactsForElement(state.elementId) != null) {
+      return false;
+    }
+    final destinationExists = _root._store.hasLayer(
+      creation.destination.layerId,
+    );
+    return destinationExists == creation.destination.exists;
+  }
+
   bool _sameGuardIdentity(
     _RuntimeTextEditSessionState left,
     _RuntimeTextEditSessionState right,
   ) {
-    return left.requestId == right.requestId &&
+    return left.origin == right.origin &&
+        left.requestId == right.requestId &&
         left.elementId == right.elementId &&
         left.elementKind == right.elementKind &&
         left.controllerEpoch == right.controllerEpoch &&
@@ -5195,6 +5478,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   void _discardCandidateState(_RuntimeTextEditSessionState state) {
     if (identical(_active, state)) {
       return;
+    }
+    if (state.origin == CanvasTextEditOrigin.newElement) {
+      _root._interactionEngine.consumeTextCreationRequest(state.requestId);
     }
     _ownedStates.removeWhere((owned) => identical(owned, state));
   }
@@ -5358,6 +5644,7 @@ final class _TextEditActiveSlotRefusal extends _TextEditActiveSlotAdmission {
 
 final class _RuntimeTextEditSessionState {
   _RuntimeTextEditSessionState({
+    required this.origin,
     required this.requestId,
     required this.elementId,
     required this.documentRevision,
@@ -5369,12 +5656,14 @@ final class _RuntimeTextEditSessionState {
     required this.liveText,
     required this.emptyTextBehavior,
     required this.baseFacts,
+    required this.creation,
     required this.isBold,
     required this.isItalic,
     required this.isUnderline,
     required this.session,
   });
 
+  final CanvasTextEditOrigin origin;
   final CanvasInteractionRequestId requestId;
   final CanvasElementId elementId;
   final int documentRevision;
@@ -5386,6 +5675,7 @@ final class _RuntimeTextEditSessionState {
   String liveText;
   final CanvasTextEditEmptyTextBehavior emptyTextBehavior;
   final FrameElementFacts baseFacts;
+  final _TextCreationSessionFacts? creation;
   final CanvasTextEditSession session;
   bool isBold;
   bool isItalic;
@@ -5393,6 +5683,18 @@ final class _RuntimeTextEditSessionState {
   bool active = false;
   bool stale = false;
   CanvasTextEditGeometry? lastGeometry;
+}
+
+final class _TextCreationSessionFacts {
+  const _TextCreationSessionFacts({
+    required this.seed,
+    required this.destination,
+    required this.index,
+  });
+
+  final CanvasTextElement seed;
+  final ContentLayerDestination destination;
+  final int? index;
 }
 
 final class _TextEditSuppressionToken {

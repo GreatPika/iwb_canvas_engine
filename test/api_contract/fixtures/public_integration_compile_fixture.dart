@@ -205,6 +205,23 @@ final class PublicIntegrationCompileFixture {
       case CanvasTextEditStartRefusal(:final reason):
         _use(reason);
     }
+    final newResult = port.startNew(
+      CanvasTextElement(
+        id: CanvasElementId('new-text'),
+        revision: 3,
+        text: 'new',
+        color: _compileOnly(),
+        textDirection: _compileOnly(),
+      ),
+      layerId: CanvasLayerId('new-layer'),
+      index: 2,
+    );
+    switch (newResult) {
+      case CanvasTextEditStartSuccess(:final session):
+        _use(session.origin);
+      case CanvasTextEditStartRefusal(:final reason):
+        _use(reason);
+    }
 
     return port.finishActive(CanvasTextEditFinishIntent.cancel);
   }
@@ -232,6 +249,19 @@ final class PublicIntegrationTextEditingPort implements CanvasTextEditingPort {
 
     return const CanvasTextEditStartRefusal(
       CanvasTextEditStartRefusalReason.notFound,
+    );
+  }
+
+  @override
+  CanvasTextEditStartResult startNew(
+    CanvasTextElement seed, {
+    CanvasLayerId? layerId,
+    int? index,
+  }) {
+    _use((seed, layerId, index));
+
+    return const CanvasTextEditStartRefusal(
+      CanvasTextEditStartRefusalReason.readOnly,
     );
   }
 

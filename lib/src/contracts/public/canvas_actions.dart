@@ -19,6 +19,7 @@ enum CanvasActionType {
   drawLine,
   erase,
   editText,
+  createText,
 }
 
 /// Public API v1 declaration for [CanvasActionCommitted].
@@ -165,6 +166,17 @@ final class CanvasTextEditActionPayload extends CanvasActionPayload {
   final CanvasInteractionRequestId requestId;
   final int previousTextLength;
   final int nextTextLength;
+}
+
+/// Public API v1 declaration for [CanvasTextCreateActionPayload].
+final class CanvasTextCreateActionPayload extends CanvasActionPayload {
+  const CanvasTextCreateActionPayload({
+    required this.requestId,
+    required this.createdTextLength,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final int createdTextLength;
 }
 
 /// Public API v1 declaration for [CanvasContextActionTrigger].

@@ -486,6 +486,14 @@ cancel through the same terminal. Session bool/void helpers, direct command
 completion with a matching active request, and the stock overlay are compatible
 adapters over that runtime terminal. Direct commands without a matching session
 remain guarded text-only updates.
+
+`startNew` also receives an issued registry requestId, using a creation target
+kind that cannot pass the existing-text guard. Runtime owns the corresponding
+creation guard: it retains the selected destination and raw index, latches
+stale on epoch change, seed-ID occupation, loss of an existing destination or
+occupation of a prospective destination, and does not retarget after unrelated
+document edits or last-layer changes.
+
 When there is no live `InteractionRequestRegistry` entry, a commitTextEdit
 request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private request-consumption effects.

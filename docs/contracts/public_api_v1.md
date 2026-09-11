@@ -2490,6 +2490,7 @@ enum CanvasActionType {
   drawLine,
   erase,
   editText,
+  createText,
 }
 
 final class CanvasActionCommitted {
@@ -2619,6 +2620,16 @@ final class CanvasTextEditActionPayload extends CanvasActionPayload {
   final int previousTextLength;
   final int nextTextLength;
 }
+
+final class CanvasTextCreateActionPayload extends CanvasActionPayload {
+  const CanvasTextCreateActionPayload({
+    required this.requestId,
+    required this.createdTextLength,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final int createdTextLength;
+}
 ```
 
 Payload collection rules:
@@ -2636,6 +2647,8 @@ Payload collection rules:
   CanvasEraserPreview.corridor, not the count of raw pointer samples;
 - CanvasTextEditActionPayload carries text lengths only and never raw previous
   or next text content;
+- CanvasTextCreateActionPayload carries the issued requestId and created text
+  length only; CanvasActionCommitted.elementIds identifies the created element;
 - CanvasActionCommitted.elementIds defensively copies input.
 ```
 
@@ -2659,6 +2672,7 @@ Event emission matrix:
 | line commit | yes | `drawLine` | `CanvasDrawLineActionPayload` |
 | eraser commit | yes if removed | `erase` | `CanvasEraseActionPayload` |
 | guarded text edit changed commit | yes | `editText` | `CanvasTextEditActionPayload` |
+| guarded new text accepted commit | yes | `createText` | `CanvasTextCreateActionPayload` |
 | guarded text edit stale/no-op commit | no | — | — |
 | loadDocumentFromJson | no | — | — |
 | set camera/background/grid/palette | no | — | — |
@@ -2880,6 +2894,8 @@ enum CanvasTextEditFinishIntent { commit, cancel }
 
 enum CanvasTextEditEmptyTextBehavior { keepElement, deleteElement }
 
+enum CanvasTextEditOrigin { existing, newElement }
+
 enum CanvasTextEditStartRefusalReason {
   readOnly,
   anotherSessionActive,
@@ -2887,6 +2903,7 @@ enum CanvasTextEditStartRefusalReason {
   notFound,
   unsupportedType,
   unavailable,
+  alreadyExists,
 }
 
 sealed class CanvasTextEditStartResult { const CanvasTextEditStartResult(); }
@@ -2912,6 +2929,7 @@ enum CanvasTextEditFinishResult {
 
 final class CanvasTextEditSession {
   final CanvasElementId elementId;
+  final CanvasTextEditOrigin origin;
   final CanvasInteractionRequestId requestId;
   final int documentRevision;
   final int elementRevision;
@@ -2942,6 +2960,12 @@ abstract interface class CanvasTextEditingPort {
     CanvasElementId elementId, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
         CanvasTextEditEmptyTextBehavior.keepElement,
+  });
+
+  CanvasTextEditStartResult startNew(
+    CanvasTextElement seed, {
+    CanvasLayerId? layerId,
+    int? index,
   });
 
   CanvasTextEditSession? sessionCandidateFor(
@@ -2998,8 +3022,9 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 // CanvasTextEditingPort get textEditing;
 ```
 
-Port implementers add `finishActive`, `startForElement`, and the optional
-empty-text behavior on ID/candidate/context admission. ID consumers branch on
+Port implementers add `finishActive`, `startForElement`, `startNew`, and the
+optional empty-text behavior on ID/candidate/context admission. ID and new-seed
+consumers branch on
 CanvasTextEditStartSuccess and CanvasTextEditStartRefusal through the root
 barrel; existing callers may retain
 `CanvasTextEditSession.commit`, `CanvasTextEditSession.dismiss`, and
@@ -3009,7 +3034,10 @@ on the returned result. Existing editor integrations can add partial B/I/U
 changes with `session.updateFormatting(isBold: true)`; omitted flags retain
 their current draft values and the session identity remains stable. The
 root-barrel integration fixture compiles a concrete port implementation against
-this migration surface.
+this migration surface. `startNew` exposes a `newElement` session whose
+elementRevision is the seed revision and generation is zero. It retains the
+seed, raw placement and an issued requestId outside the document until a
+nonempty confirmation is accepted; an empty confirmation closes unchanged.
 
 ### 4.20 Unified commit confirmation
 
@@ -3161,6 +3189,22 @@ final class CanvasTextEditCommitRequest extends CanvasCommitRequest {
   final CanvasTextElement before;
   final CanvasTextElement after;
 }
+
+final class CanvasTextCreateCommitRequest extends CanvasCommitRequest {
+  CanvasTextCreateCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required this.requestId,
+    required this.entry,
+    required this.layerIndex,
+    required this.createsLayer,
+  });
+  final CanvasInteractionRequestId requestId;
+  final CanvasCommitElementEntry entry;
+  final int layerIndex;
+  final bool createsLayer;
+}
 ```
 
 Resolver and lease rules:
@@ -3176,10 +3220,12 @@ Resolver and lease rules:
   prepared entries, retained terminal corridor, and thickness. Move carries the
   captured participant reads, proposed delta, and bounds. Rotate/Reflect carry
   Unit-8 prepared participant reads, pivot, exact world transform, and only
-  their respective operation pair. Text carries the complete Unit-9 prepared
-  before/after text pair, including unchanged fields.
+  their respective operation pair. Existing text carries the complete prepared
+  before/after pair, including unchanged fields. New text carries its issued
+  requestId and prepared insertion entry, layer index and creates-layer facts;
+  it has no fictional before element.
 - `CanvasCommitAccept` is compatible with Draw, Delete, Erase, Rotate, Reflect,
-  and Text Edit. `CanvasMoveCommitAccept` is compatible only with Move and its
+  Text Edit, and Text Create. `CanvasMoveCommitAccept` is compatible only with Move and its
   delta must be finite and non-zero. An incompatible acceptance still returns a
   lease, which is aborted exactly once; it never installs or emits an action.
 - The returned lease is acquired before acceptance and prepared-delta validation.

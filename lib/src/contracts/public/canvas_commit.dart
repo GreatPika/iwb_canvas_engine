@@ -224,3 +224,22 @@ final class CanvasTextEditCommitRequest extends CanvasCommitRequest {
   final CanvasTextElement before;
   final CanvasTextElement after;
 }
+
+@immutable
+/// Prepared new text submitted for host confirmation before insertion.
+final class CanvasTextCreateCommitRequest extends CanvasCommitRequest {
+  CanvasTextCreateCommitRequest({
+    required super.documentSummary,
+    required super.documentRevision,
+    required super.selectedElementIdsBefore,
+    required this.requestId,
+    required this.entry,
+    required this.layerIndex,
+    required this.createsLayer,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final CanvasCommitElementEntry entry;
+  final int layerIndex;
+  final bool createsLayer;
+}

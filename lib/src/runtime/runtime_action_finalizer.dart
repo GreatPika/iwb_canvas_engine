@@ -90,6 +90,9 @@ final class RuntimeActionFinalizer {
   }
 }
 
+// One exhaustive mapping keeps public action meaning beside the closed intent
+// union; splitting cases would duplicate the finalizer's semantic boundary.
+// ignore: cyclomatic-complexity
 CanvasActionType _actionType(CommitActionIntent intent) {
   return switch (intent) {
     MoveSelectionActionIntent() => CanvasActionType.moveSelection,
@@ -102,9 +105,13 @@ CanvasActionType _actionType(CommitActionIntent intent) {
     DrawLineActionIntent() => CanvasActionType.drawLine,
     EraseActionIntent() => CanvasActionType.erase,
     EditTextActionIntent() => CanvasActionType.editText,
+    CreateTextActionIntent() => CanvasActionType.createText,
   };
 }
 
+// Payload construction must remain exhaustive with the same closed intent
+// union so action type and payload cannot drift into separate owners.
+// ignore: cyclomatic-complexity
 CanvasActionPayload _payload(CommitActionIntent intent) {
   switch (intent) {
     case MoveSelectionActionIntent():
@@ -143,6 +150,8 @@ CanvasActionPayload _payload(CommitActionIntent intent) {
       return _erasePayload(intent, observedElementIds);
     case EditTextActionIntent():
       return _editTextPayload(intent);
+    case CreateTextActionIntent():
+      return _createTextPayload(intent);
   }
 }
 
@@ -266,5 +275,14 @@ CanvasTextEditActionPayload _editTextPayload(EditTextActionIntent intent) {
     requestId: intent.requestId,
     previousTextLength: intent.previousTextLength,
     nextTextLength: intent.nextTextLength,
+  );
+}
+
+CanvasTextCreateActionPayload _createTextPayload(
+  CreateTextActionIntent intent,
+) {
+  return CanvasTextCreateActionPayload(
+    requestId: intent.requestId,
+    createdTextLength: intent.createdTextLength,
   );
 }

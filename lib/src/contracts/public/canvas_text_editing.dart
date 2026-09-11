@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import 'canvas_actions.dart';
+import 'canvas_element.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 
@@ -24,7 +25,16 @@ enum CanvasTextEditEmptyTextBehavior {
   deleteElement,
 }
 
-/// The reason a requested existing-text editing session was not admitted.
+/// Identifies whether a session edits committed text or stages a new element.
+enum CanvasTextEditOrigin {
+  /// The session's element is an existing committed text element.
+  existing,
+
+  /// The session stages a seed until one accepted insertion creates it.
+  newElement,
+}
+
+/// The reason a requested text-editing session was not admitted.
 enum CanvasTextEditStartRefusalReason {
   /// Editing is disabled for the runtime.
   readOnly,
@@ -43,22 +53,25 @@ enum CanvasTextEditStartRefusalReason {
 
   /// The requested text element cannot be edited from its current location.
   unavailable,
+
+  /// A new-text seed uses an identifier that is already committed.
+  alreadyExists,
 }
 
-/// The typed outcome of admitting an existing text element for editing.
+/// The typed outcome of admitting a text element or a new text seed for editing.
 sealed class CanvasTextEditStartResult {
   const CanvasTextEditStartResult();
 }
 
-/// A successful existing-text admission.
+/// A successful text-editing admission.
 final class CanvasTextEditStartSuccess extends CanvasTextEditStartResult {
   const CanvasTextEditStartSuccess(this.session);
 
-  /// The active runtime-owned session for the admitted element.
+  /// The active runtime-owned session for the admitted element or seed.
   final CanvasTextEditSession session;
 }
 
-/// An existing-text admission refusal.
+/// A text-editing admission refusal.
 final class CanvasTextEditStartRefusal extends CanvasTextEditStartResult {
   const CanvasTextEditStartRefusal(this.reason);
 
@@ -71,7 +84,8 @@ enum CanvasTextEditFinishResult {
   /// A changed draft was installed.
   committed,
 
-  /// A net-equal draft closed without document work.
+  /// A draft closed without document work, including a net-equal existing draft
+  /// or an empty new draft.
   unchanged,
 
   /// The active draft was discarded.
@@ -80,7 +94,7 @@ enum CanvasTextEditFinishResult {
   /// The resolver refused the prepared draft, which remains retryable.
   rejected,
 
-  /// The draft's captured existing-target guard no longer matches.
+  /// The draft's captured admission guard no longer matches current state.
   stale,
 
   /// No active draft was available to complete.
@@ -188,6 +202,7 @@ final class CanvasTextEditStyle {
 // ignore: number-of-methods
 final class CanvasTextEditSession {
   const CanvasTextEditSession._({
+    required this.origin,
     required this.elementId,
     required this.requestId,
     required this.documentRevision,
@@ -227,6 +242,7 @@ final class CanvasTextEditSession {
   final VoidCallback _dismiss;
 
   final CanvasElementId elementId;
+  final CanvasTextEditOrigin origin;
   final CanvasInteractionRequestId requestId;
   final int documentRevision;
   final int elementRevision;
@@ -262,6 +278,13 @@ abstract interface class CanvasTextEditingPort {
         CanvasTextEditEmptyTextBehavior.keepElement,
   });
 
+  /// Stages a new text seed until a nonempty draft is accepted for insertion.
+  CanvasTextEditStartResult startNew(
+    CanvasTextElement seed, {
+    CanvasLayerId? layerId,
+    int? index,
+  });
+
   CanvasTextEditSession? sessionCandidateFor(
     CanvasContextActionRequested request, {
     CanvasTextEditEmptyTextBehavior emptyTextBehavior =
@@ -288,6 +311,7 @@ abstract interface class CanvasTextEditingPort {
 // handoff so Unit 3 cannot wire a session from mismatched state fragments.
 // ignore: number-of-parameters
 CanvasTextEditSession canvasTextEditSessionForRuntime({
+  required CanvasTextEditOrigin origin,
   required CanvasElementId elementId,
   required CanvasInteractionRequestId requestId,
   required int documentRevision,
@@ -307,6 +331,7 @@ CanvasTextEditSession canvasTextEditSessionForRuntime({
   required VoidCallback dismiss,
 }) {
   return CanvasTextEditSession._(
+    origin: origin,
     elementId: elementId,
     requestId: requestId,
     documentRevision: documentRevision,

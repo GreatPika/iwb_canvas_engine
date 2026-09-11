@@ -2,7 +2,7 @@ import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import 'interaction_read_port.dart';
 
-enum InteractionRequestTargetKind { contentElement, emptyCanvas }
+enum InteractionRequestTargetKind { contentElement, emptyCanvas, textCreation }
 
 final class InteractionRequestGuardFacts {
   const InteractionRequestGuardFacts({
@@ -61,6 +61,21 @@ final class InteractionRequestRegistry {
       contentElementKind: target.targetKind,
       generation: target.generation,
       elementRevision: target.elementRevision,
+    );
+  }
+
+  InteractionRequestGuardFacts issueTextCreationRequest({
+    required int controllerEpoch,
+    required int documentRevision,
+  }) {
+    return _issue(
+      targetKind: InteractionRequestTargetKind.textCreation,
+      controllerEpoch: controllerEpoch,
+      documentRevision: documentRevision,
+      contentElementId: null,
+      contentElementKind: null,
+      generation: null,
+      elementRevision: null,
     );
   }
 

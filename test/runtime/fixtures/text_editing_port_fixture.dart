@@ -34,6 +34,8 @@ void main() {
   _testEmptyPolicyDeletionCloseFailureRemainsCommitted();
   _testNonTextCandidateLookup();
   _testReadOnlyAdmission();
+  _testNewTextAdmission();
+  _testNewTextDelivery();
   _testSingleActiveAdmission();
   _testIdAdmission();
   _testLiveUpdateRemeasuresGeometry();
@@ -70,6 +72,876 @@ void main() {
   _testFailedLoadPreservesActiveSession();
   _testDisposedRuntimeRejectsTextEditingPortOperations();
   _testDisposedRuntimeRejectsTextEditingSessionCallbacks();
+}
+
+// The creation lifecycle needs one registration group because the public
+// session, guard, placement, request, action and retry facts share its setup.
+// Splitting it only for metrics would hide those causal witnesses.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testNewTextAdmission() {
+  test(
+    'new text admission stays transient until one accepted insertion',
+    () async {
+      final scenario = _Scenario();
+      final seed = CanvasTextElement(
+        id: CanvasElementId('new-text'),
+        revision: 7,
+        text: 'seed',
+        fontSize: 18,
+        color: const Color(0xFF224466),
+        textDirection: TextDirection.ltr,
+        transform: CanvasTransform.translation(const Offset(12, 16)),
+      );
+      try {
+        final admission = scenario.root.textEditing.startNew(seed);
+        final session = _expectStartSuccess(admission);
+
+        expect(session.origin, CanvasTextEditOrigin.newElement);
+        expect(session.elementRevision, seed.revision);
+        expect(session.generation, 0);
+        expect(session.initialText, 'seed');
+        expect(_containsElement(scenario.root, seed.id), isFalse);
+        expect(scenario.root.readDocument().layers, hasLength(1));
+
+        expect(session.commit(), isTrue);
+        final inserted = scenario.root
+            .readDocument()
+            .layers
+            .single
+            .elements
+            .whereType<CanvasTextElement>()
+            .singleWhere((element) => element.id == seed.id);
+        _expectCompleteTextElement(inserted, seed);
+        expect(scenario.actions.single.type, CanvasActionType.createText);
+        final payload =
+            scenario.actions.single.payload as CanvasTextCreateActionPayload;
+        expect(payload.requestId, session.requestId);
+        expect(payload.createdTextLength, seed.text.length);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  test(
+    'each released new session has an issued request matching its proposal',
+    () async {
+      final requests = <CanvasTextCreateCommitRequest>[];
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            if (request is CanvasTextCreateCommitRequest) requests.add(request);
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final first = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('issued-new-first')),
+          ),
+        );
+        expect(first.commit(), isTrue);
+        final second = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('issued-new-second')),
+          ),
+        );
+        expect(second.commit(), isTrue);
+
+        expect(first.requestId, isNot(second.requestId));
+        expect(requests.map((request) => request.requestId), [
+          first.requestId,
+          second.requestId,
+        ]);
+        expect(
+          scenario.actions.map(
+            (action) =>
+                (action.payload as CanvasTextCreateActionPayload).requestId,
+          ),
+          [first.requestId, second.requestId],
+        );
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  test(
+    'new text uses shared slot refusal and duplicate-id admission',
+    () async {
+      final scenario = _Scenario();
+      final seed = _newTextSeed(id: CanvasElementId('new-admission'));
+      try {
+        scenario.root.textEditing.setReadOnly(true);
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startNew(seed),
+          reason: CanvasTextEditStartRefusalReason.readOnly,
+        );
+        scenario.root.textEditing.setReadOnly(false);
+
+        final active = _expectStartSuccess(
+          scenario.root.textEditing.startNew(seed),
+        );
+        active.updateText('retained draft');
+        active.updateFormatting(isBold: true);
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('competing-new')),
+          ),
+          reason: CanvasTextEditStartRefusalReason.anotherSessionActive,
+          expectedActive: active,
+        );
+        active.dismiss();
+
+        final existing = _expectStartSuccess(
+          scenario.root.textEditing.startForElement(_textId),
+        );
+        expect(existing.origin, CanvasTextEditOrigin.existing);
+        existing.updateText('retained existing draft');
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('competing-existing')),
+          ),
+          reason: CanvasTextEditStartRefusalReason.anotherSessionActive,
+          expectedActive: existing,
+        );
+        _makeTextRequestStale(scenario);
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('competing-stale-existing')),
+          ),
+          reason: CanvasTextEditStartRefusalReason.anotherSessionActive,
+          expectedActive: existing,
+        );
+        expect(existing.liveText, 'retained existing draft');
+        existing.dismiss();
+
+        _expectStartRefusal(
+          scenario.root.textEditing.startNew(_textElement(scenario.root)),
+          CanvasTextEditStartRefusalReason.alreadyExists,
+        );
+        final staleNew = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            seed,
+            layerId: CanvasLayerId('new-stale-layer'),
+          ),
+        );
+        scenario.root.edits.edit((edit) {
+          edit.addElement(
+            CanvasRectElement(
+              id: CanvasElementId('stale-new-layer-change'),
+              size: const Size(2, 2),
+            ),
+            layerId: CanvasLayerId('new-stale-layer'),
+          );
+        });
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startNew(seed),
+          reason: CanvasTextEditStartRefusalReason.stale,
+          expectedActive: staleNew,
+        );
+        staleNew.dismiss();
+        expect(
+          scenario.root.textEditing.startNew(seed),
+          isA<CanvasTextEditStartSuccess>(),
+        );
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  test(
+    'new trim-empty and cancellation leave a prospective layer transient',
+    () async {
+      var resolverCalls = 0;
+      final scenario = _Scenario(
+        document: CanvasDocument(),
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) {
+            resolverCalls += 1;
+            return const CanvasCommitCancel();
+          },
+        ),
+      );
+      final seed = _newTextSeed(id: CanvasElementId('prospective-text'));
+      try {
+        final revisions = scenario.root.state.value.revisions;
+        final documentBefore = scenario.root.readDocument();
+        final cancelledWork = <PreparedInteractionApplyWorkEvent>[];
+        late CanvasTextEditSession session;
+        CommitApplier.observePreparedInteractionWork(cancelledWork.add, () {
+          session = _expectStartSuccess(
+            scenario.root.textEditing.startNew(
+              seed,
+              layerId: CanvasLayerId('prospective-layer'),
+              index: 9,
+            ),
+          );
+          session.updateText('draft');
+          session.updateFormatting(isBold: true, isItalic: true);
+          session.dismiss();
+        });
+        expect(scenario.root.readDocument().layers, isEmpty);
+        expect(scenario.root.selectedElementIds, isEmpty);
+        expect(scenario.actions, isEmpty);
+        expect(scenario.root.readDocument(), same(documentBefore));
+        expect(
+          scenario.root.state.value.revisions.document,
+          revisions.document,
+        );
+        expect(cancelledWork, isEmpty);
+        expect(resolverCalls, 0);
+
+        final emptyWork = <PreparedInteractionApplyWorkEvent>[];
+        late CanvasTextEditSession empty;
+        CommitApplier.observePreparedInteractionWork(emptyWork.add, () {
+          empty = _expectStartSuccess(
+            scenario.root.textEditing.startNew(
+              seed,
+              layerId: CanvasLayerId('prospective-layer'),
+            ),
+          );
+          empty.updateText(' \n ');
+          expect(empty.commit(), isTrue);
+        });
+        expect(scenario.root.readDocument().layers, isEmpty);
+        expect(scenario.root.textEditing.activeSession.value, isNull);
+        expect(scenario.actions, isEmpty);
+        expect(scenario.root.readDocument(), same(documentBefore));
+        expect(
+          scenario.root.state.value.revisions.document,
+          revisions.document,
+        );
+        expect(emptyWork, isEmpty);
+        expect(resolverCalls, 0);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  test('new text retains destination and latches creation conflicts', () async {
+    var resolverCalls = 0;
+    final scenario = _Scenario(
+      document: CanvasDocument(),
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          resolverCalls += 1;
+          return acceptCommit(request);
+        },
+      ),
+    );
+    final seed = _newTextSeed(id: CanvasElementId('guarded-new'));
+    try {
+      final session = _expectStartSuccess(
+        scenario.root.textEditing.startNew(
+          seed,
+          layerId: CanvasLayerId('prospective-layer'),
+        ),
+      );
+      scenario.root.edits.edit((edit) {
+        edit.addElement(
+          CanvasRectElement(
+            id: CanvasElementId('external-layer-occupant'),
+            size: const Size(2, 2),
+          ),
+          layerId: CanvasLayerId('prospective-layer'),
+        );
+      });
+      final prospectiveConflictDocument = scenario.root.readDocument();
+      expect(session.isStale, isTrue);
+      session.updateText('must not mutate retained draft');
+      expect(session.liveText, seed.text);
+      expect(session.commit(), isFalse);
+      expect(session.commit(), isFalse);
+      expect(scenario.root.textEditing.activeSession.value, same(session));
+      expect(_containsElement(scenario.root, seed.id), isFalse);
+      expect(scenario.actions, isEmpty);
+      expect(scenario.root.readDocument(), same(prospectiveConflictDocument));
+      expect(resolverCalls, 0);
+      session.dismiss();
+
+      final idSession = _expectStartSuccess(
+        scenario.root.textEditing.startNew(
+          _newTextSeed(id: CanvasElementId('external-element-occupant')),
+          layerId: CanvasLayerId('prospective-layer'),
+        ),
+      );
+      scenario.root.edits.edit((edit) {
+        edit.addElement(
+          CanvasRectElement(
+            id: CanvasElementId('external-element-occupant'),
+            size: const Size(2, 2),
+          ),
+          layerId: CanvasLayerId('prospective-layer'),
+        );
+      });
+      final idConflictDocument = scenario.root.readDocument();
+      expect(idSession.isStale, isTrue);
+      idSession.updateText('must not mutate the occupied-id draft');
+      expect(idSession.liveText, 'seed');
+      expect(idSession.commit(), isFalse);
+      expect(idSession.commit(), isFalse);
+      expect(scenario.actions, isEmpty);
+      expect(scenario.root.textEditing.activeSession.value, same(idSession));
+      expect(scenario.root.readDocument(), same(idConflictDocument));
+      expect(resolverCalls, 0);
+      idSession.dismiss();
+
+      final retainedDestination = _expectStartSuccess(
+        scenario.root.textEditing.startNew(
+          _newTextSeed(id: CanvasElementId('retained-default-destination')),
+        ),
+      );
+      scenario.root.edits.edit(
+        (edit) => edit.ensureLayer(CanvasLayerId('later-last-layer')),
+      );
+      retainedDestination.updateText('must stay in the admitted layer');
+      expect(retainedDestination.isStale, isFalse);
+      expect(retainedDestination.commit(), isTrue);
+      expect(resolverCalls, 1);
+      final admittedLayer = scenario.root.readDocument().layers.singleWhere(
+        (layer) => layer.id == CanvasLayerId('prospective-layer'),
+      );
+      expect(
+        admittedLayer.elements.map((element) => element.id),
+        contains(retainedDestination.elementId),
+      );
+      expect(
+        scenario.root
+            .readDocument()
+            .layers
+            .singleWhere(
+              (layer) => layer.id == CanvasLayerId('later-last-layer'),
+            )
+            .elements,
+        isEmpty,
+      );
+
+      final removedDestination = CanvasLayerId('removed-destination');
+      scenario.root.edits.edit(
+        (edit) => expect(edit.ensureLayer(removedDestination), isTrue),
+      );
+      final lostDestination = _expectStartSuccess(
+        scenario.root.textEditing.startNew(
+          _newTextSeed(id: CanvasElementId('lost-destination-text')),
+          layerId: removedDestination,
+        ),
+      );
+      scenario.root.edits.edit(
+        (edit) => expect(edit.removeEmptyLayer(removedDestination), isTrue),
+      );
+      final removedDestinationDocument = scenario.root.readDocument();
+      expect(lostDestination.isStale, isTrue);
+      lostDestination.updateText('must retain only a stale draft');
+      expect(lostDestination.liveText, 'seed');
+      expect(lostDestination.commit(), isFalse);
+      expect(lostDestination.commit(), isFalse);
+      expect(
+        _containsElement(scenario.root, lostDestination.elementId),
+        isFalse,
+      );
+      expect(
+        scenario.root.textEditing.activeSession.value,
+        same(lostDestination),
+      );
+      expect(scenario.root.readDocument(), same(removedDestinationDocument));
+      expect(resolverCalls, 1);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('new text proposal is exact and rejection retains its draft', () async {
+    final requests = <CanvasTextCreateCommitRequest>[];
+    var accept = false;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          if (request is CanvasTextCreateCommitRequest) {
+            requests.add(request);
+          }
+          return accept ? acceptCommit(request) : const CanvasCommitCancel();
+        },
+      ),
+    );
+    final seed = _newTextSeed(id: CanvasElementId('proposal-text'));
+    try {
+      final session = _expectStartSuccess(
+        scenario.root.textEditing.startNew(seed, index: 0),
+      );
+      session.updateText(' untrimmed proposal ');
+      session.updateFormatting(isBold: true, isUnderline: true);
+      final refusedWork = <PreparedInteractionApplyWorkEvent>[];
+      expect(
+        CommitApplier.observePreparedInteractionWork(
+          refusedWork.add,
+          session.commit,
+        ),
+        isFalse,
+      );
+      expect(session.liveText, ' untrimmed proposal ');
+      expect(_containsElement(scenario.root, seed.id), isFalse);
+      expect(requests, hasLength(1));
+      final refused = requests.single;
+      expect(refused.requestId, session.requestId);
+      expect(refused.entry.element, isA<CanvasTextElement>());
+      final proposed = refused.entry.element as CanvasTextElement;
+      expect(proposed.text, ' untrimmed proposal ');
+      expect(proposed.isBold, isTrue);
+      expect(proposed.isUnderline, isTrue);
+      expect(refused.entry.elementIndex, 0);
+      expect(refused.layerIndex, 0);
+      expect(refused.createsLayer, isFalse);
+      expect(refusedWork, [
+        PreparedInteractionApplyWorkEvent.prepared,
+        PreparedInteractionApplyWorkEvent.ownershipReleased,
+        PreparedInteractionApplyWorkEvent.discarded,
+      ]);
+
+      accept = true;
+      expect(session.commit(), isTrue);
+      expect(requests, hasLength(2));
+      final accepted = requests.last;
+      expect(accepted.entry.elementIndex, 0);
+      expect(accepted.requestId, session.requestId);
+      final installed = scenario.root
+          .readDocument()
+          .layers
+          .single
+          .elements
+          .first;
+      _expectCompleteTextElement(installed as CanvasTextElement, proposed);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test(
+    'new text creates an absent destination only after acceptance',
+    () async {
+      CanvasTextCreateCommitRequest? request;
+      late final RuntimeRoot root;
+      root = runtimeRootWithCommittedDocumentSeed(
+        CanvasDocument(),
+        config: CanvasRuntimeConfig(
+          commitResolver: (candidate) {
+            request = candidate as CanvasTextCreateCommitRequest;
+            expect(root.readDocument().layers, isEmpty);
+            return acceptCommit(candidate);
+          },
+        ),
+      );
+      try {
+        final session = _expectStartSuccess(
+          root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('accepted-prospective-text')),
+            layerId: CanvasLayerId('accepted-prospective-layer'),
+          ),
+        );
+        session.updateText('accepted prospective');
+        expect(session.commit(), isTrue);
+        final proposal = request;
+        if (proposal == null) fail('Expected a creation proposal.');
+        expect(proposal.createsLayer, isTrue);
+        expect(proposal.layerIndex, 0);
+        expect(
+          proposal.entry.layerId,
+          CanvasLayerId('accepted-prospective-layer'),
+        );
+        expect(proposal.entry.elementIndex, 0);
+        expect(root.readDocument().layers.single.id, proposal.entry.layerId);
+        expect(_containsElement(root, session.elementId), isTrue);
+      } finally {
+        root.dispose();
+      }
+    },
+  );
+
+  test(
+    'new text normalizes retained append and numeric placement at preparation',
+    () async {
+      final requests = <CanvasTextCreateCommitRequest>[];
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            if (request is CanvasTextCreateCommitRequest) {
+              requests.add(request);
+            }
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final append = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('retained-append')),
+          ),
+        );
+        scenario.root.edits.edit((edit) {
+          edit.addElement(
+            CanvasRectElement(
+              id: CanvasElementId('append-after-admission'),
+              size: const Size(2, 2),
+            ),
+          );
+        });
+        final appendOracle = _ordinaryTextInsertionLocation(
+          scenario.root.readDocument(),
+          _newTextSeed(id: CanvasElementId('retained-append')),
+        );
+        expect(append.commit(), isTrue);
+        expect(requests.single.layerIndex, appendOracle.layerIndex);
+        expect(requests.single.entry.elementIndex, appendOracle.elementIndex);
+        final appendDocument = scenario.root.readDocument();
+        final appendInstalled =
+            appendDocument.layers[appendOracle.layerIndex]
+                .elements[appendOracle.elementIndex];
+        expect(appendInstalled.id, append.elementId);
+
+        final numeric = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('retained-numeric')),
+            index: 5,
+          ),
+        );
+        scenario.root.edits.edit((edit) {
+          edit.addElement(
+            CanvasRectElement(
+              id: CanvasElementId('numeric-after-admission'),
+              size: const Size(2, 2),
+            ),
+          );
+        });
+        final numericOracle = _ordinaryTextInsertionLocation(
+          scenario.root.readDocument(),
+          _newTextSeed(id: CanvasElementId('retained-numeric')),
+          index: 5,
+        );
+        expect(numeric.commit(), isTrue);
+        expect(requests.last.layerIndex, numericOracle.layerIndex);
+        expect(requests.last.entry.elementIndex, numericOracle.elementIndex);
+        final numericDocument = scenario.root.readDocument();
+        final numericInstalled =
+            numericDocument.layers[numericOracle.layerIndex]
+                .elements[numericOracle.elementIndex];
+        expect(numericInstalled.id, numeric.elementId);
+        expect(
+          scenario.root
+              .readDocument()
+              .layers
+              .single
+              .elements
+              .where(
+                (element) => element.id == CanvasElementId('retained-numeric'),
+              )
+              .single,
+          isA<CanvasTextElement>(),
+        );
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// New-origin confirmation crosses the same resolver, sealed preparation, lease,
+// delivery, and close boundary as editing an existing element. These are kept
+// together so successful delivery cannot mask a pre-install failure.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testNewTextDelivery() {
+  test(
+    'new text rejects pre-install failures and retains its retryable draft',
+    () async {
+      final resolverFailure = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) => throw StateError('creation resolver failed'),
+        ),
+      );
+      try {
+        final session = _expectStartSuccess(
+          resolverFailure.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('resolver-failure-new')),
+          ),
+        );
+        session.updateText('retryable creation');
+
+        expect(session.commit(), isFalse);
+        expect(session.isActive, isTrue);
+        expect(session.liveText, 'retryable creation');
+        expect(
+          _containsElement(resolverFailure.root, session.elementId),
+          isFalse,
+        );
+        expect(resolverFailure.actions, isEmpty);
+      } finally {
+        await resolverFailure.dispose();
+      }
+
+      final lease = _TextCommitLease();
+      final incompatible = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) =>
+              CanvasMoveCommitAccept(delta: const Offset(1, 0), lease: lease),
+        ),
+      );
+      try {
+        final session = _expectStartSuccess(
+          incompatible.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('incompatible-new')),
+          ),
+        );
+
+        expect(session.commit(), isFalse);
+        expect(session.isActive, isTrue);
+        expect(_containsElement(incompatible.root, session.elementId), isFalse);
+        expect(lease.committedCalls, 0);
+        expect(lease.abortedCalls, 1);
+        expect(incompatible.actions, isEmpty);
+      } finally {
+        await incompatible.dispose();
+      }
+
+      var retry = false;
+      final failedLease = _TextCommitLease();
+      final retryLease = _TextCommitLease();
+      final consumeFailure = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) =>
+              CanvasCommitAccept(lease: retry ? retryLease : failedLease),
+        ),
+      );
+      try {
+        final session = _expectStartSuccess(
+          consumeFailure.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('consume-failure-new')),
+          ),
+        );
+        session.updateText('retry after consume failure');
+        final failure = StateError('creation consume failed');
+        final work = <PreparedInteractionApplyWorkEvent>[];
+
+        expect(
+          () => CommitApplier.observePreparedInteractionWork((event) {
+            work.add(event);
+            if (event == PreparedInteractionApplyWorkEvent.consumed) {
+              throw failure;
+            }
+          }, session.commit),
+          throwsA(same(failure)),
+        );
+        expect(work, [
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.ownershipReleased,
+          PreparedInteractionApplyWorkEvent.consumed,
+        ]);
+        expect(session.isActive, isTrue);
+        expect(session.liveText, 'retry after consume failure');
+        expect(
+          consumeFailure.root.textEditing.activeSession.value,
+          same(session),
+        );
+        expect(
+          _containsElement(consumeFailure.root, session.elementId),
+          isFalse,
+        );
+        expect(failedLease.committedCalls, 0);
+        expect(failedLease.abortedCalls, 1);
+        expect(consumeFailure.actions, isEmpty);
+
+        retry = true;
+        expect(session.commit(), isTrue);
+        expect(
+          _containsElement(consumeFailure.root, session.elementId),
+          isTrue,
+        );
+        expect(retryLease.committedCalls, 1);
+        expect(retryLease.abortedCalls, 0);
+      } finally {
+        await consumeFailure.dispose();
+      }
+    },
+  );
+
+  test(
+    'new text installs once and delivers state lease action observer then close',
+    () async {
+      final trace = <String>[];
+      final lease = _TextCommitLease();
+      late final RuntimeRoot root;
+      late CanvasTextEditSession session;
+      var committing = false;
+      root = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            expect(request, isA<CanvasTextCreateCommitRequest>());
+            expect(
+              _containsElement(root, CanvasElementId('delivery-new')),
+              isFalse,
+            );
+            expect(
+              () => root.commands.removeElement(_rectId),
+              throwsA(isA<StateError>()),
+            );
+            expect(root.generateElementId, throwsA(isA<StateError>()));
+            expect(() => session.commit(), throwsA(isA<StateError>()));
+            expect(root.dispose, throwsA(isA<StateError>()));
+            return CanvasCommitAccept(lease: lease);
+          },
+        ),
+        commitEffectObserver: (_) {
+          if (committing) trace.add('observer');
+        },
+      );
+      final actions = <CanvasActionCommitted>[];
+      final actionSubscription = root.actions.listen((action) {
+        if (committing) {
+          actions.add(action);
+          trace.add('action');
+        }
+      });
+      void onState() {
+        if (committing) trace.add('state');
+      }
+
+      root.state.addListener(onState);
+      try {
+        session = _expectStartSuccess(
+          root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('delivery-new')),
+          ),
+        );
+        CanvasTextEditSession? replacement;
+        void onClose() {
+          if (root.textEditing.activeSession.value != null) return;
+          trace.add('close');
+          replacement = _expectStartSuccess(
+            root.textEditing.startNew(
+              _newTextSeed(id: CanvasElementId('delivery-replacement')),
+            ),
+          );
+        }
+
+        root.textEditing.activeSession.addListener(onClose);
+        try {
+          lease.onCommitted = () {
+            trace.add('lease');
+            expect(
+              () => root.commands.removeElement(_rectId),
+              throwsA(isA<StateError>()),
+            );
+            expect(root.generateElementId, throwsA(isA<StateError>()));
+            expect(() => session.commit(), throwsA(isA<StateError>()));
+            expect(root.dispose, throwsA(isA<StateError>()));
+          };
+          committing = true;
+          expect(session.commit(timestampMs: 73), isTrue);
+          committing = false;
+        } finally {
+          root.textEditing.activeSession.removeListener(onClose);
+        }
+
+        expect(trace, [
+          'state',
+          'lease',
+          'action',
+          'observer',
+          'close',
+          'state',
+        ]);
+        expect(_containsElement(root, session.elementId), isTrue);
+        expect(session.isActive, isFalse);
+        expect(root.textEditing.activeSession.value, same(replacement));
+        expect(lease.committedCalls, 1);
+        expect(lease.abortedCalls, 0);
+        expect(actions, hasLength(1));
+        expect(actions.single.type, CanvasActionType.createText);
+        final payload = actions.single.payload as CanvasTextCreateActionPayload;
+        expect(payload.requestId, session.requestId);
+        expect(payload.createdTextLength, session.liveText.length);
+      } finally {
+        root.state.removeListener(onState);
+        await actionSubscription.cancel();
+        root.dispose();
+      }
+    },
+  );
+
+  test(
+    'new text remains committed when its post-install close notification fails',
+    () async {
+      final reports = <FlutterErrorDetails>[];
+      final previousReporter = FlutterError.onError;
+      FlutterError.onError = reports.add;
+      final lease = _TextCommitLease();
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) => CanvasCommitAccept(lease: lease),
+        ),
+      );
+      try {
+        final session = _expectStartSuccess(
+          scenario.root.textEditing.startNew(
+            _newTextSeed(id: CanvasElementId('close-failure-new')),
+          ),
+        );
+        void throwingCloseListener() {
+          if (scenario.root.textEditing.activeSession.value == null) {
+            throw StateError('creation close listener failed');
+          }
+        }
+
+        CanvasTextEditSession? replacement;
+        void replacementCloseListener() {
+          if (scenario.root.textEditing.activeSession.value == null) {
+            replacement = _expectStartSuccess(
+              scenario.root.textEditing.startNew(
+                _newTextSeed(id: CanvasElementId('close-failure-replacement')),
+              ),
+            );
+          }
+        }
+
+        scenario.root.textEditing.activeSession.addListener(
+          throwingCloseListener,
+        );
+        scenario.root.textEditing.activeSession.addListener(
+          replacementCloseListener,
+        );
+        try {
+          expect(session.commit(), isTrue);
+        } finally {
+          scenario.root.textEditing.activeSession.removeListener(
+            throwingCloseListener,
+          );
+          scenario.root.textEditing.activeSession.removeListener(
+            replacementCloseListener,
+          );
+        }
+        expect(_containsElement(scenario.root, session.elementId), isTrue);
+        expect(session.isActive, isFalse);
+        expect(
+          scenario.root.textEditing.activeSession.value,
+          same(replacement),
+        );
+        expect(lease.committedCalls, 1);
+        expect(lease.abortedCalls, 0);
+        expect(scenario.actions.single.type, CanvasActionType.createText);
+        expect(reports, hasLength(1));
+      } finally {
+        FlutterError.onError = previousReporter;
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 // Default resolution is observed at the real frame/session handoffs and then
@@ -132,15 +1004,108 @@ void _testRuntimeDefaultFontFamilyIsEffectiveButNotStored() {
         expect(explicitSession.style.fontFamily, 'Inter');
         expect(inheritedSession.commit(), isTrue);
         expect(explicitSession.commit(), isTrue);
+        final createdSeed = CanvasTextElement(
+          id: CanvasElementId('inherited-created-text'),
+          text: 'created',
+          color: const Color(0xFF224466),
+          textDirection: TextDirection.ltr,
+        );
+        final creation = _expectStartSuccess(
+          inherited.root.textEditing.startNew(createdSeed),
+        );
+        expect(creation.style.fontFamily, _unit3RuntimeRobotoFamily);
+        creation.updateFormatting(isBold: true);
+        expect(creation.commit(), isTrue);
         expect(inherited.root.projectionBuildCount, 0);
         expect(explicit.root.projectionBuildCount, 0);
         expect(_textElement(inherited.root).fontFamily, isNull);
         expect(_textElement(explicit.root).fontFamily, 'Inter');
+        final created = inherited.root
+            .readDocument()
+            .layers
+            .single
+            .elements
+            .whereType<CanvasTextElement>()
+            .singleWhere((element) => element.id == createdSeed.id);
+        expect(created.fontFamily, isNull);
+        final encoded = encodeCanvasDocumentToJson(
+          inherited.root.readDocument(),
+        );
+        expect(
+          encoded,
+          contains(RegExp('"id":"inherited-created-text".*?"fontFamily":null')),
+        );
         fallbackSession.dismiss();
       } finally {
         await inherited.dispose();
         await fallback.dispose();
         await explicit.dispose();
+      }
+    },
+  );
+
+  test(
+    'new default and explicit families keep their draft geometry through acceptance',
+    () async {
+      await _loadRobotoForRuntimeStyleGeometry();
+      for (final family in <String?>[null, 'Inter']) {
+        final scenario = _Scenario(
+          document: CanvasDocument(),
+          config: const CanvasRuntimeConfig(
+            commitResolver: acceptCommit,
+            defaultFontFamily: _unit3RuntimeRobotoFamily,
+          ),
+        );
+        final id = CanvasElementId('new-family-${family ?? 'default'}');
+        final seed = CanvasTextElement(
+          id: id,
+          text: 'WMWMWM',
+          fontSize: 18,
+          color: const Color(0xFF224466),
+          textDirection: TextDirection.ltr,
+          align: TextAlign.right,
+          transform: CanvasTransform.translation(const Offset(30, 15)),
+          fontFamily: family,
+        );
+        try {
+          final session = _expectStartSuccess(
+            scenario.root.textEditing.startNew(seed),
+          );
+          final baseAnchor = _anchorValueFor(
+            session.geometry.editBoundsWorld,
+            TextAlign.right,
+          );
+          session.updateText('WMWMWM\nformatted creation');
+          session.updateFormatting(isBold: true);
+          final draftGeometry = session.geometry;
+          expect(
+            _anchorValueFor(draftGeometry.editBoundsWorld, TextAlign.right),
+            moreOrLessEquals(baseAnchor, epsilon: 0.001),
+          );
+          expect(session.commit(), isTrue);
+          _expectAcceptedTextFrameMatchesDraftGeometry(
+            scenario.root,
+            draftGeometry: draftGeometry,
+            baseAnchor: baseAnchor,
+            expectedRow: (
+              elementId: id,
+              text: 'WMWMWM\nformatted creation',
+              isBold: true,
+              isItalic: false,
+              isUnderline: false,
+            ),
+          );
+          final installed = scenario.root
+              .readDocument()
+              .layers
+              .single
+              .elements
+              .whereType<CanvasTextElement>()
+              .single;
+          expect(installed.fontFamily, family);
+        } finally {
+          await scenario.dispose();
+        }
       }
     },
   );
@@ -2025,6 +2990,7 @@ void _testFormattedDraftGeometryMatchesAcceptedFrame() {
           draftGeometry: boldDraftGeometry,
           baseAnchor: baseAnchor,
           expectedRow: (
+            elementId: _textId,
             text: 'WMWMWM',
             isBold: true,
             isItalic: false,
@@ -2056,6 +3022,7 @@ void _testFormattedDraftGeometryMatchesAcceptedFrame() {
           draftGeometry: mixedDraftGeometry,
           baseAnchor: baseAnchor,
           expectedRow: (
+            elementId: _textId,
             text: 'WMWMWM\nitalic mixed draft',
             isBold: true,
             isItalic: true,
@@ -2081,7 +3048,13 @@ void _expectAcceptedTextFrameMatchesDraftGeometry(
   RuntimeRoot root, {
   required CanvasTextEditGeometry draftGeometry,
   required double baseAnchor,
-  required ({String text, bool isBold, bool isItalic, bool isUnderline})
+  required ({
+    CanvasElementId elementId,
+    String text,
+    bool isBold,
+    bool isItalic,
+    bool isUnderline,
+  })
   expectedRow,
 }) {
   final output = root.buildResourceFreeMainFrame(
@@ -2091,7 +3064,7 @@ void _expectAcceptedTextFrameMatchesDraftGeometry(
     gridStyle: CanvasGridStyle.defaultStyle,
   );
   final record = output.ordinaryPlan.ordinaryRecords.singleWhere(
-    (record) => record.id == _textId,
+    (record) => record.id == expectedRow.elementId,
   );
   final row = record.row as TextRenderRow;
 
@@ -2101,24 +3074,20 @@ void _expectAcceptedTextFrameMatchesDraftGeometry(
     _anchorValueFor(record.paintBoundsWorld, TextAlign.right),
     moreOrLessEquals(baseAnchor, epsilon: 0.001),
   );
-  expect(
-    (
+  expect((
+    elementId: record.id,
       text: row.text,
       isBold: row.isBold,
       isItalic: row.isItalic,
       isUnderline: row.isUnderline,
-    ),
-    expectedRow,
-  );
-  expect(
-    (
+  ), expectedRow);
+  expect((
+    elementId: record.id,
       text: row.layoutInput.text,
       isBold: row.layoutInput.isBold,
       isItalic: row.layoutInput.isItalic,
       isUnderline: row.layoutInput.isUnderline,
-    ),
-    expectedRow,
-  );
+  ), expectedRow);
 }
 
 void _testLiveGeometryPreservesTextAlignmentAnchor() {
@@ -3521,6 +4490,21 @@ CanvasTextElement _asTextElement(CanvasElement element) {
   return element;
 }
 
+CanvasTextElement _newTextSeed({required CanvasElementId id}) =>
+    CanvasTextElement(
+      id: id,
+      revision: 7,
+      text: 'seed',
+      fontSize: 18,
+      color: const Color(0xFF224466),
+      textDirection: TextDirection.ltr,
+      align: TextAlign.right,
+      transform: CanvasTransform.translation(const Offset(12, 16)),
+      fontFamily: 'Inter',
+      lineHeight: 1.2,
+      metadata: CanvasMetadata.fromMap({'seed': true}),
+    );
+
 // One complete field comparison prevents a future text request from omitting a
 // common, nullable, formatting, or sizing fact behind smaller partial checks.
 // ignore: halstead-volume
@@ -3556,6 +4540,29 @@ bool _containsElement(RuntimeRoot root, CanvasElementId id) {
   return root.readDocument().layers.any(
     (layer) => layer.elements.any((element) => element.id == id),
   );
+}
+
+({int layerIndex, int elementIndex}) _ordinaryTextInsertionLocation(
+  CanvasDocument document,
+  CanvasTextElement element, {
+  int? index,
+}) {
+  final root = runtimeRootWithCommittedDocumentSeed(document);
+  try {
+    root.edits.edit((edit) => edit.addElement(element, index: index));
+    final layers = root.readDocument().layers;
+    for (var layerIndex = 0; layerIndex < layers.length; layerIndex += 1) {
+      final elementIndex = layers[layerIndex].elements.indexWhere(
+        (candidate) => candidate.id == element.id,
+      );
+      if (elementIndex >= 0) {
+        return (layerIndex: layerIndex, elementIndex: elementIndex);
+      }
+    }
+    throw StateError('Ordinary insertion did not install the test element.');
+  } finally {
+    root.dispose();
+  }
 }
 
 /// This fixture needs the complete original text entry for deletion assertions.
