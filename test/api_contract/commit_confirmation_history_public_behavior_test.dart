@@ -41,6 +41,15 @@ void main() {
   test('Draw provenance restores only the layer created by that Draw', () async {
     await _exerciseDrawLayerProvenance();
   });
+
+  test('Text gestures record accepted public facts for host Undo and Redo', () async {
+    final host = _Host();
+    try {
+      await host.exerciseTextGestureHistory();
+    } finally {
+      await host.dispose();
+    }
+  });
 }
 
 final class _Host implements CanvasCommitLease {
@@ -60,15 +69,27 @@ final class _Host implements CanvasCommitLease {
   Offset? _pendingMoveDelta;
   var _recording = true;
   var cancelNextDelete = false;
+  var rejectNextText = false;
   var abortNextMove = false;
   var abortedCalls = 0;
   var resolverCalls = 0;
+  var _savedDocumentRevision = 0;
+
+  bool get isDirty =>
+      runtime.state.value.revisions.document != _savedDocumentRevision;
+  int get savedDocumentRevision => _savedDocumentRevision;
 
   static CanvasCommitResolution _resolveCommit(CanvasCommitRequest request) {
     final host = _active;
     host.resolverCalls += 1;
     if (request is CanvasDeleteCommitRequest && host.cancelNextDelete) {
       host.cancelNextDelete = false;
+      return const CanvasCommitCancel();
+    }
+    if ((request is CanvasTextEditCommitRequest ||
+            request is CanvasTextCreateCommitRequest) &&
+        host.rejectNextText) {
+      host.rejectNextText = false;
       return const CanvasCommitCancel();
     }
     if (request is CanvasMoveCommitRequest && host.abortNextMove) {
@@ -221,6 +242,346 @@ final class _Host implements CanvasCommitLease {
     expect(actions, hasLength(actionsBeforeReplay));
     expect(resolverCalls, resolverCallsBeforeReplay);
     _expectText(_text(runtime), _expectedTextAfter());
+  }
+
+  Future<void> exerciseTextGestureHistory() async {
+    _active = this;
+    _seed();
+    markSaved();
+    _expectCompleteDocument(runtime, _textGestureDocument());
+
+    final update = _startedSession(
+      runtime.textEditing.startForElement(CanvasElementId('text')),
+    );
+    final revisionBeforeDraft = runtime.state.value.revisions.document;
+    update.updateText(_formattedText);
+    update.updateFormatting(isBold: false, isItalic: false, isUnderline: false);
+    expect(history.records, isEmpty);
+    expect(runtime.state.value.revisions.document, revisionBeforeDraft);
+    expect(isDirty, isFalse);
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.committed,
+    );
+    expect(history.records, hasLength(1));
+    expect(isDirty, isTrue);
+    final updateRequest = history.records.single.request as CanvasTextEditCommitRequest;
+    _expectText(updateRequest.before, _expectedTextBefore());
+    _expectText(updateRequest.after, _expectedFormattedTextAfter());
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(text: _expectedFormattedTextAfter()),
+    );
+    markSaved();
+
+    final create = _startedSession(
+      runtime.textEditing.startNew(
+        _newTextSeed(),
+        layerId: CanvasLayerId('text-created-layer'),
+        index: 0,
+      ),
+    );
+    expect(create.origin, CanvasTextEditOrigin.newElement);
+    expect(history.records, hasLength(1));
+    expect(isDirty, isFalse);
+    create.updateText(_createdText);
+    final createdExpected = _createdTextElement(
+      transform: create.geometry.transform,
+    );
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.committed,
+    );
+    expect(history.records, hasLength(2));
+    expect(isDirty, isTrue);
+    final createRequest = history.records.last.request as CanvasTextCreateCommitRequest;
+    expect(createRequest.createsLayer, isTrue);
+    expect(createRequest.entry.layerId, CanvasLayerId('text-created-layer'));
+    expect(createRequest.entry.elementIndex, 0);
+    expect(createRequest.entry.element, isA<CanvasTextElement>());
+    _expectText(createRequest.entry.element as CanvasTextElement, createdExpected);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        text: _expectedFormattedTextAfter(),
+        created: createdExpected,
+      ),
+    );
+    markSaved();
+
+    final delete = _startedSession(
+      runtime.textEditing.startForElement(
+        CanvasElementId('text'),
+        emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+      ),
+    );
+    delete.updateText(' \n ');
+    expect(history.records, hasLength(2));
+    expect(isDirty, isFalse);
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.committed,
+    );
+    expect(history.records, hasLength(3));
+    expect(isDirty, isTrue);
+    final deleteRequest = history.records.last.request as CanvasDeleteCommitRequest;
+    expect(deleteRequest.entries, hasLength(1));
+    final deletedEntry = deleteRequest.entries.single;
+    expect(deletedEntry.layerId, CanvasLayerId('seed'));
+    _expectText(deletedEntry.element as CanvasTextElement, _expectedFormattedTextAfter());
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        includeText: false,
+        created: createdExpected,
+      ),
+    );
+    markSaved();
+
+    history.undo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        text: _expectedFormattedTextAfter(),
+        created: createdExpected,
+      ),
+    );
+    history.undo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(text: _expectedFormattedTextAfter()),
+    );
+    history.undo(runtime);
+    _expectCompleteDocument(runtime, _textGestureDocument());
+    history.redo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(text: _expectedFormattedTextAfter()),
+    );
+    history.redo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        text: _expectedFormattedTextAfter(),
+        created: createdExpected,
+      ),
+    );
+
+    runtime.edits.edit((edit) {
+      edit.addElement(
+        _rect('later-text-layer-content', const Offset(45, 10)),
+        layerId: CanvasLayerId('text-created-layer'),
+      );
+    });
+    history.undo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        text: _expectedFormattedTextAfter(),
+        laterContent: true,
+      ),
+    );
+    history.redo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        text: _expectedFormattedTextAfter(),
+        created: createdExpected,
+        laterContent: true,
+      ),
+    );
+    history.redo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        includeText: false,
+        created: createdExpected,
+        laterContent: true,
+      ),
+    );
+    markSaved();
+
+    runtime.edits.edit(
+      (edit) => edit.ensureLayer(CanvasLayerId('pre-existing-empty-text-layer')),
+    );
+    final preExistingLayerCreate = _startedSession(
+      runtime.textEditing.startNew(
+        _preExistingLayerTextSeed(),
+        layerId: CanvasLayerId('pre-existing-empty-text-layer'),
+      ),
+    );
+    preExistingLayerCreate.updateText('created in pre-existing layer');
+    final preExistingLayerExpected = _preExistingLayerTextElement(
+      transform: preExistingLayerCreate.geometry.transform,
+    );
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.committed,
+    );
+    final preExistingLayerRequest =
+        history.records.last.request as CanvasTextCreateCommitRequest;
+    expect(preExistingLayerRequest.createsLayer, isFalse);
+    expect(
+      preExistingLayerRequest.entry.layerId,
+      CanvasLayerId('pre-existing-empty-text-layer'),
+    );
+    _expectText(
+      preExistingLayerRequest.entry.element as CanvasTextElement,
+      preExistingLayerExpected,
+    );
+    _expectText(
+      _textById(runtime, CanvasElementId('new-text-existing-layer')),
+      preExistingLayerExpected,
+    );
+    history.undo(runtime);
+    _expectCompleteDocument(
+      runtime,
+      _textGestureDocument(
+        includeText: false,
+        created: createdExpected,
+        laterContent: true,
+        preExistingEmptyLayer: true,
+      ),
+    );
+    markSaved();
+
+    final cancelled = _startedSession(
+      runtime.textEditing.startForElement(CanvasElementId('new-text')),
+    );
+    cancelled.updateText('cancelled draft');
+    final recordsBeforeFailure = history.records.length;
+    final documentRevisionBeforeFailure = runtime.state.value.revisions.document;
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.cancel),
+      CanvasTextEditFinishResult.cancelled,
+    );
+    _expectNoAttemptEffects(
+      recordsBeforeFailure,
+      documentRevisionBeforeFailure,
+    );
+
+    _startedSession(runtime.textEditing.startForElement(CanvasElementId('new-text')));
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.unchanged,
+    );
+    _expectNoAttemptEffects(
+      recordsBeforeFailure,
+      documentRevisionBeforeFailure,
+    );
+
+    final emptyNew = _startedSession(
+      runtime.textEditing.startNew(
+        _emptyNewTextSeed(),
+        layerId: CanvasLayerId('empty-new-layer'),
+      ),
+    );
+    expect(emptyNew.origin, CanvasTextEditOrigin.newElement);
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit),
+      CanvasTextEditFinishResult.unchanged,
+    );
+    _expectNoAttemptEffects(
+      recordsBeforeFailure,
+      documentRevisionBeforeFailure,
+    );
+
+    runtime.edits.edit((edit) {
+      edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('later-text-layer-content'),
+          opacity: const CanvasFieldSet(0.2),
+        ),
+      );
+    });
+    final savedRevisionBeforeRejected = savedDocumentRevision;
+    final documentRevisionBeforeRejected =
+        runtime.state.value.revisions.document;
+    expect(isDirty, isTrue);
+    final rejected = _startedSession(
+      runtime.textEditing.startForElement(CanvasElementId('new-text')),
+    );
+    rejected.updateText('rejected draft');
+    rejectNextText = true;
+    expect(finishActiveAndSave(), CanvasTextEditFinishResult.rejected);
+    _expectSaveRefusalHasNoAttemptEffects(
+      recordsBeforeFailure,
+      documentRevisionBeforeRejected,
+      savedRevisionBeforeRejected,
+    );
+    expect(runtime.textEditing.activeSession.value, same(rejected));
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.cancel),
+      CanvasTextEditFinishResult.cancelled,
+    );
+
+    final stale = _startedSession(
+      runtime.textEditing.startForElement(CanvasElementId('new-text')),
+    );
+    stale.updateText('stale draft');
+    runtime.edits.edit((edit) {
+      edit.updateElement(
+        CanvasTextElementUpdate(
+          id: CanvasElementId('new-text'),
+          text: const CanvasFieldSet('external text'),
+        ),
+      );
+    });
+    final recordsBeforeStaleSave = history.records.length;
+    final documentRevisionBeforeStaleSave = runtime.state.value.revisions.document;
+    final savedRevisionBeforeStaleSave = savedDocumentRevision;
+    final textBeforeStaleSave = _textById(runtime, CanvasElementId('new-text'));
+    expect(finishActiveAndSave(), CanvasTextEditFinishResult.stale);
+    _expectSaveRefusalHasNoAttemptEffects(
+      recordsBeforeStaleSave,
+      documentRevisionBeforeStaleSave,
+      savedRevisionBeforeStaleSave,
+    );
+    _expectText(_textById(runtime, CanvasElementId('new-text')), textBeforeStaleSave);
+    expect(runtime.textEditing.activeSession.value, same(stale));
+    expect(
+      runtime.textEditing.finishActive(CanvasTextEditFinishIntent.cancel),
+      CanvasTextEditFinishResult.cancelled,
+    );
+  }
+
+  void markSaved() {
+    _savedDocumentRevision = runtime.state.value.revisions.document;
+  }
+
+  CanvasTextEditFinishResult finishActiveAndSave() {
+    final result = runtime.textEditing.finishActive(
+      CanvasTextEditFinishIntent.commit,
+    );
+    switch (result) {
+      case CanvasTextEditFinishResult.committed ||
+          CanvasTextEditFinishResult.unchanged:
+        markSaved();
+      case CanvasTextEditFinishResult.cancelled ||
+          CanvasTextEditFinishResult.rejected ||
+          CanvasTextEditFinishResult.stale ||
+          CanvasTextEditFinishResult.noActiveSession:
+        break;
+    }
+
+    return result;
+  }
+
+  void _expectNoAttemptEffects(int recordCount, int documentRevision) {
+    expect(history.records, hasLength(recordCount));
+    expect(runtime.state.value.revisions.document, documentRevision);
+    expect(isDirty, isFalse);
+  }
+
+  void _expectSaveRefusalHasNoAttemptEffects(
+    int recordCount,
+    int documentRevision,
+    int savedRevision,
+  ) {
+    expect(history.records, hasLength(recordCount));
+    expect(runtime.state.value.revisions.document, documentRevision);
+    expect(savedDocumentRevision, savedRevision);
+    expect(isDirty, isTrue);
   }
 
   void _seed() {
@@ -402,24 +763,39 @@ final _expectedReflectTransform = _aroundExpectedPivot(
   const Offset(40, 30),
 ).multiply(_expectedRotateTransform);
 
-CanvasTransform _expectedTextTransform(String nextText) {
+CanvasTransform _expectedTextTransform(
+  String nextText, {
+  bool isBold = true,
+  bool isItalic = true,
+  bool isUnderline = true,
+}) {
   final before = _expectedTextSize('before');
-  final after = _expectedTextSize(nextText);
+  final after = _expectedTextSize(
+    nextText,
+    isBold: isBold,
+    isItalic: isItalic,
+    isUnderline: isUnderline,
+  );
   return CanvasTransform.translation(
     Offset(90 + (before.width - after.width) / 2, (after.height - before.height) / 2),
   );
 }
 
-Size _expectedTextSize(String text) {
+Size _expectedTextSize(
+  String text, {
+  bool isBold = true,
+  bool isItalic = true,
+  bool isUnderline = true,
+}) {
   final painter = TextPainter(
     text: TextSpan(
       text: text,
       style: TextStyle(
         color: const Color(0xFF102030),
         fontSize: 18,
-        fontWeight: FontWeight.bold,
-        fontStyle: FontStyle.italic,
-        decoration: TextDecoration.underline,
+        fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+        fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+        decoration: isUnderline ? TextDecoration.underline : TextDecoration.none,
       ),
     ),
     textAlign: TextAlign.right,
@@ -693,6 +1069,148 @@ CanvasTextElement _expectedTextAfter() {
   );
 }
 
+const _formattedText = 'updated text with all formatting changed';
+const _createdText = 'created nonempty text';
+
+CanvasTextElement _expectedFormattedTextAfter() => CanvasTextElement(
+      id: CanvasElementId('text'),
+      revision: 2,
+      transform: _expectedTextTransform(
+        _formattedText,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+      ),
+      opacity: 0.7,
+      hitPadding: 2,
+      metadata: CanvasMetadata.fromMap({'version': 'before'}),
+      text: _formattedText,
+      fontSize: 18,
+      color: const Color(0xFF102030),
+      align: TextAlign.right,
+      textDirection: TextDirection.ltr,
+    );
+
+CanvasTextElement _newTextSeed() => CanvasTextElement(
+      id: CanvasElementId('new-text'),
+      revision: 7,
+      transform: CanvasTransform.translation(const Offset(50, 10)),
+      opacity: 0.4,
+      hitPadding: 3,
+      isSelectable: false,
+      isLocked: true,
+      isDeletable: false,
+      isTransformable: false,
+      metadata: CanvasMetadata.fromMap({'created': 'host seed'}),
+      text: 'new draft',
+      fontSize: 16,
+      color: const Color(0xFF334455),
+      align: TextAlign.left,
+      textDirection: TextDirection.ltr,
+    );
+
+CanvasTextElement _createdTextElement({required CanvasTransform transform}) => CanvasTextElement(
+      id: CanvasElementId('new-text'),
+      revision: 7,
+      transform: transform,
+      opacity: 0.4,
+      hitPadding: 3,
+      isSelectable: false,
+      isLocked: true,
+      isDeletable: false,
+      isTransformable: false,
+      metadata: CanvasMetadata.fromMap({'created': 'host seed'}),
+      text: _createdText,
+      fontSize: 16,
+      color: const Color(0xFF334455),
+      align: TextAlign.left,
+      textDirection: TextDirection.ltr,
+    );
+
+CanvasTextElement _emptyNewTextSeed() => CanvasTextElement(
+      id: CanvasElementId('empty-new-text'),
+      text: ' \n ',
+      color: const Color(0xFF334455),
+      textDirection: TextDirection.ltr,
+    );
+
+CanvasTextElement _preExistingLayerTextSeed() => CanvasTextElement(
+      id: CanvasElementId('new-text-existing-layer'),
+      revision: 4,
+      transform: CanvasTransform.translation(const Offset(70, 20)),
+      opacity: 0.5,
+      hitPadding: 1,
+      metadata: CanvasMetadata.fromMap({'created': 'pre-existing layer'}),
+      text: 'initial pre-existing-layer draft',
+      fontSize: 14,
+      color: const Color(0xFF556677),
+      align: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      isBold: true,
+    );
+
+CanvasTextElement _preExistingLayerTextElement({
+  required CanvasTransform transform,
+}) =>
+    CanvasTextElement(
+      id: CanvasElementId('new-text-existing-layer'),
+      revision: 4,
+      transform: transform,
+      opacity: 0.5,
+      hitPadding: 1,
+      metadata: CanvasMetadata.fromMap({'created': 'pre-existing layer'}),
+      text: 'created in pre-existing layer',
+      fontSize: 14,
+      color: const Color(0xFF556677),
+      align: TextAlign.center,
+      textDirection: TextDirection.ltr,
+      isBold: true,
+    );
+
+CanvasDocument _textGestureDocument({
+  CanvasTextElement? text,
+  CanvasTextElement? created,
+  bool includeText = true,
+  bool laterContent = false,
+  bool preExistingEmptyLayer = false,
+}) {
+  final baseline = _seedDocument();
+  final seedLayer = baseline.layers.single;
+  final seedElements = <CanvasElement>[
+    for (final element in seedLayer.elements)
+      if (element.id != CanvasElementId('text'))
+        element
+      else if (includeText)
+        text ?? _expectedTextBefore(),
+  ];
+  final createdLayerElements = <CanvasElement>[
+    if (created != null) created,
+    if (laterContent) _rect('later-text-layer-content', const Offset(45, 10)),
+  ];
+  return CanvasDocument(
+    camera: baseline.camera,
+    background: baseline.background,
+    palette: baseline.palette,
+    resources: baseline.resources,
+    backgroundElements: baseline.backgroundElements,
+    metadata: baseline.metadata,
+    layers: [
+      CanvasLayer(
+        id: seedLayer.id,
+        metadata: seedLayer.metadata,
+        elements: seedElements,
+      ),
+      if (createdLayerElements.isNotEmpty)
+        CanvasLayer(
+          id: CanvasLayerId('text-created-layer'),
+          elements: createdLayerElements,
+        ),
+      if (preExistingEmptyLayer)
+        CanvasLayer(id: CanvasLayerId('pre-existing-empty-text-layer')),
+    ],
+  );
+}
+
 void _drag(CanvasToolPort tools, Offset start, Offset end) {
   tools.handlePointer(_sample(CanvasPointerLifecyclePhase.down, start));
   tools.handlePointer(_sample(CanvasPointerLifecyclePhase.move, end));
@@ -708,6 +1226,50 @@ CanvasPointerSample _sample(CanvasPointerLifecyclePhase phase, Offset position) 
     );
 
 CanvasTextElement _text(CanvasRuntime runtime) => _textFrom(runtime.readDocument());
+
+CanvasTextElement _textById(CanvasRuntime runtime, CanvasElementId id) => runtime
+    .readDocument()
+    .layers
+    .expand((layer) => layer.elements)
+    .whereType<CanvasTextElement>()
+    .singleWhere((element) => element.id == id);
+
+CanvasTextEditSession _startedSession(CanvasTextEditStartResult result) {
+  return switch (result) {
+    CanvasTextEditStartSuccess(:final session) => session,
+    CanvasTextEditStartRefusal(:final reason) => fail('Text admission refused: $reason.'),
+  };
+}
+
+void _expectCompleteDocument(CanvasRuntime runtime, CanvasDocument expected) {
+  final actual = runtime.readDocument();
+  _expectDocumentEnvelope(actual, expected);
+  expect(actual.layers.map((layer) => layer.id), expected.layers.map((layer) => layer.id));
+  for (var layerIndex = 0; layerIndex < expected.layers.length; layerIndex += 1) {
+    final actualLayer = actual.layers[layerIndex];
+    final expectedLayer = expected.layers[layerIndex];
+    expect(actualLayer.metadata, expectedLayer.metadata);
+    expect(
+      actualLayer.elements.map((element) => element.id),
+      expectedLayer.elements.map((element) => element.id),
+    );
+    for (
+      var elementIndex = 0;
+      elementIndex < expectedLayer.elements.length;
+      elementIndex += 1
+    ) {
+      final actualElement = actualLayer.elements[elementIndex];
+      final expectedElement = expectedLayer.elements[elementIndex];
+      expect(actualElement.runtimeType, expectedElement.runtimeType);
+      _expectCommonElement(actualElement, expectedElement);
+      _expectElementContent(actualElement, expectedElement);
+      if (actualElement is CanvasTextElement && expectedElement is CanvasTextElement) {
+        _expectText(actualElement, expectedElement);
+      }
+    }
+  }
+  expect(runtime.selection.selectedElementIds, isEmpty);
+}
 
 void _expectSnapshot(
   CanvasRuntime runtime,
@@ -879,7 +1441,12 @@ void _expectElementContent(CanvasElement actual, CanvasElement expected) {
 
 void _expectText(CanvasTextElement actual, CanvasTextElement expected) {
   expect(actual.id, expected.id);
-  expect(actual.transform, expected.transform);
+  expect(
+    actual.transform,
+    expected.transform,
+    reason: 'actual translation ${actual.transform.translation}; '
+        'expected ${expected.transform.translation}',
+  );
   expect(actual.opacity, expected.opacity);
   expect(actual.hitPadding, expected.hitPadding);
   expect(actual.isVisible, expected.isVisible);

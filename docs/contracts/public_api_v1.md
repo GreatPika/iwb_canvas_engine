@@ -3039,6 +3039,99 @@ elementRevision is the seed revision and generation is zero. It retains the
 seed, raw placement and an issued requestId outside the document until a
 nonempty confirmation is accepted; an empty confirmation closes unchanged.
 
+An application owns Undo/Redo, dirty state, and persistence. It configures the
+same empty-text policy for automatic overlay admission and explicit ID
+admission, starts new text without first adding a document placeholder, and
+records only a lease-confirmed immutable request:
+
+```dart
+final overlay = CanvasTextEditingOverlay(
+  runtime: runtime,
+  inlineEditOnDoubleTap: true,
+  emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+);
+
+CanvasTextEditSession? startExistingText(CanvasElementId id) {
+  return switch (runtime.textEditing.startForElement(
+    id,
+    emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  )) {
+    CanvasTextEditStartSuccess(:final session) => session,
+    CanvasTextEditStartRefusal() => null,
+  };
+}
+
+CanvasTextEditSession? startNewText(CanvasTextElement seed) {
+  return switch (runtime.textEditing.startNew(
+    seed,
+    layerId: CanvasLayerId('notes'),
+  )) {
+    CanvasTextEditStartSuccess(:final session) => session,
+    CanvasTextEditStartRefusal() => null,
+  };
+}
+
+final class HostLease implements CanvasCommitLease {
+  HostLease(this.history);
+
+  final List<CanvasCommitRequest> history;
+  CanvasCommitRequest? pendingRequest;
+
+  @override
+  void committed() {
+    final request = pendingRequest!;
+    switch (request) {
+      case CanvasTextEditCommitRequest() ||
+          CanvasTextCreateCommitRequest() ||
+          CanvasDeleteCommitRequest():
+        history.add(request);
+      case _:
+        break;
+    }
+    pendingRequest = null;
+  }
+
+  @override
+  void aborted() => pendingRequest = null;
+}
+
+CanvasTextEditFinishResult finishTextForSave() {
+  final result = runtime.textEditing.finishActive(
+    CanvasTextEditFinishIntent.commit,
+  );
+  switch (result) {
+    case CanvasTextEditFinishResult.committed:
+      return result;
+    case CanvasTextEditFinishResult.unchanged:
+      break;
+    case CanvasTextEditFinishResult.rejected ||
+        CanvasTextEditFinishResult.stale:
+      return result; // Keep the existing save marker and retryable/readable draft.
+    case CanvasTextEditFinishResult.cancelled ||
+        CanvasTextEditFinishResult.noActiveSession:
+      break;
+  }
+  return result;
+}
+
+void markDocumentSavedAfterPersistence() {
+  savedDocumentRevision = runtime.state.value.revisions.document;
+}
+```
+
+The host's configured `CanvasCommitResolver` assigns its immutable request to
+`HostLease.pendingRequest` before returning `CanvasCommitAccept(lease: lease)`.
+Persist application data after `committed()` has recorded the accepted request;
+after that persistence succeeds, call `markDocumentSavedAfterPersistence()`.
+
+The host replays a `CanvasTextEditCommitRequest` from its complete `before` and
+`after` values, a `CanvasTextCreateCommitRequest` from `entry`, `layerIndex`,
+and `createsLayer`, and a `CanvasDeleteCommitRequest` from each original entry.
+Undo removes an operation-created layer only when it is empty; redo restores the
+recorded layer and entry placement through `CanvasEdit`. A cancelled, unchanged,
+empty-new, rejected, or stale finish does not append history or advance a
+host-owned dirty/save marker.
+
 ### 4.20 Unified commit confirmation
 
 Confirmation is synchronous in v1; asynchronous resolution is not supported.
