@@ -8,7 +8,7 @@ The maintained package supports one runtime-owned text-editing gesture through t
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `text-design` | docs/planning/designs/2026-09-11-text-editing-drafts-and-global-font.md |
+| Design | `text-design` | docs/history/designs/2026-09-11-text-editing-drafts-and-global-font.md |
 | PLAN | none | none |
 | Other | `s-001` | user request |
 | Research | `s-002` | docs/history/research/2026-09-11-text-editing-drafts-and-global-font.md |
@@ -178,7 +178,7 @@ Work Budget And Cost Displacement: No new performance target or benchmark is int
 
 ## Execution Units
 
-### [ ] Unit 1: Retain stale drafts through the shared guard boundary
+### [x] Unit 1: Retain stale drafts through the shared guard boundary
 
 Owner: Runtime text session lifecycle and interaction guard validity
 Boundary: D-001/D-004 existing-target guard comparison and retention only
@@ -197,7 +197,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Expose typed finish through compatible adapters
+### [x] Unit 2: Expose typed finish through compatible adapters
 
 Owner: CanvasTextEditingPort terminal API and runtime implementation
 Boundary: D-005 existing-target result distinctions; no creation/deletion branch yet
@@ -218,7 +218,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 1 — produces: retained stale session lifecycle; consumed as: stale and cancellation result semantics
 
-### [ ] Unit 3: Commit text and formatting as one draft
+### [x] Unit 3: Commit text and formatting as one draft
 
 Owner: Runtime draft and frame geometry with stock surface input preservation
 Boundary: D-003/D-006 one existing-target text/B/I/U candidate
@@ -242,7 +242,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 2 — produces: common typed existing completion; consumed as: atomic draft candidate and compatible adapters
 
-### [ ] Unit 4: Select one deletion for opted-in empty existing text
+### [x] Unit 4: Select one deletion for opted-in empty existing text
 
 Owner: Runtime existing-text operation selection and direct-removal preparation
 Boundary: D-006 captured empty policy and deletion precedence
@@ -264,7 +264,7 @@ Depends On:
 - Unit 2 — produces: typed finish outcomes; consumed as: committed/rejected deletion terminal
 - Unit 3 — produces: complete draft comparison; consumed as: deletion precedence over net no-op
 
-### [ ] Unit 5: Admit existing text directly by ID
+### [x] Unit 5: Admit existing text directly by ID
 
 Owner: Runtime text admission and interaction request issuance/read facts
 Boundary: D-002 typed ID route and parity with existing admission
@@ -285,7 +285,7 @@ Depends On:
 - Unit 1 — produces: shared validity and retained stale identity; consumed as: same-target admission revalidation
 - Unit 4 — produces: captured empty policy; consumed as: ID and context policy parity
 
-### [ ] Unit 6: Forward stock double-tap empty policy
+### [x] Unit 6: Forward stock double-tap empty policy
 
 Owner: CanvasTextEditingOverlay admission subscription
 Boundary: R-011/D-002 stock surface policy capture
@@ -305,7 +305,7 @@ Depends On:
 - Unit 5 — produces: common ID/context admission; consumed as: stock double-tap admission
 - Unit 4 — produces: complete empty-policy deletion behavior; consumed as: confirmation through stock overlay
 
-### [ ] Unit 7: Resolve the runtime font default before layout
+### [x] Unit 7: Resolve the runtime font default before layout
 
 Owner: Runtime config and effective frame/session text input
 Boundary: D-010 immutable family fallback across existing consumers
@@ -325,7 +325,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 8: Separate destination selection from layer installation
+### [x] Unit 8: Separate destination selection from layer installation
 
 Owner: Existing addElement placement rule, edit preparation and its structural replay consumer
 Boundary: D-007 existing named/last/default destination policy only; no new text session, public API or Store transaction redesign
@@ -344,7 +344,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 9: Consolidate existing prepared insertion sealing
+### [x] Unit 9: Consolidate existing prepared insertion sealing
 
 Owner: Runtime prepared insertion construction through existing EditKernel
 Boundary: D-008/D-009 deferred add, exact entry/layer facts and action sealing; current stroke/line consumers only
@@ -363,7 +363,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 8 — produces: destination decision consumed by addElement; consumed as: destination facts for the existing deferred insertion
 
-### [ ] Unit 10: Complete new text as one transient-to-insert lifecycle
+### [x] Unit 10: Complete new text as one transient-to-insert lifecycle
 
 Owner: Runtime new-origin session using existing draft, placement and prepared insertion owners
 Boundary: D-007/D-008 new-origin guard and one insertion branch only
@@ -396,7 +396,7 @@ Depends On:
 - Unit 5 — produces: single-slot typed admission; consumed as: new-origin admission/refusal
 - Unit 7 — produces: effective versus stored family handoff; consumed as: seed measurement and accepted storage
 
-### [ ] Unit 11: Demonstrate one-gesture host Undo and Redo
+### [x] Unit 11: Demonstrate one-gesture host Undo and Redo
 
 Owner: Existing public external-consumer history proof and public integration guidance
 Boundary: R-013/A-013 cross-owner replay contract
