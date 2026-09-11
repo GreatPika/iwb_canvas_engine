@@ -4485,9 +4485,7 @@ void _validateTextEditCommandInput(
   String newText,
   int? timestampMs,
 ) {
-  if (timestampMs != null) {
-    validateNonNegativeInt(timestampMs, path: 'textEdit.timestampMs');
-  }
+  _validateTextEditTimestamp(timestampMs);
   final normalizedRequestId = CanvasInteractionRequestId(requestId.value);
   if (normalizedRequestId != requestId) {
     throw StateError('CanvasInteractionRequestId normalization drifted.');
@@ -4496,6 +4494,12 @@ void _validateTextEditCommandInput(
     id: CanvasElementId('text-edit-validation-probe'),
     text: CanvasFieldSet(newText),
   );
+}
+
+void _validateTextEditTimestamp(int? timestampMs) {
+  if (timestampMs != null) {
+    validateNonNegativeInt(timestampMs, path: 'textEdit.timestampMs');
+  }
 }
 
 Offset _textEditAnchorLocalFor(
@@ -5014,6 +5018,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     int? timestampMs,
   }) {
     _ensurePublicOperationAllowed();
+    if (intent == CanvasTextEditFinishIntent.commit) {
+      _validateTextEditTimestamp(timestampMs);
+    }
     final state = _active;
     if (state == null) {
       _pruneExpiredCandidateStates();

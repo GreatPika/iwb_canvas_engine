@@ -1755,6 +1755,59 @@ void _testDirectTerminalInputAndSharedValidation() {
 // setup and state assertions across test-only helpers.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testTypedFinishReportsNoActiveSession() {
+  test(
+    'typed finish validates an absent commit timestamp before its result',
+    () async {
+      var resolverCalls = 0;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) {
+            resolverCalls += 1;
+            return const CanvasCommitCancel();
+          },
+        ),
+      );
+      try {
+        final documentRevision = scenario.root.state.value.revisions.document;
+
+        expect(
+          () => scenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+            timestampMs: -1,
+          ),
+          throwsA(
+            isA<CanvasDataException>().having(
+              (error) => error.path,
+              'path',
+              'textEdit.timestampMs',
+            ),
+          ),
+        );
+        expect(
+          scenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+            timestampMs: 4,
+          ),
+          CanvasTextEditFinishResult.noActiveSession,
+        );
+        expect(
+          scenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+          CanvasTextEditFinishResult.noActiveSession,
+        );
+        expect(scenario.root.textEditing.activeSession.value, isNull);
+        expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
+        expect(_textValue(scenario.root), 'hello');
+        expect(scenario.root.state.value.revisions.document, documentRevision);
+        expect(resolverCalls, 0);
+        expect(scenario.actions, isEmpty);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
   test('typed finish reports an absent active session', () async {
     final scenario = _Scenario();
     try {

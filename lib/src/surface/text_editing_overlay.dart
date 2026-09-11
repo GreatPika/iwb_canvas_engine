@@ -407,12 +407,10 @@ final class _CanvasTextEditingOverlayState
 
   void _dismissSession() {
     final session = _session;
-    if (session == null ||
-        !identical(widget.runtime.textEditing.activeSession.value, session) ||
-        !session.isActive) {
+    if (session == null || !session.isActive) {
       return;
     }
-    widget.runtime.textEditing.finishActive(CanvasTextEditFinishIntent.cancel);
+    session.dismiss();
   }
 
   Size _editorSizeFor(Size editSize) {

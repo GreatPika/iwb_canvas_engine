@@ -26,6 +26,7 @@ void main() {
   _testFocusLossCommit();
   _testMultilineGrowthAndMaxHeightPolicy();
   _testDisposesListeners();
+  _testRuntimeSwapCancelsPreviousDraft();
   _testOverlayDoesNotMeasureText();
 }
 
@@ -861,6 +862,50 @@ void _testDisposesListeners() {
     expect(scenario.runtime.textEditing.activeSession.value, isNull);
     expect(tester.takeException(), isNull);
   });
+}
+
+// The runtime swap needs old-session cancellation and new-editor survival in
+// one rendered lifecycle to rule out a local overlay replacement.
+// ignore: halstead-volume
+void _testRuntimeSwapCancelsPreviousDraft() {
+  testWidgets(
+    'overlay cancels its previous runtime draft during a runtime swap',
+    (tester) async {
+      final previous = _OverlayScenario(inlineEditOnDoubleTap: true);
+      final replacement = _OverlayScenario(inlineEditOnDoubleTap: true);
+      addTearDown(previous.dispose);
+      addTearDown(replacement.dispose);
+      await previous.pump(tester);
+      await previous.doubleTapText(tester);
+      final previousSession = previous.activeSession;
+      final previousRevision = previous.runtime.state.value.revisions.document;
+      final replacementSession = switch (replacement.runtime.textEditing
+          .startForElement(CanvasElementId('text-a'))) {
+        CanvasTextEditStartSuccess(:final session) => session,
+        CanvasTextEditStartRefusal(:final reason) => throw StateError(
+          'Expected replacement session, got $reason.',
+        ),
+      };
+
+      await replacement.pump(tester);
+
+      expect(previous.runtime.textEditing.activeSession.value, isNull);
+      expect(previousSession.isActive, isFalse);
+      expect(_textElement(previous.runtime).text, 'hello');
+      expect(previous.runtime.state.value.revisions.document, previousRevision);
+      expect(previous.actions, isEmpty);
+      expect(
+        replacement.runtime.textEditing.activeSession.value,
+        same(replacementSession),
+      );
+      expect(
+        find.byKey(canvasTextEditingOverlayEditableTextKey),
+        findsOneWidget,
+      );
+      expect(_textElement(replacement.runtime).text, 'hello');
+      expect(replacement.actions, isEmpty);
+    },
+  );
 }
 
 void _testOverlayDoesNotMeasureText() {
