@@ -7,6 +7,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
+import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 // This one cohesive runtime fixture observes both the Store pair seam and its
@@ -1558,179 +1559,281 @@ void _testLiveUpdateRemeasuresGeometry() {
 }
 
 // One assertion path must retain the resolver proposal, committed fields,
-// revision, action, and preparation observations together; splitting it would
-// hide a partial update or terminal-work leak.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index
+// revision, action, and preparation observations together; splitting its
+// independent flag case oracles would hide a partial update or work leak.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index, cyclomatic-complexity
 void _testFormattingDraftCommitsOneCompleteUpdate() {
-  test('style-only draft commits one complete text update', () async {
-    CanvasTextEditCommitRequest? proposal;
+  const formattingCases =
+      <({String name, bool? isBold, bool? isItalic, bool? isUnderline})>[
+        (name: 'bold', isBold: true, isItalic: null, isUnderline: null),
+        (name: 'italic', isBold: null, isItalic: true, isUnderline: null),
+        (name: 'underline', isBold: null, isItalic: null, isUnderline: true),
+        (
+          name: 'bold and italic',
+          isBold: true,
+          isItalic: true,
+          isUnderline: null,
+        ),
+      ];
+  for (final formatting in formattingCases) {
+    test(
+      'style-only ${formatting.name} draft commits one complete text update',
+      () async {
+        final expectedIsBold = formatting.isBold ?? false;
+        final expectedIsItalic = formatting.isItalic ?? false;
+        final expectedIsUnderline = formatting.isUnderline ?? false;
+        CanvasTextEditCommitRequest? proposal;
+        final scenario = _Scenario(
+          config: CanvasRuntimeConfig(
+            commitResolver: (request) {
+              proposal = request as CanvasTextEditCommitRequest;
+
+              return acceptCommit(request);
+            },
+          ),
+        );
+        try {
+          final request = await scenario.issueTextRequest();
+          final session = _expectSession(
+            scenario.root.textEditing.startFromContextAction(request),
+          );
+          final documentRevision = scenario.root.state.value.revisions.document;
+          final documentBeforeFormatting = scenario.root.readDocument();
+          final projections = <StoreAffectedElementProjection>[];
+          final work = <PreparedInteractionApplyWorkEvent>[];
+
+          CommitApplier.observePreparedInteractionWork(
+            work.add,
+            () => DocumentStoreKernel.observeAffectedElementProjection(
+              projections.add,
+              () => session.updateFormatting(
+                isBold: formatting.isBold,
+                isItalic: formatting.isItalic,
+                isUnderline: formatting.isUnderline,
+              ),
+            ),
+          );
+
+          expect(session.style.isBold, expectedIsBold);
+          expect(session.style.isItalic, expectedIsItalic);
+          expect(session.style.isUnderline, expectedIsUnderline);
+          expect(_textElement(scenario.root).text, 'hello');
+          expect(_textElement(scenario.root).isBold, isFalse);
+          expect(_textElement(scenario.root).isItalic, isFalse);
+          expect(_textElement(scenario.root).isUnderline, isFalse);
+          expect(
+            scenario.root.state.value.revisions.document,
+            documentRevision,
+          );
+          expect(scenario.root.readDocument(), same(documentBeforeFormatting));
+          expect(projections, isEmpty);
+          expect(work, isEmpty);
+
+          expect(
+            CommitApplier.observePreparedInteractionWork(
+              work.add,
+              () => DocumentStoreKernel.observeAffectedElementProjection(
+                projections.add,
+                () => session.commit(timestampMs: 91),
+              ),
+            ),
+            isTrue,
+          );
+
+          expect(proposal?.before.text, 'hello');
+          expect(proposal?.before.isBold, isFalse);
+          expect(proposal?.before.isItalic, isFalse);
+          expect(proposal?.before.isUnderline, isFalse);
+          expect(proposal?.after.text, 'hello');
+          expect(proposal?.after.isBold, expectedIsBold);
+          expect(proposal?.after.isItalic, expectedIsItalic);
+          expect(proposal?.after.isUnderline, expectedIsUnderline);
+          final projectedBefore = _asTextElement(projections.single.before);
+          final projectedAfter = _asTextElement(projections.single.after);
+          expect(projectedBefore.text, 'hello');
+          expect(projectedBefore.isBold, isFalse);
+          expect(projectedBefore.isItalic, isFalse);
+          expect(projectedBefore.isUnderline, isFalse);
+          expect(projectedAfter.text, 'hello');
+          expect(projectedAfter.isBold, expectedIsBold);
+          expect(projectedAfter.isItalic, expectedIsItalic);
+          expect(projectedAfter.isUnderline, expectedIsUnderline);
+          final installed = _textElement(scenario.root);
+          expect(installed.text, 'hello');
+          expect(installed.isBold, expectedIsBold);
+          expect(installed.isItalic, expectedIsItalic);
+          expect(installed.isUnderline, expectedIsUnderline);
+          expect(
+            scenario.root.state.value.revisions.document,
+            documentRevision + 1,
+          );
+          expect(projections, hasLength(1));
+          expect(work, [
+            PreparedInteractionApplyWorkEvent.prepared,
+            PreparedInteractionApplyWorkEvent.ownershipReleased,
+            PreparedInteractionApplyWorkEvent.consumed,
+          ]);
+          expect(scenario.actions, hasLength(1));
+          final payload =
+              scenario.actions.single.payload as CanvasTextEditActionPayload;
+          expect(payload.requestId, request.requestId);
+          expect(payload.previousTextLength, 5);
+          expect(payload.nextTextLength, 5);
+        } finally {
+          await scenario.dispose();
+        }
+      },
+    );
+  }
+}
+
+// Revert and cancel share the same terminal-work absence oracle, so keeping
+// their independent flag cases together makes a resolver or action leak visible.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testFormattingNoOpAndCancelAreSilent() {
+  const formattingCases =
+      <({String name, bool? isBold, bool? isItalic, bool? isUnderline})>[
+        (name: 'bold', isBold: true, isItalic: null, isUnderline: null),
+        (name: 'italic', isBold: null, isItalic: true, isUnderline: null),
+        (name: 'underline', isBold: null, isItalic: null, isUnderline: true),
+        (
+          name: 'bold and italic',
+          isBold: true,
+          isItalic: true,
+          isUnderline: null,
+        ),
+      ];
+  for (final formatting in formattingCases) {
+    test(
+      'reverted ${formatting.name} formatting draft has no terminal work',
+      () async {
+        var resolverCalls = 0;
+        final scenario = _Scenario(
+          config: CanvasRuntimeConfig(
+            commitResolver: (_) {
+              resolverCalls += 1;
+              return const CanvasCommitCancel();
+            },
+          ),
+        );
+        try {
+          final firstRequest = await scenario.issueTextRequest();
+          final reverted = _expectSession(
+            scenario.root.textEditing.startFromContextAction(firstRequest),
+          );
+          final initialRevision = scenario.root.state.value.revisions.document;
+          final documentBeforeRevert = scenario.root.readDocument();
+          final revertedProjections = <StoreAffectedElementProjection>[];
+          final revertedWork = <PreparedInteractionApplyWorkEvent>[];
+
+          CommitApplier.observePreparedInteractionWork(
+            revertedWork.add,
+            () => DocumentStoreKernel.observeAffectedElementProjection(
+              revertedProjections.add,
+              () => reverted.updateFormatting(
+                isBold: formatting.isBold,
+                isItalic: formatting.isItalic,
+                isUnderline: formatting.isUnderline,
+              ),
+            ),
+          );
+          expect(scenario.root.readDocument(), same(documentBeforeRevert));
+          expect(revertedProjections, isEmpty);
+          expect(revertedWork, isEmpty);
+
+          expect(
+            CommitApplier.observePreparedInteractionWork(
+              revertedWork.add,
+              () => DocumentStoreKernel.observeAffectedElementProjection(
+                revertedProjections.add,
+                () {
+                  reverted.updateFormatting(
+                    isBold: formatting.isBold == null ? null : false,
+                    isItalic: formatting.isItalic == null ? null : false,
+                    isUnderline: formatting.isUnderline == null ? null : false,
+                  );
+
+                  return scenario.root.textEditing.finishActive(
+                    CanvasTextEditFinishIntent.commit,
+                    timestampMs: 94,
+                  );
+                },
+              ),
+            ),
+            CanvasTextEditFinishResult.unchanged,
+          );
+          expect(_textElement(scenario.root).isBold, isFalse);
+          expect(_textElement(scenario.root).isItalic, isFalse);
+          expect(_textElement(scenario.root).isUnderline, isFalse);
+          expect(scenario.root.state.value.revisions.document, initialRevision);
+          expect(scenario.root.readDocument(), same(documentBeforeRevert));
+          expect(revertedProjections, isEmpty);
+          expect(revertedWork, isEmpty);
+          expect(scenario.actions, isEmpty);
+          expect(resolverCalls, 0);
+        } finally {
+          await scenario.dispose();
+        }
+      },
+    );
+  }
+
+  test('cancelled formatting draft does not start terminal work', () async {
+    var resolverCalls = 0;
     final scenario = _Scenario(
       config: CanvasRuntimeConfig(
-        commitResolver: (request) {
-          proposal = request as CanvasTextEditCommitRequest;
-
-          return acceptCommit(request);
+        commitResolver: (_) {
+          resolverCalls += 1;
+          return const CanvasCommitCancel();
         },
       ),
     );
     try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(request),
+      final cancelRequest = await scenario.issueTextRequest();
+      final cancelled = _expectSession(
+        scenario.root.textEditing.startFromContextAction(cancelRequest),
       );
-      final documentRevision = scenario.root.state.value.revisions.document;
-      final documentBeforeFormatting = scenario.root.readDocument();
-      final projections = <StoreAffectedElementProjection>[];
-      final work = <PreparedInteractionApplyWorkEvent>[];
+      final initialRevision = scenario.root.state.value.revisions.document;
+      final documentBeforeCancel = scenario.root.readDocument();
+      final cancelledProjections = <StoreAffectedElementProjection>[];
+      final cancelledWork = <PreparedInteractionApplyWorkEvent>[];
 
       CommitApplier.observePreparedInteractionWork(
-        work.add,
+        cancelledWork.add,
         () => DocumentStoreKernel.observeAffectedElementProjection(
-          projections.add,
-          () => session.updateFormatting(isBold: true, isItalic: true),
+          cancelledProjections.add,
+          () => cancelled.updateFormatting(isUnderline: true),
+        ),
+      );
+      expect(scenario.root.readDocument(), same(documentBeforeCancel));
+      expect(cancelledProjections, isEmpty);
+      expect(cancelledWork, isEmpty);
+
+      CommitApplier.observePreparedInteractionWork(
+        cancelledWork.add,
+        () => DocumentStoreKernel.observeAffectedElementProjection(
+          cancelledProjections.add,
+          cancelled.dismiss,
         ),
       );
 
-      expect(session.style.isBold, isTrue);
-      expect(session.style.isItalic, isTrue);
-      expect(session.style.isUnderline, isFalse);
-      expect(_textElement(scenario.root).isBold, isFalse);
-      expect(_textElement(scenario.root).isItalic, isFalse);
-      expect(scenario.root.state.value.revisions.document, documentRevision);
-      expect(scenario.root.readDocument(), same(documentBeforeFormatting));
-      expect(projections, isEmpty);
-      expect(work, isEmpty);
-
-      expect(
-        CommitApplier.observePreparedInteractionWork(
-          work.add,
-          () => DocumentStoreKernel.observeAffectedElementProjection(
-            projections.add,
-            () => session.commit(timestampMs: 91),
-          ),
-        ),
-        isTrue,
-      );
-
-      expect(proposal?.before.text, 'hello');
-      expect(proposal?.before.isBold, isFalse);
-      expect(proposal?.before.isItalic, isFalse);
-      expect(proposal?.after.text, 'hello');
-      expect(proposal?.after.isBold, isTrue);
-      expect(proposal?.after.isItalic, isTrue);
-      expect(proposal?.after.isUnderline, isFalse);
-      expect(_textElement(scenario.root).isBold, isTrue);
-      expect(_textElement(scenario.root).isItalic, isTrue);
-      expect(
-        scenario.root.state.value.revisions.document,
-        documentRevision + 1,
-      );
-      expect(projections, hasLength(1));
-      expect(work, [
-        PreparedInteractionApplyWorkEvent.prepared,
-        PreparedInteractionApplyWorkEvent.ownershipReleased,
-        PreparedInteractionApplyWorkEvent.consumed,
-      ]);
-      expect(scenario.actions, hasLength(1));
-      final payload =
-          scenario.actions.single.payload as CanvasTextEditActionPayload;
-      expect(payload.requestId, request.requestId);
-      expect(payload.previousTextLength, 5);
-      expect(payload.nextTextLength, 5);
+      expect(_textElement(scenario.root).isUnderline, isFalse);
+      expect(scenario.root.state.value.revisions.document, initialRevision);
+      expect(scenario.root.readDocument(), same(documentBeforeCancel));
+      expect(cancelledProjections, isEmpty);
+      expect(cancelledWork, isEmpty);
+      expect(scenario.actions, isEmpty);
+      expect(resolverCalls, 0);
     } finally {
       await scenario.dispose();
     }
   });
 }
 
-// Revert and cancel share the same terminal-work absence oracle, so keeping
-// them together makes a resolver or action leak visible in either branch.
-// ignore: halstead-volume, source-lines-of-code
-void _testFormattingNoOpAndCancelAreSilent() {
-  test(
-    'reverted and cancelled formatting drafts do not start terminal work',
-    () async {
-      var resolverCalls = 0;
-      final scenario = _Scenario(
-        config: CanvasRuntimeConfig(
-          commitResolver: (_) {
-            resolverCalls += 1;
-            return const CanvasCommitCancel();
-          },
-        ),
-      );
-      try {
-        final firstRequest = await scenario.issueTextRequest();
-        final reverted = _expectSession(
-          scenario.root.textEditing.startFromContextAction(firstRequest),
-        );
-        final initialRevision = scenario.root.state.value.revisions.document;
-        final documentBeforeRevert = scenario.root.readDocument();
-        final revertedProjections = <StoreAffectedElementProjection>[];
-        final revertedWork = <PreparedInteractionApplyWorkEvent>[];
-
-        expect(
-          CommitApplier.observePreparedInteractionWork(
-            revertedWork.add,
-            () => DocumentStoreKernel.observeAffectedElementProjection(
-              revertedProjections.add,
-              () {
-                reverted.updateFormatting(isBold: true, isItalic: true);
-                reverted.updateFormatting(isBold: false, isItalic: false);
-
-                return reverted.commit(timestampMs: 94);
-              },
-            ),
-          ),
-          isTrue,
-        );
-        expect(_textElement(scenario.root).isBold, isFalse);
-        expect(_textElement(scenario.root).isItalic, isFalse);
-        expect(scenario.root.state.value.revisions.document, initialRevision);
-        expect(scenario.root.readDocument(), same(documentBeforeRevert));
-        expect(revertedProjections, isEmpty);
-        expect(revertedWork, isEmpty);
-        expect(scenario.actions, isEmpty);
-        expect(resolverCalls, 0);
-
-        final cancelRequest = await scenario.issueTextRequest();
-        final cancelled = _expectSession(
-          scenario.root.textEditing.startFromContextAction(cancelRequest),
-        );
-        final documentBeforeCancel = scenario.root.readDocument();
-        final cancelledProjections = <StoreAffectedElementProjection>[];
-        final cancelledWork = <PreparedInteractionApplyWorkEvent>[];
-
-        CommitApplier.observePreparedInteractionWork(
-          cancelledWork.add,
-          () => DocumentStoreKernel.observeAffectedElementProjection(
-            cancelledProjections.add,
-            () {
-              cancelled.updateFormatting(isUnderline: true);
-              cancelled.dismiss();
-            },
-          ),
-        );
-
-        expect(_textElement(scenario.root).isUnderline, isFalse);
-        expect(scenario.root.state.value.revisions.document, initialRevision);
-        expect(scenario.root.readDocument(), same(documentBeforeCancel));
-        expect(cancelledProjections, isEmpty);
-        expect(cancelledWork, isEmpty);
-        expect(scenario.actions, isEmpty);
-        expect(resolverCalls, 0);
-      } finally {
-        await scenario.dispose();
-      }
-    },
-  );
-}
-
-// This exercises RuntimeRoot's public draft geometry against a later frame
-// projection using metrics loaded from the installed Flutter SDK. The frame
-// fixture separately proves the same font distinguishes normal, bold, and
-// italic measurement inputs.
-// ignore: halstead-volume, source-lines-of-code
+// This keeps each draft beside its accepted actual frame comparison using
+// metrics loaded from the installed Flutter SDK. The frame fixture separately
+// proves the same font distinguishes normal, bold, and italic measurement inputs.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testFormattedDraftGeometryMatchesAcceptedFrame() {
   test(
     'formatted draft geometry and anchor match the accepted frame',
@@ -1766,6 +1869,17 @@ void _testFormattedDraftGeometryMatchesAcceptedFrame() {
           moreOrLessEquals(baseAnchor, epsilon: 0.001),
         );
         expect(initial.commit(timestampMs: 92), isTrue);
+        _expectAcceptedTextFrameMatchesDraftGeometry(
+          scenario.root,
+          draftGeometry: boldDraftGeometry,
+          baseAnchor: baseAnchor,
+          expectedRow: (
+            text: 'WMWMWM',
+            isBold: true,
+            isItalic: false,
+            isUnderline: false,
+          ),
+        );
 
         final boldRequest = await scenario.issueTextRequest();
         final boldAccepted = _expectSession(
@@ -1786,6 +1900,17 @@ void _testFormattedDraftGeometryMatchesAcceptedFrame() {
           moreOrLessEquals(baseAnchor, epsilon: 0.001),
         );
         expect(mixed.commit(timestampMs: 93), isTrue);
+        _expectAcceptedTextFrameMatchesDraftGeometry(
+          scenario.root,
+          draftGeometry: mixedDraftGeometry,
+          baseAnchor: baseAnchor,
+          expectedRow: (
+            text: 'WMWMWM\nitalic mixed draft',
+            isBold: true,
+            isItalic: true,
+            isUnderline: false,
+          ),
+        );
 
         final mixedRequest = await scenario.issueTextRequest();
         final mixedAccepted = _expectSession(
@@ -1798,6 +1923,50 @@ void _testFormattedDraftGeometryMatchesAcceptedFrame() {
         await scenario.dispose();
       }
     },
+  );
+}
+
+void _expectAcceptedTextFrameMatchesDraftGeometry(
+  RuntimeRoot root, {
+  required CanvasTextEditGeometry draftGeometry,
+  required double baseAnchor,
+  required ({String text, bool isBold, bool isItalic, bool isUnderline})
+  expectedRow,
+}) {
+  final output = root.buildResourceFreeMainFrame(
+    viewportWorldBounds: const Rect.fromLTWH(-20, -20, 220, 120),
+    devicePixelRatio: 1,
+    selectionStyle: CanvasSelectionStyle.defaultStyle,
+    gridStyle: CanvasGridStyle.defaultStyle,
+  );
+  final record = output.ordinaryPlan.ordinaryRecords.singleWhere(
+    (record) => record.id == _textId,
+  );
+  final row = record.row as TextRenderRow;
+
+  expect(record.paintBoundsWorld, draftGeometry.paintBoundsWorld);
+  expect(record.transform, draftGeometry.transform);
+  expect(
+    _anchorValueFor(record.paintBoundsWorld, TextAlign.right),
+    moreOrLessEquals(baseAnchor, epsilon: 0.001),
+  );
+  expect(
+    (
+      text: row.text,
+      isBold: row.isBold,
+      isItalic: row.isItalic,
+      isUnderline: row.isUnderline,
+    ),
+    expectedRow,
+  );
+  expect(
+    (
+      text: row.layoutInput.text,
+      isBold: row.layoutInput.isBold,
+      isItalic: row.layoutInput.isItalic,
+      isUnderline: row.layoutInput.isUnderline,
+    ),
+    expectedRow,
   );
 }
 
