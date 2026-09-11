@@ -199,29 +199,51 @@ final class InteractionEngine {
   TextEditGuardDecision textEditGuardDecision(
     CanvasInteractionRequestId requestId,
   ) {
+    final observation = textEditGuardValidity(requestId);
+    final guard = observation.guard;
+    if (observation.kind == TextEditGuardValidityKind.unknownOrConsumed) {
+      return const TextEditGuardDecision.unknownOrConsumed();
+    }
+    if (observation.kind == TextEditGuardValidityKind.rejected) {
+      _requestRegistry.consume(requestId);
+
+      return const TextEditGuardDecision.rejectedAndConsumed();
+    }
+    final targetElementId = guard?.contentElementId;
+    final currentText = observation.currentText;
+    if (targetElementId == null || currentText == null) {
+      throw StateError('Accepted text guard observation is incomplete.');
+    }
+
+    return TextEditGuardDecision.accepted(
+      targetElementId: targetElementId,
+      currentText: currentText,
+    );
+  }
+
+  /// Reads issued and current guard facts without retiring the request.
+  TextEditGuardObservation textEditGuardValidity(
+    CanvasInteractionRequestId requestId,
+  ) {
     final guard = _requestRegistry.factsFor(requestId);
     if (guard == null) {
-      return const TextEditGuardDecision.unknownOrConsumed();
+      return const TextEditGuardObservation.unknownOrConsumed();
     }
     final targetElementId = guard.contentElementId;
     if (guard.targetKind != InteractionRequestTargetKind.contentElement ||
         guard.contentElementKind != CanvasElementKind.text ||
         targetElementId == null) {
-      _requestRegistry.consume(requestId);
-
-      return const TextEditGuardDecision.rejectedAndConsumed();
+      return TextEditGuardObservation.rejected(guard: guard);
     }
     final current = readPort.textCommitGuardFacts(
       TextCommitGuardReadRequest(targetElementId: targetElementId),
     );
     if (!_textGuardMatches(guard, current)) {
-      _requestRegistry.consume(requestId);
-
-      return const TextEditGuardDecision.rejectedAndConsumed();
+      return TextEditGuardObservation.rejected(guard: guard);
     }
 
-    return TextEditGuardDecision.accepted(
-      targetElementId: targetElementId,
+    return TextEditGuardObservation.accepted(
+      guard: guard,
       currentText: current.currentText as String,
     );
   }

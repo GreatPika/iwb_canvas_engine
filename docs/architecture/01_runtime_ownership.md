@@ -55,8 +55,8 @@ Runtime responsibilities are split as follows:
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
-| InteractionEngine | pointer sessions, immutable selected-move participant basis/conflict state, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
-| CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
+| InteractionEngine | pointer sessions, immutable selected-move participant basis/conflict state, tools, preview state, terminal commit requests, one non-consuming issued/current text-guard comparison, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
+| CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, permanently latched stale-draft retention, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, duplicate the interaction guard comparison, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image/vector references, or committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset resolution, resolver budget, same-frame null-result suppression, bounded placeholders, and synchronous cache/suppression wrapper-borrow retirement before its narrow retained-output release callback | own committed descriptors, public runtime state, Flutter widget lifecycle, or application assets/Pictures |
@@ -245,12 +245,16 @@ text-input session, not a context menu or app overlay state owner, and not
 `CanvasTextEditingPort` is the runtime-owned active inline text editing
 boundary. It admits only current text content-action requests, exposes one
 `ValueListenable<CanvasTextEditSession?>`, derives live session geometry from
-the frame-measured text layout source, and commits through the guarded command
-path. A changed commit obtains its action facts from the prepared Store target
-pair before installation, while its frame and committed layout share the same
-effective color calculation so the existing layout cache can be reused. It does
-not own Flutter `EditableText`, app decoration, context menus, or visibility
-hiding; active paint suppression is frame output behavior.
+the frame-measured text layout source, and asks InteractionEngine's one
+non-consuming issued/current guard comparison for admission and staleness. It
+latches stale sessions without rebasing them, retaining their identity, live
+draft, base style, and last geometry while refusing later updates and commits.
+The command terminal alone retires a known invalid request. A changed commit
+obtains its action facts from the prepared Store target pair before installation,
+while its frame and committed layout share the same effective color calculation
+so the existing layout cache can be reused. It does not own Flutter
+`EditableText`, app decoration, context menus, or visibility hiding; active
+paint suppression is frame output behavior and stops for a stale session.
 
 Composition root:
 

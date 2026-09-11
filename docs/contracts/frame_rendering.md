@@ -36,6 +36,8 @@ Required tests:
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.measured_text_layout`
+- `test.runtime.text_editing_port`
+- `test.runtime.text_edit_paint_suppression`
 - `test.guardrails.text_surface_guardrail_checks`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
@@ -151,6 +153,9 @@ Rules:
   selection decoration in frame output using runtime-owned active session facts.
   Suppression must not mutate `CanvasTextElement.isVisible`, remove the element
   from hit/context membership, or change committed document state.
+- a stale inline text session retains its runtime draft but supplies no
+  suppression fact, so the current committed text and selection decoration are
+  rendered again without a visibility or document mutation.
 ```
 
 Accepted internal split:

@@ -37,8 +37,9 @@ void main() {
   _testSessionCancelPreservesDraftForRetry();
   _testCandidateStateReusedAndPrunedAfterCommit();
   _testStaleCandidateStatePruned();
-  _testStaleCommitCleanup();
-  _testDirectCommandStaleCommitClearsActiveSession();
+  _testStaleCommitRetainsDraft();
+  _testDirectStaleCommandRetainsActiveSession();
+  _testRemovalAndSameIdReplacementRetainStaleDrafts();
   _testUnrelatedDocumentRevisionIsObservationOnly();
   _testUnrelatedDocumentRevisionPreservesSuppressionIdentity();
   _testPreparedTextFactsAreExactBeforeInstall();
@@ -905,53 +906,301 @@ void _testStaleCandidateStatePruned() {
   });
 }
 
-void _testStaleCommitCleanup() {
-  test('stale commit clears transient session without mutation', () async {
-    final scenario = _Scenario();
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(request),
-      );
-      _makeTextRequestStale(scenario);
-      session.updateText('stale update');
+// This one scenario keeps the conflict, retained draft, retry, and explicit
+// dismissal observations together so a stale false result cannot hide draft
+// loss or a revision/action side effect across helper boundaries.
+// ignore: halstead-volume, source-lines-of-code
+void _testStaleCommitRetainsDraft() {
+  test(
+    'stale commit retains the immutable draft until explicit dismissal',
+    () async {
+      var resolverCalls = 0;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            resolverCalls += 1;
 
-      expect(session.isStale, isTrue);
-      expect(session.commit(timestampMs: 43), isFalse);
-      expect(_textValue(scenario.root), 'hello');
-      expect(scenario.root.textEditing.activeSession.value, isNull);
-      expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
-      expect(scenario.root.textEditCandidateStateCountForTesting, 0);
-      expect(scenario.actions, isEmpty);
-    } finally {
-      await scenario.dispose();
-    }
-  });
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('retained draft');
+        final retainedGeometry = session.geometry;
+        final retainedStyle = session.style;
+        _makeTextRequestStale(scenario);
+        final revisionsAfterExternalChange =
+            scenario.root.state.value.revisions;
+        session.updateText('must not replace retained draft');
+
+        expect(session.isStale, isTrue);
+        expect(session.commit(timestampMs: 43), isFalse);
+        expect(_textValue(scenario.root), 'hello');
+        expect(
+          scenario.root.state.value.revisions,
+          revisionsAfterExternalChange,
+        );
+        expect(session.liveText, 'retained draft');
+        expect(session.style, retainedStyle);
+        final staleGeometryLayoutEvents = <(String, Color)>[];
+        FrameTextLayoutMeasurer.observeNewLayoutWork(
+          (text, color) => staleGeometryLayoutEvents.add((text, color)),
+          () => expect(session.geometry, retainedGeometry),
+        );
+        expect(staleGeometryLayoutEvents, isEmpty);
+        expect(session.isActive, isTrue);
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
+        expect(scenario.root.textEditCandidateStateCountForTesting, 1);
+        expect(scenario.actions, isEmpty);
+        expect(resolverCalls, 0);
+
+        expect(session.commit(timestampMs: 44), isFalse);
+        expect(session.liveText, 'retained draft');
+        expect(session.isActive, isTrue);
+        expect(scenario.root.textEditing.start(session), same(session));
+        expect(
+          scenario.root.textEditing.startFromContextAction(request),
+          isNull,
+        );
+        expect(resolverCalls, 0);
+
+        session.dismiss();
+        expect(session.isActive, isFalse);
+        expect(scenario.root.textEditing.activeSession.value, isNull);
+        expect(scenario.root.textEditCandidateStateCountForTesting, 0);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
-void _testDirectCommandStaleCommitClearsActiveSession() {
-  test('direct stale command clears matching active session', () async {
-    final scenario = _Scenario();
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(request),
-      );
-      _makeTextRequestStale(scenario);
+// The direct terminal must share the retained-session behavior with the session
+// terminal, so its request retirement and draft observations stay together.
+// ignore: halstead-volume, source-lines-of-code
+void _testDirectStaleCommandRetainsActiveSession() {
+  test(
+    'direct stale command retires its request without clearing the draft',
+    () async {
+      var resolverCalls = 0;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            resolverCalls += 1;
 
-      expect(
-        scenario.root.commands.commitTextEdit(request.requestId, 'stale'),
-        isFalse,
+            return acceptCommit(request);
+          },
+        ),
       );
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('direct retained draft');
+        final retainedGeometry = session.geometry;
+        final retainedStyle = session.style;
+        _makeTextRequestStale(scenario);
+        final revisionsAfterExternalChange =
+            scenario.root.state.value.revisions;
 
-      expect(_textValue(scenario.root), 'hello');
-      expect(scenario.root.textEditing.activeSession.value, isNull);
-      expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
-      expect(session.isActive, isFalse);
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        expect(
+          scenario.root.commands.commitTextEdit(request.requestId, 'stale'),
+          isFalse,
+        );
+
+        expect(_textValue(scenario.root), 'hello');
+        expect(
+          scenario.root.state.value.revisions,
+          revisionsAfterExternalChange,
+        );
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
+        expect(session.isActive, isTrue);
+        expect(session.isStale, isTrue);
+        expect(session.liveText, 'direct retained draft');
+        expect(session.style, retainedStyle);
+        expect(session.geometry, retainedGeometry);
+        session.updateText('must not change direct draft');
+        expect(session.liveText, 'direct retained draft');
+        expect(resolverCalls, 0);
+
+        session.dismiss();
+        expect(scenario.root.textEditing.activeSession.value, isNull);
+        expect(session.isActive, isFalse);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// This assertion covers every external conflict variant in one lifecycle.
+// Combining mutation, retained state, and terminal effects keeps a case-specific
+// helper from concealing a different terminal path.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testRemovalAndSameIdReplacementRetainStaleDrafts() {
+  test(
+    'removal and same-id replacement retain stale drafts without overwrite',
+    () async {
+      for (final scenarioCase in [
+        (
+          name: 'text change',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit(
+              (edit) => edit.updateElement(
+                CanvasTextElementUpdate(
+                  id: _textId,
+                  text: const CanvasFieldSet('external text'),
+                ),
+              ),
+            );
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(_textValue(scenario.root), 'external text');
+          },
+        ),
+        (
+          name: 'hidden target',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit(
+              (edit) => edit.updateElement(
+                CanvasTextElementUpdate(
+                  id: _textId,
+                  isVisible: const CanvasFieldSet(false),
+                ),
+              ),
+            );
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(_textElement(scenario.root).isVisible, isFalse);
+          },
+        ),
+        (
+          name: 'kind replacement',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit((edit) {
+              edit.removeElement(_textId);
+              edit.addElement(
+                CanvasRectElement(id: _textId, size: const Size(10, 10)),
+              );
+            });
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(_containsElement(scenario.root, _textId), isTrue);
+          },
+        ),
+        (
+          name: 'background relocation',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit((edit) {
+              edit.removeElement(_textId);
+              edit.addBackgroundElement(
+                CanvasTextElement(
+                  id: _textId,
+                  text: 'background replacement',
+                  fontSize: 16,
+                  color: const Color(0xFF111111),
+                  textDirection: TextDirection.ltr,
+                ),
+              );
+            });
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(
+              scenario.root.readDocument().backgroundElements.any(
+                (element) => element.id == _textId,
+              ),
+              isTrue,
+            );
+          },
+        ),
+        (
+          name: 'removal',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit((edit) => edit.removeElement(_textId));
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(_containsElement(scenario.root, _textId), isFalse);
+          },
+        ),
+        (
+          name: 'same-id replacement',
+          apply: (_Scenario scenario) {
+            scenario.root.edits.edit(
+              (edit) =>
+                  edit.replaceDraftDocument(_document(text: 'replacement')),
+            );
+          },
+          verifyCommitted: (_Scenario scenario) {
+            expect(_textValue(scenario.root), 'replacement');
+          },
+        ),
+      ]) {
+        var resolverCalls = 0;
+        final scenario = _Scenario(
+          config: CanvasRuntimeConfig(
+            commitResolver: (request) {
+              resolverCalls += 1;
+
+              return acceptCommit(request);
+            },
+          ),
+        );
+        try {
+          final request = await scenario.issueTextRequest();
+          final session = _expectSession(
+            scenario.root.textEditing.startFromContextAction(request),
+          );
+          final draft = 'retained ${scenarioCase.name} draft';
+          session.updateText(draft);
+          final retainedGeometry = session.geometry;
+          final retainedStyle = session.style;
+
+          scenarioCase.apply(scenario);
+          final revisionsAfterExternalChange =
+              scenario.root.state.value.revisions;
+          scenarioCase.verifyCommitted(scenario);
+
+          final projected = <StoreAffectedElementProjection>[];
+          DocumentStoreKernel.observeAffectedElementProjection(
+            projected.add,
+            () {
+              expect(session.isStale, isTrue);
+              session.updateText('must not overwrite $draft');
+              expect(session.commit(timestampMs: 45), isFalse);
+              expect(session.commit(timestampMs: 46), isFalse);
+            },
+          );
+
+          expect(projected, isEmpty);
+          expect(
+            scenario.root.state.value.revisions,
+            revisionsAfterExternalChange,
+          );
+          scenarioCase.verifyCommitted(scenario);
+          expect(session.liveText, draft);
+          expect(session.style, retainedStyle);
+          expect(session.geometry, retainedGeometry);
+          expect(session.isActive, isTrue);
+          expect(scenario.root.textEditing.activeSession.value, same(session));
+          expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
+          expect(scenario.actions, isEmpty);
+          expect(resolverCalls, 0);
+
+          session.dismiss();
+          expect(scenario.root.textEditing.activeSession.value, isNull);
+        } finally {
+          await scenario.dispose();
+        }
+      }
+    },
+  );
 }
 
 void _testUnrelatedDocumentRevisionIsObservationOnly() {
@@ -1641,6 +1890,7 @@ bool _containsElement(RuntimeRoot root, CanvasElementId id) {
 CanvasDocument _document({
   TextAlign align = TextAlign.left,
   double? maxWidth = 120,
+  String text = 'hello',
 }) {
   return CanvasDocument(
     layers: [
@@ -1649,7 +1899,7 @@ CanvasDocument _document({
         elements: [
           CanvasTextElement(
             id: _textId,
-            text: 'hello',
+            text: text,
             fontSize: 16,
             color: const Color(0xFF111111),
             textDirection: TextDirection.ltr,

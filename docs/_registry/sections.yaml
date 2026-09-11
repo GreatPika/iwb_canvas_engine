@@ -456,6 +456,7 @@
   - test.interaction.pointer_tool_cleanup_coordinator
   - test.interaction.context_action_request
   - test.interaction.text_edit_stale_commit_guard
+  - test.runtime.text_editing_port
   - test.diagnostics.interaction_diagnostics
   - test.guardrails.interaction_guardrail_enforcement
   - test.guardrails.selection_boundary_checks
@@ -511,6 +512,8 @@
   - test.frame.paint_plan_excludes_preview_delta
   - test.frame.paint_plan_excludes_selection_state
   - test.frame.measured_text_layout
+  - test.runtime.text_editing_port
+  - test.runtime.text_edit_paint_suppression
   - test.guardrails.text_surface_guardrail_checks
   - test.frame.camera_pan_preserves_ordinary_paint_plan
   - test.frame.selected_supplement_staging_no_global_sort

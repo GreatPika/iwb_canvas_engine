@@ -86,7 +86,7 @@ Resource and interaction owners own their resource and interaction rows.
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | Unit-2 filtered canonical Store entries plus selection-owner prune after guarded unified confirmation | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove canonical entry ids | evict | prepare before `CanvasEraseCommitRequest`; generic accept installs bound Store then owned Selection once, completes eraser cleanup, then common delivery; cancel/error discard and clean without commit | erase after accepted state and lease commitment; `runtime_created_timestamps_monotonic` |
 | context-action double-tap request | direct `handleDoubleTap` clears pending context tap history before current-target resolution; target admission requires a candidate spatial result with no unresolved/skipped handles; InteractionRequestRegistry stores live context request target kind and guard facts; pending delivery is suppressed by load/dispose cleanup | none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` unless suppressed before scheduled delivery |
-| commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
+| commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; a matching active text session latches stale and retains its identity, draft, base style, and last geometry until explicit dismissal | none | none | no | frame suppression ends; no resolver, action, document overwrite, or revision change | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel; after successful prepare it resolves `CanvasTextEditCommitRequest`, then after EditKernel closure RuntimeRoot consumes/removes the live request, silently clears only a matching active text session and its owned suppression/candidate state, and records an interaction revision before capture; it completes guarded common delivery, releases the guard, then notifies matching-session closure before true return | state.revisions.document and, only for a matching active session, state.revisions.interaction; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main common delivery, lease commitment after public state and before action/observer, then matching-session close notification; a listener may start another session without losing it | editText; `runtime_created_timestamps_monotonic` |
 | no-op edit, including compensating final fact no-op | none | none | none | none | none | none |
@@ -164,6 +164,12 @@ Notes:
   publish public
   `CanvasRuntimeState` and has no document, selection, preview, spatial,
   projection, resource, repaint, or action effect.
+- A matching active text session observes the same non-consuming guard rule as
+  `commitTextEdit`. On mismatch it latches stale without rebasing: its identity,
+  draft, base style, and last geometry remain readable; later updates and
+  commits do nothing; frame suppression ends. Explicit dismissal, read-only,
+  successful load, and disposal clear that transient session, while failed load
+  preserves it.
 - `commitTextEdit` validates `newText` before request consumption and before
   draft mutation. For a changed text candidate, it projects the addressed
   committed-before and normalized-candidate-after text rows before installation

@@ -479,9 +479,13 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_11_edit_kernel`, `section_23_tests`
 
+## test.runtime.text_edit_paint_suppression
+
+- Sections: `section_15_frame_render_contract`
+
 ## test.runtime.text_editing_port
 
-- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
 
 ## test.selection.runtime_owner_separation
 

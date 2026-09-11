@@ -460,7 +460,13 @@ notification), a listener's accepted separate mutation/new-session survival,
 Flutter notifier-error continuation, public overlay/custom-overlay replacement, multiline growth
 from session geometry, live preservation of the resolved horizontal anchor and
 top edit edge, committed preservation of the same anchors after text size
-changes, and paint suppression without document visibility mutation.
+changes, and paint suppression without document visibility mutation. The runtime
+fixture also uses real external text/style, visibility, kind, relocation,
+removal, and same-ID replacement changes to prove stale draft identity/text/
+style/geometry retention, immutable retries, resolver/action/revision silence,
+and explicit dismissal; it observes stale cleanup without addressed candidate
+projection. `test.runtime.text_edit_paint_suppression` proves the corresponding
+committed-frame paint restoration.
 
 `test.guardrails.text_surface_guardrail_checks` proves the runner-backed
 structural checks for formula-based text bounds, duplicate overlay

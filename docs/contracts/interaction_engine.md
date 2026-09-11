@@ -54,6 +54,7 @@ Required tests:
 - `test.interaction.pointer_tool_cleanup_coordinator`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
+- `test.runtime.text_editing_port`
 - `test.diagnostics.interaction_diagnostics`
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.guardrails.selection_boundary_checks`
@@ -463,8 +464,10 @@ current.
 
 The registry is not itself an active text-input session and not
 CanvasPreviewState. `CanvasTextEditingPort` owns the single active text session
-value and consumes registry facts only through the guarded request boundary.
-The application owns context menus, optional custom editor decoration, IME
+value. It uses InteractionEngine's one non-consuming issued/current guard
+comparison for session admission and stale observation; the guarded command
+terminal is the only consumer that retires a known invalid request. The
+application owns context menus, optional custom editor decoration, IME
 presentation, focus policy choices, accessibility presentation, and text
 selection controls.
 
@@ -494,6 +497,13 @@ draft mutation, and delegates changed text to EditKernel before emitting
 `CanvasActionType.editText`. Direct
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
 non-request synchronization API.
+
+When a rejected stale request matches an active text session, request retirement
+does not dismiss that session. Runtime latches it stale, retains its identity,
+draft, base style, and last geometry for reads and explicit dismissal, refuses
+later draft updates and commits, and stops its frame suppression. Resolver
+refusal remains retryable rather than stale; successful load, read-only mode,
+and disposal retain their existing explicit-session cleanup behavior.
 
 `CanvasElementKind` is the sole semantic interaction discriminator for context
 target identity and stale request guards. No interaction behavior may branch on

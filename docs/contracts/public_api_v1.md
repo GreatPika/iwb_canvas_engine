@@ -1725,6 +1725,10 @@ Rules:
   element is missing, the current element generation no longer matches the
   issued request, the current elementRevision changed, or the current element
   family no longer matches a text element;
+- when that stale request has a matching active text session, private request
+  retirement latches that session stale but retains its identity, draft, style,
+  and last geometry for explicit dismissal. It removes frame suppression and
+  does not advance a public revision or invoke the resolver;
 - commitTextEdit private request consumption has no public state snapshot,
   document, selection, preview, spatial, projection, resource, repaint, or
   action effect;
@@ -2725,7 +2729,7 @@ Context-action and text editing model:
   CanvasRuntime.textEditing.startFromContextAction(request), or mount the
   official CanvasTextEditingOverlay with inlineEditOnDoubleTap enabled;
 - CanvasRuntime owns one active CanvasTextEditSession through
-  CanvasTextEditingPort.activeSession; starting a text session consumes only
+  CanvasTextEditingPort.activeSession; starting a text session observes only
   current text content-target requests and returns null for empty-canvas,
   non-text, stale, family-mismatched, read-only, unknown, or already-consumed
   requests;
@@ -2735,6 +2739,14 @@ Context-action and text editing model:
 - CanvasTextEditSession.updateText updates live session text and live measured
   geometry without committing document state; commit() delegates to the guarded
   text command path and dismiss() exits without document or action effects;
+- a session asks the InteractionEngine-owned non-consuming issued/current guard
+  comparison for admission and staleness. If the captured epoch, kind,
+  generation, elementRevision, or visible content eligibility is no longer
+  current, it latches stale: its identity, live draft, base style, and last
+  geometry remain readable, later draft updates have no effect, and later
+  commits return false. The committed original is immediately unsuppressed;
+  explicit dismiss, read-only mode, successful document load, and disposal
+  still clear the session, while failed load preserves it;
 - a changed accepted commit closes its EditKernel handle, consumes its request,
   silently clears only a matching active text session and its owned suppression
   and candidate state, and records the outer interaction revision before frame
@@ -2749,8 +2761,9 @@ Context-action and text editing model:
   CanvasCommandPort.commitTextEdit(requestId, newText) or the active session
   commit() helper;
 - request facts are live and consumed/removed once rather than kept as durable
-  registry state; unknown and already-consumed ids are no-effect false
-  results;
+  registry state. A command terminal retires a known invalid request, but stale
+  retention never recreates it; unknown and already-consumed ids are no-effect
+  false results;
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;
 - documentRevision is emitted as an observation and diagnostics fact, not a

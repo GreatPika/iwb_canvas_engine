@@ -58,7 +58,6 @@ import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
-import '../interaction/interaction_request_registry.dart';
 import '../interaction/interaction_runtime_intents.dart';
 import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
@@ -4521,14 +4520,17 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   @override
   bool get readOnly => _readOnly;
 
-  _TextEditSuppressionToken? get activeSuppressionToken => _suppressionToken;
-  TextEditPaintSuppression? get activeFrameSuppression {
+  _TextEditSuppressionToken? get activeSuppressionToken {
     final state = _active;
     if (state == null || _isStale(state)) {
       return null;
     }
 
-    return _suppressionToken?.frameSuppression;
+    return _suppressionToken;
+  }
+
+  TextEditPaintSuppression? get activeFrameSuppression {
+    return activeSuppressionToken?.frameSuppression;
   }
 
   int get candidateStateCount => _ownedStates.length;
@@ -4695,17 +4697,14 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return false;
   }
 
-  bool clearConsumedRequest(
-    CanvasInteractionRequestId requestId, {
-    bool publishState = true,
-  }) {
+  void clearConsumedRequest(CanvasInteractionRequestId requestId) {
     final state = _active;
-    if (state != null && state.requestId == requestId && _isStale(state)) {
-      return _dismissActiveWithoutGuard(publishState: publishState);
+    if (state != null && state.requestId == requestId) {
+      _isStale(state);
+
+      return;
     }
     _pruneExpiredCandidateStates();
-
-    return false;
   }
 
   void dispose() {
@@ -4719,15 +4718,13 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   _RuntimeTextEditSessionState? _candidateStateFor(
     CanvasContextActionRequested request,
   ) {
-    final guard = _root._interactionEngine.requestFactsFor(request.requestId);
-    if (guard == null ||
-        guard.requestId != request.requestId ||
-        guard.targetKind != InteractionRequestTargetKind.contentElement ||
-        guard.contentElementKind != CanvasElementKind.text) {
-      return null;
-    }
-    final current = _currentGuardFacts(guard);
-    if (!_textGuardMatches(guard, current)) {
+    final observation = _root._interactionEngine.textEditGuardValidity(
+      request.requestId,
+    );
+    final guard = observation.guard;
+    if (observation.kind != TextEditGuardValidityKind.accepted ||
+        guard == null ||
+        guard.requestId != request.requestId) {
       return null;
     }
     final targetElementId = guard.contentElementId as CanvasElementId;
@@ -4735,7 +4732,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     if (facts == null || facts.kind != CanvasElementKind.text) {
       return null;
     }
-    final initialText = current.currentText as String;
+    final initialText = observation.currentText as String;
     late final _RuntimeTextEditSessionState state;
     state = _RuntimeTextEditSessionState(
       requestId: guard.requestId,
@@ -4789,36 +4786,6 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return state;
   }
 
-  TextCommitGuardReadFacts _currentGuardFacts(
-    InteractionRequestGuardFacts guard,
-  ) {
-    final targetElementId = guard.contentElementId;
-    if (targetElementId == null) {
-      return TextCommitGuardReadFacts.missing(
-        targetElementId: CanvasElementId('missing-text-target'),
-        controllerEpoch: guard.controllerEpoch,
-        documentRevision: guard.documentRevision,
-      );
-    }
-
-    return _root._interactionReadPort.textCommitGuardFacts(
-      TextCommitGuardReadRequest(targetElementId: targetElementId),
-    );
-  }
-
-  bool _textGuardMatches(
-    InteractionRequestGuardFacts guard,
-    TextCommitGuardReadFacts current,
-  ) {
-    return current.exists &&
-        current.targetKind == CanvasElementKind.text &&
-        current.controllerEpoch == guard.controllerEpoch &&
-        current.generation == guard.generation &&
-        current.elementRevision == guard.elementRevision &&
-        current.targetKind == guard.contentElementKind &&
-        current.currentText != null;
-  }
-
   _RuntimeTextEditSessionState? _stateForSession(
     CanvasTextEditSession session,
   ) {
@@ -4852,12 +4819,19 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }
 
   bool _isStale(_RuntimeTextEditSessionState state) {
-    final guard = _root._interactionEngine.requestFactsFor(state.requestId);
-    if (guard == null) {
+    if (state.stale) {
       return true;
     }
 
-    return !_textGuardMatches(guard, _currentGuardFacts(guard));
+    final observation = _root._interactionEngine.textEditGuardValidity(
+      state.requestId,
+    );
+    if (observation.kind == TextEditGuardValidityKind.accepted) {
+      return false;
+    }
+    state.stale = true;
+
+    return true;
   }
 
   bool _sameGuardIdentity(
@@ -4890,6 +4864,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     if (!identical(_active?.session, state.session)) {
       return;
     }
+    if (_isStale(state)) {
+      return;
+    }
     if (state.liveText == text) {
       return;
     }
@@ -4907,7 +4884,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       state.liveText,
       timestampMs: timestampMs,
     );
-    if (!_root.isDisposed && (didCommit || _isStale(state))) {
+    if (!_root.isDisposed && didCommit) {
       _dismiss(state);
     }
 
@@ -4923,6 +4900,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }
 
   CanvasTextEditGeometry _geometryFor(_RuntimeTextEditSessionState state) {
+    final retained = state.lastGeometry;
+    if (state.stale && retained != null) {
+      return retained;
+    }
     final measuredTextLayout = _root._measuredTextLayoutFromFrameFacts(
       state.baseFacts,
       state.liveText,
@@ -4943,7 +4924,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     );
     final bounds = const GeometryPolicy().boundsFor(facts);
 
-    return CanvasTextEditGeometry(
+    return state.lastGeometry = CanvasTextEditGeometry(
       paintBoundsWorld: bounds.paintBoundsWorld,
       editBoundsWorld: bounds.editBoundsWorld,
       transform: facts.transform,
@@ -4994,6 +4975,8 @@ final class _RuntimeTextEditSessionState {
   final FrameElementFacts baseFacts;
   final CanvasTextEditSession session;
   bool active = false;
+  bool stale = false;
+  CanvasTextEditGeometry? lastGeometry;
 }
 
 final class _TextEditSuppressionToken {
