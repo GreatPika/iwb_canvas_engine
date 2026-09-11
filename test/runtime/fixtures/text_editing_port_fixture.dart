@@ -676,13 +676,11 @@ void _testTypedFinishReportsNoActiveSession() {
         ),
       );
       expect(projections, hasLength(1));
-      expect(
-        work,
-        containsAllInOrder([
-          PreparedInteractionApplyWorkEvent.prepared,
-          PreparedInteractionApplyWorkEvent.consumed,
-        ]),
-      );
+      expect(work, [
+        PreparedInteractionApplyWorkEvent.prepared,
+        PreparedInteractionApplyWorkEvent.ownershipReleased,
+        PreparedInteractionApplyWorkEvent.consumed,
+      ]);
       expect(_textValue(scenario.root), 'typed finish');
       expect(session.isActive, isFalse);
       expect(scenario.actions, hasLength(1));
@@ -1628,13 +1626,11 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
         documentRevision + 1,
       );
       expect(projections, hasLength(1));
-      expect(
-        work,
-        containsAllInOrder([
-          PreparedInteractionApplyWorkEvent.prepared,
-          PreparedInteractionApplyWorkEvent.consumed,
-        ]),
-      );
+      expect(work, [
+        PreparedInteractionApplyWorkEvent.prepared,
+        PreparedInteractionApplyWorkEvent.ownershipReleased,
+        PreparedInteractionApplyWorkEvent.consumed,
+      ]);
       expect(scenario.actions, hasLength(1));
       final payload =
           scenario.actions.single.payload as CanvasTextEditActionPayload;
