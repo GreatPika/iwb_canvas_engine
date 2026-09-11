@@ -2739,10 +2739,12 @@ Context-action and text editing model:
 - active editing suppresses the original frame text paint through frame output
   and must not mutate CanvasTextElement.isVisible, remove the element from hit
   or context membership, or change document visibility as a hide/show bridge;
-- CanvasTextEditSession.updateText updates live session text and live measured
-  geometry without committing document state. commit() delegates to the active
-  finish terminal and returns true only for committed or unchanged; dismiss()
-  delegates to cancellation and exits without document or action effects;
+- CanvasTextEditSession.updateText and updateFormatting stage one live text and
+  B/I/U draft without committing document state. updateFormatting changes only
+  supplied flags, while style and frame-measured geometry read the same draft.
+  commit() delegates to the active finish terminal and returns true only for
+  committed or unchanged; dismiss() delegates to cancellation and exits without
+  document or action effects;
 - a session asks the InteractionEngine-owned non-consuming issued/current guard
   comparison for admission and staleness. If the captured epoch, kind,
   generation, elementRevision, or visible content eligibility is no longer
@@ -2866,6 +2868,11 @@ final class CanvasTextEditSession {
   bool get isStale;
 
   void updateText(String text);
+  void updateFormatting({
+    bool? isBold,
+    bool? isItalic,
+    bool? isUnderline,
+  });
   bool commit({int? timestampMs});
   void dismiss();
 }
@@ -2924,8 +2931,11 @@ Port implementers add `finishActive`; existing callers may retain
 `CanvasTextEditSession.commit`, `CanvasTextEditSession.dismiss`, and
 `CanvasTextEditingPort.dismissActive`. Consumers that need the terminal outcome
 call `finishActive(CanvasTextEditFinishIntent.commit)` or `.cancel` and branch
-on the returned result. The root-barrel integration fixture compiles a concrete
-port implementation against this migration surface.
+on the returned result. Existing editor integrations can add partial B/I/U
+changes with `session.updateFormatting(isBold: true)`; omitted flags retain
+their current draft values and the session identity remains stable. The
+root-barrel integration fixture compiles a concrete port implementation against
+this migration surface.
 
 ### 4.20 Unified commit confirmation
 

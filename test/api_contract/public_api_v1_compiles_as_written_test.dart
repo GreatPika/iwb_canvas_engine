@@ -1155,6 +1155,11 @@ void _exerciseInlineTextEditingContractSurface(
   _use(session?.isActive);
   _use(session?.isStale);
   session?.updateText('draft text');
+  session?.updateFormatting(
+    isBold: true,
+    isItalic: false,
+    isUnderline: true,
+  );
   _use(session?.commit(timestampMs: 11));
   session?.dismiss();
 }

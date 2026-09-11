@@ -149,6 +149,8 @@ final class CanvasTextEditSession {
     required bool Function() isActive,
     required bool Function() isStale,
     required void Function(String text) updateText,
+    required void Function({bool? isBold, bool? isItalic, bool? isUnderline})
+    updateFormatting,
     required bool Function({int? timestampMs}) commit,
     required VoidCallback dismiss,
   }) : _liveText = liveText,
@@ -157,6 +159,7 @@ final class CanvasTextEditSession {
        _isActive = isActive,
        _isStale = isStale,
        _updateText = updateText,
+       _updateFormatting = updateFormatting,
        _commit = commit,
        _dismiss = dismiss;
 
@@ -166,6 +169,8 @@ final class CanvasTextEditSession {
   final bool Function() _isActive;
   final bool Function() _isStale;
   final void Function(String text) _updateText;
+  final void Function({bool? isBold, bool? isItalic, bool? isUnderline})
+  _updateFormatting;
   final bool Function({int? timestampMs}) _commit;
   final VoidCallback _dismiss;
 
@@ -182,6 +187,12 @@ final class CanvasTextEditSession {
   bool get isStale => _isStale();
 
   void updateText(String text) => _updateText(text);
+  void updateFormatting({bool? isBold, bool? isItalic, bool? isUnderline}) =>
+      _updateFormatting(
+        isBold: isBold,
+        isItalic: isItalic,
+        isUnderline: isUnderline,
+      );
   bool commit({int? timestampMs}) => _commit(timestampMs: timestampMs);
   void dismiss() => _dismiss();
 }
@@ -225,6 +236,8 @@ CanvasTextEditSession canvasTextEditSessionForRuntime({
   required bool Function() isActive,
   required bool Function() isStale,
   required void Function(String text) updateText,
+  required void Function({bool? isBold, bool? isItalic, bool? isUnderline})
+  updateFormatting,
   required bool Function({int? timestampMs}) commit,
   required VoidCallback dismiss,
 }) {
@@ -241,6 +254,7 @@ CanvasTextEditSession canvasTextEditSessionForRuntime({
     isActive: isActive,
     isStale: isStale,
     updateText: updateText,
+    updateFormatting: updateFormatting,
     commit: commit,
     dismiss: dismiss,
   );

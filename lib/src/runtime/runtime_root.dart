@@ -79,6 +79,9 @@ typedef TextEditPrepareInput = ({
   CanvasInteractionRequestId requestId,
   CanvasElementId targetElementId,
   String newText,
+  bool isBold,
+  bool isItalic,
+  bool isUnderline,
   int? timestampMs,
 });
 
@@ -864,15 +867,28 @@ final class RuntimeRoot
   // This explicit copy keeps a live text measurement in the same frame-facts
   // shape GeometryPolicy already owns; splitting fields into a partial builder
   // would make the frame handoff harder to audit.
-  // ignore: halstead-volume, source-lines-of-code
+  // ignore: halstead-volume, source-lines-of-code, number-of-parameters
   FrameElementFacts _textFrameFactsWithLiveText(
     FrameElementFacts source,
     String text, {
+    bool? isBold,
+    bool? isItalic,
+    bool? isUnderline,
     CanvasTransform? transform,
     MeasuredTextLayout? measuredTextLayout,
   }) {
+    final resolvedIsBold = isBold ?? source.isBold ?? false;
+    final resolvedIsItalic = isItalic ?? source.isItalic ?? false;
+    final resolvedIsUnderline = isUnderline ?? source.isUnderline ?? false;
     final layout =
-        measuredTextLayout ?? _measuredTextLayoutFromFrameFacts(source, text);
+        measuredTextLayout ??
+        _measuredTextLayoutFromFrameFacts(
+          source,
+          text,
+          isBold: resolvedIsBold,
+          isItalic: resolvedIsItalic,
+          isUnderline: resolvedIsUnderline,
+        );
 
     return FrameElementFacts(
       id: source.id,
@@ -904,9 +920,9 @@ final class RuntimeRoot
       textColor: source.textColor,
       textAlign: source.textAlign,
       textDirection: source.textDirection,
-      isBold: source.isBold,
-      isItalic: source.isItalic,
-      isUnderline: source.isUnderline,
+      isBold: resolvedIsBold,
+      isItalic: resolvedIsItalic,
+      isUnderline: resolvedIsUnderline,
       fontFamily: source.fontFamily,
       maxWidth: source.maxWidth,
       lineHeight: source.lineHeight,
@@ -948,10 +964,16 @@ final class RuntimeRoot
     };
   }
 
+  // The frame input remains together so text and every formatting fact reach
+  // the sole measurer as one candidate rather than parallel geometry paths.
+  // ignore: cyclomatic-complexity, number-of-parameters
   MeasuredTextLayout _measuredTextLayoutFromFrameFacts(
     FrameElementFacts facts,
-    String text,
-  ) {
+    String text, {
+    bool? isBold,
+    bool? isItalic,
+    bool? isUnderline,
+  }) {
     final result = _textLayoutMeasurer.measureTextLayout(
       MeasuredTextLayoutInput(
         text: text,
@@ -959,9 +981,9 @@ final class RuntimeRoot
         color: _textLayoutColorForFrame(facts),
         align: facts.textAlign ?? TextAlign.left,
         direction: facts.textDirection ?? TextDirection.ltr,
-        isBold: facts.isBold ?? false,
-        isItalic: facts.isItalic ?? false,
-        isUnderline: facts.isUnderline ?? false,
+        isBold: isBold ?? facts.isBold ?? false,
+        isItalic: isItalic ?? facts.isItalic ?? false,
+        isUnderline: isUnderline ?? facts.isUnderline ?? false,
         fontFamily: facts.fontFamily,
         maxWidth: facts.maxWidth,
         lineHeight: facts.lineHeight,
@@ -1522,8 +1544,9 @@ final class RuntimeRoot
   // The compatible command and active-session adapters converge here before
   // preparation so they cannot produce different terminal outcomes; keeping
   // their ordered failure and delivery checks together is safer than splitting
-  // the terminal solely to lower a metric.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  // the terminal solely to lower a metric. Keeping guard, equality, package,
+  // and delivery together makes this irreversible boundary auditable.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
   CanvasTextEditFinishResult _finishTextEdit(
     CanvasInteractionRequestId requestId,
     String newText, {
@@ -1544,7 +1567,20 @@ final class RuntimeRoot
     }
     final targetElementId = guard.targetElementId as CanvasElementId;
     final previousText = guard.currentText as String;
-    if (previousText == newText) {
+    final formatting = completingSession == null
+        ? _textFormattingForElement(targetElementId)
+        : _textFormattingForSession(completingSession);
+    if (formatting == null) {
+      _textEditingPort.clearConsumedRequest(requestId);
+
+      return completingSession == null
+          ? CanvasTextEditFinishResult.rejected
+          : CanvasTextEditFinishResult.stale;
+    }
+    final isUnchanged = completingSession == null
+        ? previousText == newText
+        : _isTextDraftEqualToBase(completingSession, newText, formatting);
+    if (isUnchanged) {
       _interactionEngine.consumeTextEditRequest(requestId);
       _textEditingPort.clearAcceptedSession(completingSession);
 
@@ -1554,6 +1590,9 @@ final class RuntimeRoot
       requestId: requestId,
       targetElementId: targetElementId,
       newText: newText,
+      isBold: formatting.isBold,
+      isItalic: formatting.isItalic,
+      isUnderline: formatting.isUnderline,
       timestampMs: timestampMs,
     ));
     if (preparedText == null) {
@@ -1600,6 +1639,9 @@ final class RuntimeRoot
     return CanvasTextEditFinishResult.committed;
   }
 
+  // The complete candidate fields stay beside the one update construction so
+  // text, B/I/U, and anchor cannot diverge across a second preparation path.
+  // ignore: halstead-volume
   _PreparedTextEditCommit? _prepareTextEditCommit(TextEditPrepareInput input) {
     final prepareOverride = _textEditPrepareOverride;
     if (prepareOverride != null) {
@@ -1608,10 +1650,7 @@ final class RuntimeRoot
           ? throw StateError('Text preparation overrides cannot install edits.')
           : null;
     }
-    final transform = _textEditAnchorPreservingTransform(
-      input.targetElementId,
-      input.newText,
-    );
+    final transform = _textEditAnchorPreservingTransform(input);
     CanvasTextElement? before;
     CanvasTextElement? after;
     final prepared = _editKernel.prepareDeferredInteractionCommit(
@@ -1622,6 +1661,9 @@ final class RuntimeRoot
               ? const CanvasFieldUpdate.absent()
               : CanvasFieldSet(transform),
           text: CanvasFieldSet(input.newText),
+          isBold: CanvasFieldSet(input.isBold),
+          isItalic: CanvasFieldSet(input.isItalic),
+          isUnderline: CanvasFieldSet(input.isUnderline),
         ),
       ),
       augmentAcceptedPlan: (document, plan) {
@@ -1676,10 +1718,9 @@ final class RuntimeRoot
   }
 
   CanvasTransform? _textEditAnchorPreservingTransform(
-    CanvasElementId elementId,
-    String newText,
+    TextEditPrepareInput input,
   ) {
-    final anchorInputs = _textEditAnchorInputsFor(elementId, newText);
+    final anchorInputs = _textEditAnchorInputsFor(input);
     if (anchorInputs == null) {
       return null;
     }
@@ -1718,18 +1759,24 @@ final class RuntimeRoot
     MeasuredTextLayout currentLayout,
     MeasuredTextLayout nextLayout,
   })?
-  _textEditAnchorInputsFor(CanvasElementId elementId, String newText) {
-    final current = _frameFactsForElement(elementId);
+  _textEditAnchorInputsFor(TextEditPrepareInput input) {
+    final current = _frameFactsForElement(input.targetElementId);
     final currentLayout = current?.measuredTextLayout;
     if (current == null ||
         current.kind != CanvasElementKind.text ||
         currentLayout == null ||
-        current.text == newText) {
+        (current.text == input.newText &&
+            current.isBold == input.isBold &&
+            current.isItalic == input.isItalic &&
+            current.isUnderline == input.isUnderline)) {
       return null;
     }
     final nextLayout = _textFrameFactsWithLiveText(
       current,
-      newText,
+      input.newText,
+      isBold: input.isBold,
+      isItalic: input.isItalic,
+      isUnderline: input.isUnderline,
     ).measuredTextLayout;
     if (nextLayout == null) {
       return null;
@@ -1740,6 +1787,40 @@ final class RuntimeRoot
       currentLayout: currentLayout,
       nextLayout: nextLayout,
     );
+  }
+
+  _TextEditFormatting? _textFormattingForElement(CanvasElementId elementId) {
+    final facts = _frameFactsForElement(elementId);
+    if (facts == null || facts.kind != CanvasElementKind.text) {
+      return null;
+    }
+
+    return _TextEditFormatting(
+      isBold: facts.isBold ?? false,
+      isItalic: facts.isItalic ?? false,
+      isUnderline: facts.isUnderline ?? false,
+    );
+  }
+
+  _TextEditFormatting _textFormattingForSession(
+    _RuntimeTextEditSessionState state,
+  ) {
+    return _TextEditFormatting(
+      isBold: state.isBold,
+      isItalic: state.isItalic,
+      isUnderline: state.isUnderline,
+    );
+  }
+
+  bool _isTextDraftEqualToBase(
+    _RuntimeTextEditSessionState state,
+    String text,
+    _TextEditFormatting formatting,
+  ) {
+    return text == state.initialText &&
+        formatting.isBold == (state.baseFacts.isBold ?? false) &&
+        formatting.isItalic == (state.baseFacts.isItalic ?? false) &&
+        formatting.isUnderline == (state.baseFacts.isUnderline ?? false);
   }
 
   Offset _textEditAnchorWorldDelta(
@@ -4313,6 +4394,18 @@ _TextEditHorizontalAnchor _resolvedHorizontalTextAnchor(
 
 enum _TextEditHorizontalAnchor { left, center, right }
 
+final class _TextEditFormatting {
+  const _TextEditFormatting({
+    required this.isBold,
+    required this.isItalic,
+    required this.isUnderline,
+  });
+
+  final bool isBold;
+  final bool isItalic;
+  final bool isUnderline;
+}
+
 // Transform update helpers.
 CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
   return CanvasTransform.translation(
@@ -4767,8 +4860,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }
 
   // Candidate creation captures request guard facts and runtime callbacks in one
-  // atomic session value so later start/commit cannot mix guard identities.
-  // ignore: halstead-volume, source-lines-of-code
+  // atomic session value, including its initial B/I/U draft, so later
+  // start/commit cannot mix guard identities or draft bases.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index
   _RuntimeTextEditSessionState? _candidateStateFor(
     CanvasContextActionRequested request,
   ) {
@@ -4799,6 +4893,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       initialText: initialText,
       liveText: initialText,
       baseFacts: facts,
+      isBold: facts.isBold ?? false,
+      isItalic: facts.isItalic ?? false,
+      isUnderline: facts.isUnderline ?? false,
       session: canvasTextEditSessionForRuntime(
         elementId: targetElementId,
         requestId: guard.requestId,
@@ -4819,7 +4916,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
         style: () {
           _ensurePublicReadAllowed();
 
-          return _styleFor(state.baseFacts);
+          return _styleFor(state);
         },
         isActive: () {
           _ensurePublicReadAllowed();
@@ -4832,6 +4929,14 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
           return _isStale(state);
         },
         updateText: (text) => _updateText(state, text),
+        updateFormatting: ({isBold, isItalic, isUnderline}) {
+          _updateFormatting(
+            state,
+            isBold: isBold,
+            isItalic: isItalic,
+            isUnderline: isUnderline,
+          );
+        },
         commit: ({timestampMs}) {
           final result = _finishState(
             state,
@@ -4939,6 +5044,30 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _activeSession.notifyLiveTextChanged();
   }
 
+  void _updateFormatting(
+    _RuntimeTextEditSessionState state, {
+    bool? isBold,
+    bool? isItalic,
+    bool? isUnderline,
+  }) {
+    _ensurePublicOperationAllowed();
+    if (!identical(_active?.session, state.session) || _isStale(state)) {
+      return;
+    }
+    final nextIsBold = isBold ?? state.isBold;
+    final nextIsItalic = isItalic ?? state.isItalic;
+    final nextIsUnderline = isUnderline ?? state.isUnderline;
+    if (nextIsBold == state.isBold &&
+        nextIsItalic == state.isItalic &&
+        nextIsUnderline == state.isUnderline) {
+      return;
+    }
+    state.isBold = nextIsBold;
+    state.isItalic = nextIsItalic;
+    state.isUnderline = nextIsUnderline;
+    _activeSession.notifyLiveTextChanged();
+  }
+
   CanvasTextEditFinishResult _finishCommandForState(
     _RuntimeTextEditSessionState state,
     String newText, {
@@ -4983,6 +5112,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     final measuredTextLayout = _root._measuredTextLayoutFromFrameFacts(
       state.baseFacts,
       state.liveText,
+      isBold: state.isBold,
+      isItalic: state.isItalic,
+      isUnderline: state.isUnderline,
     );
     final baseLayout = state.baseFacts.measuredTextLayout;
     final transform = baseLayout == null
@@ -4995,6 +5127,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     final facts = _root._textFrameFactsWithLiveText(
       state.baseFacts,
       state.liveText,
+      isBold: state.isBold,
+      isItalic: state.isItalic,
+      isUnderline: state.isUnderline,
       transform: transform,
       measuredTextLayout: measuredTextLayout,
     );
@@ -5009,13 +5144,14 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     );
   }
 
-  CanvasTextEditStyle _styleFor(FrameElementFacts facts) {
+  CanvasTextEditStyle _styleFor(_RuntimeTextEditSessionState state) {
+    final facts = state.baseFacts;
     return CanvasTextEditStyle(
       fontSize: facts.fontSize ?? 24,
       fontFamily: facts.fontFamily,
-      isBold: facts.isBold ?? false,
-      isItalic: facts.isItalic ?? false,
-      isUnderline: facts.isUnderline ?? false,
+      isBold: state.isBold,
+      isItalic: state.isItalic,
+      isUnderline: state.isUnderline,
       color: facts.textColor ?? const Color(0xFF000000),
       textAlign: facts.textAlign ?? TextAlign.left,
       textDirection: facts.textDirection ?? TextDirection.ltr,
@@ -5036,6 +5172,9 @@ final class _RuntimeTextEditSessionState {
     required this.initialText,
     required this.liveText,
     required this.baseFacts,
+    required this.isBold,
+    required this.isItalic,
+    required this.isUnderline,
     required this.session,
   });
 
@@ -5050,6 +5189,9 @@ final class _RuntimeTextEditSessionState {
   String liveText;
   final FrameElementFacts baseFacts;
   final CanvasTextEditSession session;
+  bool isBold;
+  bool isItalic;
+  bool isUnderline;
   bool active = false;
   bool stale = false;
   CanvasTextEditGeometry? lastGeometry;

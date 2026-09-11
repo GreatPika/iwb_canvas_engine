@@ -145,10 +145,13 @@ Rules:
   facts and captured grid style values where they affect static background
   output, and must not invalidate ordinary committed element paint plans.
 - `FrameTextLayoutMeasurer` is the single TextPainter owner for committed and
-  live text layout measurement. It produces immutable `MeasuredTextLayout`
-  bounds for paint, hit, selection, edit, and context geometry, and frame code
-  hands those metrics to geometry/spatial/frame consumers instead of allowing
-  downstream formula bounds or duplicate overlay measurement.
+  live text layout measurement. A live session supplies its one text/B/I/U
+  draft to that same measured input, so style-only and mixed changes use the
+  same bounds and anchor rule before and after acceptance. It produces immutable
+  `MeasuredTextLayout` bounds for paint, hit, selection, edit, and context
+  geometry, and frame code hands those metrics to geometry/spatial/frame
+  consumers instead of allowing downstream formula bounds or duplicate overlay
+  measurement.
 - active inline text editing suppresses matching original text records and
   selection decoration in frame output using runtime-owned active session facts.
   Suppression must not mutate `CanvasTextElement.isVisible`, remove the element

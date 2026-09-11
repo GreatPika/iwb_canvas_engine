@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -24,6 +25,9 @@ void main() {
   _testReadOnlyAdmission();
   _testSingleActiveAdmission();
   _testLiveUpdateRemeasuresGeometry();
+  _testFormattingDraftCommitsOneCompleteUpdate();
+  _testFormattingNoOpAndCancelAreSilent();
+  _testFormattedDraftGeometryMatchesAcceptedFrame();
   _testLiveGeometryPreservesTextAlignmentAnchor();
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
@@ -78,6 +82,7 @@ void _testDirectTerminalInputAndSharedValidation() {
           scenario.root.textEditing.startFromContextAction(request),
         );
         session.updateText('retained draft');
+        session.updateFormatting(isBold: true, isUnderline: true);
         var notifications = 0;
         void listener() {
           notifications += 1;
@@ -102,6 +107,9 @@ void _testDirectTerminalInputAndSharedValidation() {
         }
 
         expect(proposed?.after.text, 'command terminal input');
+        expect(proposed?.after.isBold, isTrue);
+        expect(proposed?.after.isItalic, isFalse);
+        expect(proposed?.after.isUnderline, isTrue);
         expect(_textValue(scenario.root), 'command terminal input');
         expect(session.liveText, 'retained draft');
         expect(notifications, 1);
@@ -797,6 +805,252 @@ void _testLiveUpdateRemeasuresGeometry() {
   });
 }
 
+// One assertion path must retain the resolver proposal, committed fields,
+// revision, action, and preparation observations together; splitting it would
+// hide a partial update or terminal-work leak.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testFormattingDraftCommitsOneCompleteUpdate() {
+  test('style-only draft commits one complete text update', () async {
+    CanvasTextEditCommitRequest? proposal;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (request) {
+          proposal = request as CanvasTextEditCommitRequest;
+
+          return acceptCommit(request);
+        },
+      ),
+    );
+    try {
+      final request = await scenario.issueTextRequest();
+      final session = _expectSession(
+        scenario.root.textEditing.startFromContextAction(request),
+      );
+      final documentRevision = scenario.root.state.value.revisions.document;
+      final documentBeforeFormatting = scenario.root.readDocument();
+      final projections = <StoreAffectedElementProjection>[];
+      final work = <PreparedInteractionApplyWorkEvent>[];
+
+      CommitApplier.observePreparedInteractionWork(
+        work.add,
+        () => DocumentStoreKernel.observeAffectedElementProjection(
+          projections.add,
+          () => session.updateFormatting(isBold: true, isItalic: true),
+        ),
+      );
+
+      expect(session.style.isBold, isTrue);
+      expect(session.style.isItalic, isTrue);
+      expect(session.style.isUnderline, isFalse);
+      expect(_textElement(scenario.root).isBold, isFalse);
+      expect(_textElement(scenario.root).isItalic, isFalse);
+      expect(scenario.root.state.value.revisions.document, documentRevision);
+      expect(scenario.root.readDocument(), same(documentBeforeFormatting));
+      expect(projections, isEmpty);
+      expect(work, isEmpty);
+
+      expect(
+        CommitApplier.observePreparedInteractionWork(
+          work.add,
+          () => DocumentStoreKernel.observeAffectedElementProjection(
+            projections.add,
+            () => session.commit(timestampMs: 91),
+          ),
+        ),
+        isTrue,
+      );
+
+      expect(proposal?.before.text, 'hello');
+      expect(proposal?.before.isBold, isFalse);
+      expect(proposal?.before.isItalic, isFalse);
+      expect(proposal?.after.text, 'hello');
+      expect(proposal?.after.isBold, isTrue);
+      expect(proposal?.after.isItalic, isTrue);
+      expect(proposal?.after.isUnderline, isFalse);
+      expect(_textElement(scenario.root).isBold, isTrue);
+      expect(_textElement(scenario.root).isItalic, isTrue);
+      expect(
+        scenario.root.state.value.revisions.document,
+        documentRevision + 1,
+      );
+      expect(projections, hasLength(1));
+      expect(
+        work,
+        containsAllInOrder([
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.consumed,
+        ]),
+      );
+      expect(scenario.actions, hasLength(1));
+      final payload =
+          scenario.actions.single.payload as CanvasTextEditActionPayload;
+      expect(payload.requestId, request.requestId);
+      expect(payload.previousTextLength, 5);
+      expect(payload.nextTextLength, 5);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+}
+
+// Revert and cancel share the same terminal-work absence oracle, so keeping
+// them together makes a resolver or action leak visible in either branch.
+// ignore: halstead-volume, source-lines-of-code
+void _testFormattingNoOpAndCancelAreSilent() {
+  test(
+    'reverted and cancelled formatting drafts do not start terminal work',
+    () async {
+      var resolverCalls = 0;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) {
+            resolverCalls += 1;
+            return const CanvasCommitCancel();
+          },
+        ),
+      );
+      try {
+        final firstRequest = await scenario.issueTextRequest();
+        final reverted = _expectSession(
+          scenario.root.textEditing.startFromContextAction(firstRequest),
+        );
+        final initialRevision = scenario.root.state.value.revisions.document;
+        final documentBeforeRevert = scenario.root.readDocument();
+        final revertedProjections = <StoreAffectedElementProjection>[];
+        final revertedWork = <PreparedInteractionApplyWorkEvent>[];
+
+        expect(
+          CommitApplier.observePreparedInteractionWork(
+            revertedWork.add,
+            () => DocumentStoreKernel.observeAffectedElementProjection(
+              revertedProjections.add,
+              () {
+                reverted.updateFormatting(isBold: true, isItalic: true);
+                reverted.updateFormatting(isBold: false, isItalic: false);
+
+                return reverted.commit(timestampMs: 94);
+              },
+            ),
+          ),
+          isTrue,
+        );
+        expect(_textElement(scenario.root).isBold, isFalse);
+        expect(_textElement(scenario.root).isItalic, isFalse);
+        expect(scenario.root.state.value.revisions.document, initialRevision);
+        expect(scenario.root.readDocument(), same(documentBeforeRevert));
+        expect(revertedProjections, isEmpty);
+        expect(revertedWork, isEmpty);
+        expect(scenario.actions, isEmpty);
+        expect(resolverCalls, 0);
+
+        final cancelRequest = await scenario.issueTextRequest();
+        final cancelled = _expectSession(
+          scenario.root.textEditing.startFromContextAction(cancelRequest),
+        );
+        final documentBeforeCancel = scenario.root.readDocument();
+        final cancelledProjections = <StoreAffectedElementProjection>[];
+        final cancelledWork = <PreparedInteractionApplyWorkEvent>[];
+
+        CommitApplier.observePreparedInteractionWork(
+          cancelledWork.add,
+          () => DocumentStoreKernel.observeAffectedElementProjection(
+            cancelledProjections.add,
+            () {
+              cancelled.updateFormatting(isUnderline: true);
+              cancelled.dismiss();
+            },
+          ),
+        );
+
+        expect(_textElement(scenario.root).isUnderline, isFalse);
+        expect(scenario.root.state.value.revisions.document, initialRevision);
+        expect(scenario.root.readDocument(), same(documentBeforeCancel));
+        expect(cancelledProjections, isEmpty);
+        expect(cancelledWork, isEmpty);
+        expect(scenario.actions, isEmpty);
+        expect(resolverCalls, 0);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// This exercises RuntimeRoot's public draft geometry against a later frame
+// projection using metrics loaded from the installed Flutter SDK. The frame
+// fixture separately proves the same font distinguishes normal, bold, and
+// italic measurement inputs.
+// ignore: halstead-volume, source-lines-of-code
+void _testFormattedDraftGeometryMatchesAcceptedFrame() {
+  test(
+    'formatted draft geometry and anchor match the accepted frame',
+    () async {
+      await _loadRobotoForRuntimeStyleGeometry();
+      final scenario = _Scenario(
+        document: _document(
+          align: TextAlign.right,
+          maxWidth: null,
+          fontFamily: _unit3RuntimeRobotoFamily,
+          text: 'WMWMWM',
+        ),
+      );
+      try {
+        final initialRequest = await scenario.issueTextRequest();
+        final initial = _expectSession(
+          scenario.root.textEditing.startFromContextAction(initialRequest),
+        );
+        final baseGeometry = initial.geometry;
+        final baseAnchor = _anchorValueFor(
+          baseGeometry.editBoundsWorld,
+          TextAlign.right,
+        );
+
+        initial.updateFormatting(isBold: true);
+        final boldDraftGeometry = initial.geometry;
+        expect(
+          boldDraftGeometry.editBoundsWorld.width,
+          isNot(equals(baseGeometry.editBoundsWorld.width)),
+        );
+        expect(
+          _anchorValueFor(boldDraftGeometry.editBoundsWorld, TextAlign.right),
+          moreOrLessEquals(baseAnchor, epsilon: 0.001),
+        );
+        expect(initial.commit(timestampMs: 92), isTrue);
+
+        final boldRequest = await scenario.issueTextRequest();
+        final boldAccepted = _expectSession(
+          scenario.root.textEditing.sessionCandidateFor(boldRequest),
+        );
+        expect(boldAccepted.geometry, boldDraftGeometry);
+        expect(boldAccepted.style.isBold, isTrue);
+        expect(boldAccepted.style.isItalic, isFalse);
+
+        final mixed = _expectSession(
+          scenario.root.textEditing.start(boldAccepted),
+        );
+        mixed.updateText('WMWMWM\nitalic mixed draft');
+        mixed.updateFormatting(isItalic: true);
+        final mixedDraftGeometry = mixed.geometry;
+        expect(
+          _anchorValueFor(mixedDraftGeometry.editBoundsWorld, TextAlign.right),
+          moreOrLessEquals(baseAnchor, epsilon: 0.001),
+        );
+        expect(mixed.commit(timestampMs: 93), isTrue);
+
+        final mixedRequest = await scenario.issueTextRequest();
+        final mixedAccepted = _expectSession(
+          scenario.root.textEditing.sessionCandidateFor(mixedRequest),
+        );
+        expect(mixedAccepted.geometry, mixedDraftGeometry);
+        expect(mixedAccepted.style.isBold, isTrue);
+        expect(mixedAccepted.style.isItalic, isTrue);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
 void _testLiveGeometryPreservesTextAlignmentAnchor() {
   test(
     'live geometry preserves the aligned text anchor before commit',
@@ -1179,12 +1433,14 @@ void _testStaleCommitRetainsDraft() {
           scenario.root.textEditing.startFromContextAction(request),
         );
         session.updateText('retained draft');
+        session.updateFormatting(isBold: true, isItalic: true);
         final retainedGeometry = session.geometry;
         final retainedStyle = session.style;
         _makeTextRequestStale(scenario);
         final revisionsAfterExternalChange =
             scenario.root.state.value.revisions;
         session.updateText('must not replace retained draft');
+        session.updateFormatting(isBold: false, isItalic: false);
 
         expect(session.isStale, isTrue);
         expect(session.commit(timestampMs: 43), isFalse);
@@ -2144,6 +2400,7 @@ CanvasDocument _document({
   TextAlign align = TextAlign.left,
   double? maxWidth = 120,
   String text = 'hello',
+  String? fontFamily,
 }) {
   return CanvasDocument(
     layers: [
@@ -2157,6 +2414,7 @@ CanvasDocument _document({
             color: const Color(0xFF111111),
             textDirection: TextDirection.ltr,
             align: align,
+            fontFamily: fontFamily,
             maxWidth: maxWidth,
           ),
           CanvasRectElement(
@@ -2168,6 +2426,40 @@ CanvasDocument _document({
       ),
     ],
   );
+}
+
+const _unit3RuntimeRobotoFamily = 'Unit3RuntimeRoboto';
+
+Future<void> _loadRobotoForRuntimeStyleGeometry() async {
+  final fontDirectory = _materialFontDirectoryForRuntimeTest();
+  final fontFiles = [
+    File('${fontDirectory.path}/Roboto-Regular.ttf'),
+    File('${fontDirectory.path}/Roboto-Bold.ttf'),
+    File('${fontDirectory.path}/Roboto-Italic.ttf'),
+  ];
+  for (final fontFile in fontFiles) {
+    expect(fontFile.existsSync(), isTrue, reason: fontFile.path);
+  }
+  for (final fontFile in fontFiles) {
+    await loadFontFromList(
+      await fontFile.readAsBytes(),
+      fontFamily: _unit3RuntimeRobotoFamily,
+    );
+  }
+}
+
+Directory _materialFontDirectoryForRuntimeTest() {
+  var candidate = File(Platform.resolvedExecutable).parent;
+  while (candidate.parent.path != candidate.path) {
+    final fontDirectory = Directory.fromUri(
+      candidate.uri.resolve('bin/cache/artifacts/material_fonts/'),
+    );
+    if (fontDirectory.existsSync()) {
+      return fontDirectory;
+    }
+    candidate = candidate.parent;
+  }
+  fail('Flutter SDK material fonts were not found from the test executable.');
 }
 
 // This fixture intentionally spells out every persisted text/common field so

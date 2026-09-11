@@ -238,7 +238,8 @@ prepared payload and do not obtain candidate access.
 
 A changed text edit seals its lengths-only action before installation from one
 addressed pair projected from that finished sparse payload: the committed base
-text row and the normalized candidate text row for the request target. The
+text row and the normalized complete text/B/I/U candidate row for the request
+target. The
 projection reads neither a whole-document view nor a live post-install value;
 it supplies the action id and both lengths from that exact-value pair. The
 immutable facts are compared by their complete values, not by DTO identity.

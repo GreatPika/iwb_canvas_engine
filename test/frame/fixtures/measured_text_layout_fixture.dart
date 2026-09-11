@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:ui';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_entry.dart';
 
 void main() {
   _testTextCacheEntryMetrics();
+  _testLoadedFontStyleMetrics();
   _testTextAlignmentAnchors();
   _testBoundedMeasurementFailure();
   _testGeometryAndRenderRecords();
@@ -40,6 +41,77 @@ void _testTextCacheEntryMetrics() {
       expect(entry.layout.lines, isNotEmpty);
     },
   );
+}
+
+void _testLoadedFontStyleMetrics() {
+  testWidgets('frame measures distinct bold and italic metrics from Roboto', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadRobotoForStyleMetrics);
+    final measurer = FrameTextLayoutMeasurer();
+    final normal = _readyLayoutWith(
+      measurer,
+      _input(
+        const _TextInputSpec(text: 'WMWMWM', fontFamily: _unit3RobotoFamily),
+      ),
+    );
+    final bold = _readyLayoutWith(
+      measurer,
+      _input(
+        const _TextInputSpec(
+          text: 'WMWMWM',
+          fontFamily: _unit3RobotoFamily,
+          isBold: true,
+        ),
+      ),
+    );
+    final italic = _readyLayoutWith(
+      measurer,
+      _input(
+        const _TextInputSpec(
+          text: 'WMWMWM',
+          fontFamily: _unit3RobotoFamily,
+          isItalic: true,
+        ),
+      ),
+    );
+
+    expect(bold.paintBoundsLocal.width, isNot(normal.paintBoundsLocal.width));
+    expect(italic.paintBoundsLocal.width, isNot(normal.paintBoundsLocal.width));
+  });
+}
+
+const _unit3RobotoFamily = 'Unit3Roboto';
+
+Future<void> _loadRobotoForStyleMetrics() async {
+  final fontDirectory = _materialFontDirectoryForTestRuntime();
+  final fontFiles = [
+    File('${fontDirectory.path}/Roboto-Regular.ttf'),
+    File('${fontDirectory.path}/Roboto-Bold.ttf'),
+    File('${fontDirectory.path}/Roboto-Italic.ttf'),
+  ];
+  for (final fontFile in fontFiles) {
+    expect(fontFile.existsSync(), isTrue, reason: fontFile.path);
+  }
+  final loader = FontLoader(_unit3RobotoFamily);
+  for (final fontFile in fontFiles) {
+    loader.addFont(fontFile.readAsBytes().then(ByteData.sublistView));
+  }
+  await loader.load();
+}
+
+Directory _materialFontDirectoryForTestRuntime() {
+  var candidate = File(Platform.resolvedExecutable).parent;
+  while (candidate.parent.path != candidate.path) {
+    final fontDirectory = Directory.fromUri(
+      candidate.uri.resolve('bin/cache/artifacts/material_fonts/'),
+    );
+    if (fontDirectory.existsSync()) {
+      return fontDirectory;
+    }
+    candidate = candidate.parent;
+  }
+  fail('Flutter SDK material fonts were not found from the test executable.');
 }
 
 void _testTextAlignmentAnchors() {
@@ -240,10 +312,10 @@ MeasuredTextLayoutInput _input(_TextInputSpec spec) {
     color: const Color(0xFF111111),
     align: spec.align,
     direction: spec.direction,
-    isBold: false,
-    isItalic: false,
+    isBold: spec.isBold,
+    isItalic: spec.isItalic,
     isUnderline: false,
-    fontFamily: null,
+    fontFamily: spec.fontFamily,
     maxWidth: spec.maxWidth,
     lineHeight: spec.lineHeight,
   );
@@ -315,6 +387,9 @@ final class _TextInputSpec {
     this.lineHeight,
     this.align = TextAlign.left,
     this.direction = TextDirection.ltr,
+    this.isBold = false,
+    this.isItalic = false,
+    this.fontFamily,
   });
 
   final String text;
@@ -323,6 +398,9 @@ final class _TextInputSpec {
   final double? lineHeight;
   final TextAlign align;
   final TextDirection direction;
+  final bool isBold;
+  final bool isItalic;
+  final String? fontFamily;
 }
 
 final class _TextFactsOverrides {

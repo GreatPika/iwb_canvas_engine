@@ -11,6 +11,7 @@ import '../../support/runtime_with_document.dart';
 
 void main() {
   _testOverlayUsesEditableTextAndSessionGeometry();
+  _testFormattingRetainsInputObjectsAndEditingValue();
   _testOverlayAnchorsLiveWidthToTextAlignment();
   _testOverlayAppliesSessionTransform();
   _testAutoStartPolicy();
@@ -177,6 +178,149 @@ void _testOverlayAppliesSessionTransform() {
       _localEditBoundsFor(scenario.activeSession.geometry),
     );
   });
+}
+
+// This surface proof uses the actual EditableText value because a styled
+// rendering assertion cannot detect a controller, focus, selection, or IME
+// composition replacement. Its ordered formatting repaints stay together to
+// preserve the one active-input invariant across each observable frame.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testFormattingRetainsInputObjectsAndEditingValue() {
+  testWidgets(
+    'formatting retains active input identity and continues text input',
+    (tester) async {
+      final scenario = _OverlayScenario(
+        inlineEditOnDoubleTap: true,
+        autofocus: true,
+      );
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
+      await scenario.doubleTapText(tester);
+      final session = scenario.activeSession;
+      final editable = tester.widget<EditableText>(_editableTextFinder());
+      final controller = editable.controller;
+      final focusNode = editable.focusNode;
+      controller.value = const TextEditingValue(
+        text: 'typed draft',
+        selection: TextSelection(baseOffset: 1, extentOffset: 6),
+        composing: TextRange(start: 1, end: 6),
+      );
+      await tester.pump();
+      final valueBeforeFormatting = controller.value;
+      final documentRevision = scenario.runtime.state.value.revisions.document;
+
+      session.updateFormatting(isBold: true);
+      await tester.pump();
+      expect(session.style.isBold, isTrue);
+      expect(session.style.isItalic, isFalse);
+      expect(session.style.isUnderline, isFalse);
+      _expectFormattedActiveInput(
+        tester,
+        session: session,
+        textEditing: scenario.runtime.textEditing,
+        controller: controller,
+        focusNode: focusNode,
+        value: valueBeforeFormatting,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.normal,
+      );
+
+      session.updateFormatting(isItalic: true);
+      await tester.pump();
+      expect(session.style.isBold, isTrue);
+      expect(session.style.isItalic, isTrue);
+      expect(session.style.isUnderline, isFalse);
+      _expectFormattedActiveInput(
+        tester,
+        session: session,
+        textEditing: scenario.runtime.textEditing,
+        controller: controller,
+        focusNode: focusNode,
+        value: valueBeforeFormatting,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
+      );
+
+      session.updateFormatting(isUnderline: true);
+      await tester.pump();
+      expect(session.style.isBold, isTrue);
+      expect(session.style.isItalic, isTrue);
+      expect(session.style.isUnderline, isTrue);
+      _expectFormattedActiveInput(
+        tester,
+        session: session,
+        textEditing: scenario.runtime.textEditing,
+        controller: controller,
+        focusNode: focusNode,
+        value: valueBeforeFormatting,
+        fontWeight: FontWeight.bold,
+        fontStyle: FontStyle.italic,
+        decoration: TextDecoration.underline,
+      );
+
+      session.updateFormatting(
+        isBold: false,
+        isItalic: true,
+        isUnderline: true,
+      );
+      await tester.pump();
+      _expectFormattedActiveInput(
+        tester,
+        session: session,
+        textEditing: scenario.runtime.textEditing,
+        controller: controller,
+        focusNode: focusNode,
+        value: valueBeforeFormatting,
+        fontWeight: FontWeight.normal,
+        fontStyle: FontStyle.italic,
+        decoration: TextDecoration.underline,
+      );
+      expect(_textElement(scenario.runtime).text, 'hello');
+      expect(scenario.runtime.state.value.revisions.document, documentRevision);
+      expect(scenario.actions, isEmpty);
+
+      await tester.enterText(
+        _editableTextFinder(),
+        'continued after formatting',
+      );
+      await tester.pump();
+
+      expect(scenario.activeSession, same(session));
+      expect(session.liveText, 'continued after formatting');
+      expect(focusNode.hasFocus, isTrue);
+      expect(_textElement(scenario.runtime).text, 'hello');
+      expect(scenario.runtime.state.value.revisions.document, documentRevision);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+// The helper keeps every observation of one visible formatted editor together.
+// Passing an opaque carrier would hide the surface interaction being proven.
+// ignore: number-of-parameters
+void _expectFormattedActiveInput(
+  WidgetTester tester, {
+  required CanvasTextEditSession session,
+  required CanvasTextEditingPort textEditing,
+  required TextEditingController controller,
+  required FocusNode focusNode,
+  required TextEditingValue value,
+  required FontWeight fontWeight,
+  required FontStyle fontStyle,
+  TextDecoration? decoration,
+}) {
+  final editable = tester.widget<EditableText>(_editableTextFinder());
+
+  expect(textEditing.activeSession.value, same(session));
+  expect(editable.controller, same(controller));
+  expect(editable.focusNode, same(focusNode));
+  expect(focusNode.hasFocus, isTrue);
+  expect(editable.style.fontWeight, fontWeight);
+  expect(editable.style.fontStyle, fontStyle);
+  expect(editable.style.decoration, decoration);
+  expect(controller.value, value);
+  expect(controller.value.selection, value.selection);
+  expect(controller.value.composing, value.composing);
 }
 
 void _testAutoStartPolicy() {

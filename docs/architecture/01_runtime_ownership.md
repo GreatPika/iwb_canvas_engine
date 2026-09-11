@@ -247,14 +247,16 @@ boundary. It admits only current text content-action requests, exposes one
 `ValueListenable<CanvasTextEditSession?>`, derives live session geometry from
 the frame-measured text layout source, and asks InteractionEngine's one
 non-consuming issued/current guard comparison for admission and staleness. It
-latches stale sessions without rebasing them, retaining their identity, live
-draft, base style, and last geometry while refusing later updates and commits.
-Its `finishActive` terminal owns commit/cancel outcome distinctions; compatible
-session, dismiss, direct-command, and stock-overlay adapters converge there.
+latches stale sessions without rebasing them, retaining their identity,
+immutable base facts, one live text/B/I/U draft, and last geometry while
+refusing later updates and commits. Its `finishActive` terminal owns
+commit/cancel outcome distinctions; compatible session, dismiss,
+direct-command, and stock-overlay adapters converge there.
 The command terminal alone retires a known invalid request. A changed commit
 obtains its action facts from the prepared Store target pair before installation,
-while its frame and committed layout share the same effective color calculation
-so the existing layout cache can be reused. It does not own Flutter
+while its frame and committed layout use the same complete text/B/I/U candidate
+and effective color calculation so the existing layout cache can be reused. It
+does not own Flutter
 `EditableText`, app decoration, context menus, or visibility hiding; active
 paint suppression is frame output behavior and stops for a stale session.
 

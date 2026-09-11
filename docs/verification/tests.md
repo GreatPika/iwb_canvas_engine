@@ -451,16 +451,20 @@ the general affine value type.
 frame-owned `FrameTextLayoutMeasurer` produces the local text bounds that
 geometry, spatial membership, frame painting, and live edit geometry consume,
 and those bounds stay stable across left, center, and right alignment changes.
+Its test-only loaded Roboto fixture proves normal, bold, and italic inputs use
+distinguishable real font metrics.
 
 `test.runtime.text_editing_port` and `test.surface.text_editing_overlay` cover
-runtime-owned active text editing sessions, stale/read-only admission, guarded
+runtime-owned active text editing sessions, partial B/I/U drafts, stale/read-only admission, guarded
 commit/dismiss behavior, changed-text active-session listener order (outer
 frame/state/action/observer delivery and guard release before close
 notification), a listener's accepted separate mutation/new-session survival,
 Flutter notifier-error continuation, public overlay/custom-overlay replacement, multiline growth
 from session geometry, live preservation of the resolved horizontal anchor and
 top edit edge, committed preservation of the same anchors after text size
-changes, and paint suppression without document visibility mutation. The runtime
+changes, formatting-only and mixed-draft geometry/anchor agreement with accepted
+frame facts, input controller/focus/selection/composing retention through
+formatting, and paint suppression without document visibility mutation. The runtime
 fixture also uses real external text/style, visibility, kind, relocation,
 removal, and same-ID replacement changes to prove stale draft identity/text/
 style/geometry retention, immutable retries, resolver/action/revision silence,
