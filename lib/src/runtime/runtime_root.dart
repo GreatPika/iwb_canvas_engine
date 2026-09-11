@@ -790,6 +790,7 @@ final class RuntimeRoot
       return null;
     }
 
+    final effectiveFontFamily = _effectiveTextFontFamily(facts.fontFamily);
     return FrameElementFacts(
       id: facts.id,
       kind: facts.kind,
@@ -827,10 +828,13 @@ final class RuntimeRoot
       isBold: facts.isBold,
       isItalic: facts.isItalic,
       isUnderline: facts.isUnderline,
-      fontFamily: facts.fontFamily,
+      fontFamily: effectiveFontFamily,
       maxWidth: facts.maxWidth,
       lineHeight: facts.lineHeight,
-      measuredTextLayout: _measuredTextLayoutFor(facts),
+      measuredTextLayout: _measuredTextLayoutFor(
+        facts,
+        fontFamily: effectiveFontFamily,
+      ),
       points: facts.points,
       start: facts.start,
       end: facts.end,
@@ -944,7 +948,14 @@ final class RuntimeRoot
     );
   }
 
-  MeasuredTextLayout? _measuredTextLayoutFor(StoreElementFacts facts) {
+  String? _effectiveTextFontFamily(String? storedFontFamily) {
+    return storedFontFamily ?? config.defaultFontFamily;
+  }
+
+  MeasuredTextLayout? _measuredTextLayoutFor(
+    StoreElementFacts facts, {
+    required String? fontFamily,
+  }) {
     final text = facts.text;
     if (facts.kind != CanvasElementKind.text || text == null) {
       return null;
@@ -959,7 +970,7 @@ final class RuntimeRoot
         isBold: facts.isBold ?? false,
         isItalic: facts.isItalic ?? false,
         isUnderline: facts.isUnderline ?? false,
-        fontFamily: facts.fontFamily,
+        fontFamily: fontFamily,
         maxWidth: facts.maxWidth,
         lineHeight: facts.lineHeight,
       ),

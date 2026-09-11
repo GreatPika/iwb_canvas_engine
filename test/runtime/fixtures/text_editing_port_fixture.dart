@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
@@ -22,7 +23,7 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // The fixture's one registration point lists every public text-session witness
 // so its coverage boundary remains explicit rather than hidden in test glue.
-// ignore: source-lines-of-code
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   _testCandidateLookup();
   _testEmptyPolicyDeletion();
@@ -39,6 +40,7 @@ void main() {
   _testFormattingDraftCommitsOneCompleteUpdate();
   _testFormattingNoOpAndCancelAreSilent();
   _testFormattedDraftGeometryMatchesAcceptedFrame();
+  _testRuntimeDefaultFontFamilyIsEffectiveButNotStored();
   _testLiveGeometryPreservesTextAlignmentAnchor();
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
@@ -68,6 +70,142 @@ void main() {
   _testFailedLoadPreservesActiveSession();
   _testDisposedRuntimeRejectsTextEditingPortOperations();
   _testDisposedRuntimeRejectsTextEditingSessionCallbacks();
+}
+
+// Default resolution is observed at the real frame/session handoffs and then
+// across confirmation so a display-only fallback cannot become stored data.
+// Keeping this end-to-end assertion together makes the stored-versus-effective
+// distinction and cross-runtime isolation easier to audit than test splitting.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testRuntimeDefaultFontFamilyIsEffectiveButNotStored() {
+  test(
+    'runtime font defaults stay isolated and preserve stored families',
+    () async {
+      await _loadRobotoForRuntimeStyleGeometry();
+      final inherited = _Scenario(
+        config: const CanvasRuntimeConfig(
+          commitResolver: acceptCommit,
+          defaultFontFamily: _unit3RuntimeRobotoFamily,
+        ),
+      );
+      final fallback = _Scenario(
+        config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
+      );
+      final explicit = _Scenario(
+        document: _document(fontFamily: 'Inter'),
+        config: const CanvasRuntimeConfig(
+          commitResolver: acceptCommit,
+          defaultFontFamily: _unit3RuntimeRobotoFamily,
+        ),
+      );
+      try {
+        final inheritedRow = _textRenderRowFor(inherited.root);
+        final fallbackRow = _textRenderRowFor(fallback.root);
+        final explicitRow = _textRenderRowFor(explicit.root);
+        expect(inheritedRow.layoutInput.fontFamily, _unit3RuntimeRobotoFamily);
+        expect(
+          inheritedRow.layoutCacheKey.fontFamily,
+          _unit3RuntimeRobotoFamily,
+        );
+        expect(fallbackRow.layoutInput.fontFamily, isNull);
+        expect(fallbackRow.layoutCacheKey.fontFamily, isNull);
+        expect(explicitRow.layoutInput.fontFamily, 'Inter');
+        expect(explicitRow.layoutCacheKey.fontFamily, 'Inter');
+
+        final inheritedSession = _expectSession(
+          inherited.root.textEditing.startFromContextAction(
+            await inherited.issueTextRequest(),
+          ),
+        );
+        final fallbackSession = _expectSession(
+          fallback.root.textEditing.startFromContextAction(
+            await fallback.issueTextRequest(),
+          ),
+        );
+        final explicitSession = _expectSession(
+          explicit.root.textEditing.startFromContextAction(
+            await explicit.issueTextRequest(),
+          ),
+        );
+        expect(inheritedSession.style.fontFamily, _unit3RuntimeRobotoFamily);
+        expect(fallbackSession.style.fontFamily, isNull);
+        expect(explicitSession.style.fontFamily, 'Inter');
+        expect(inheritedSession.commit(), isTrue);
+        expect(explicitSession.commit(), isTrue);
+        expect(inherited.root.projectionBuildCount, 0);
+        expect(explicit.root.projectionBuildCount, 0);
+        expect(_textElement(inherited.root).fontFamily, isNull);
+        expect(_textElement(explicit.root).fontFamily, 'Inter');
+        fallbackSession.dismiss();
+      } finally {
+        await inherited.dispose();
+        await fallback.dispose();
+        await explicit.dispose();
+      }
+    },
+  );
+
+  test(
+    'runtime config admits null and valid defaults and rejects element-invalid defaults',
+    () {
+      final valid = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: const CanvasRuntimeConfig(
+          commitResolver: acceptCommit,
+          defaultFontFamily: 'Roboto',
+        ),
+      );
+      valid.dispose();
+      final fallback = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: const CanvasRuntimeConfig(commitResolver: acceptCommit),
+      );
+      fallback.dispose();
+
+      for (final invalid in ['', 'f' * (canvasMaxFontFamilyLength + 1)]) {
+        expect(
+          () => runtimeRootWithCommittedDocumentSeed(
+            _document(),
+            config: CanvasRuntimeConfig(
+              commitResolver: acceptCommit,
+              defaultFontFamily: invalid,
+            ),
+          ),
+          throwsA(
+            isA<CanvasDataException>()
+                .having(
+                  (error) => error.code,
+                  'code',
+                  CanvasDataErrorCode.fieldMaxLength,
+                )
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'font family length is invalid.',
+                )
+                .having((error) => error.path, 'path', 'text.fontFamily'),
+          ),
+        );
+      }
+    },
+  );
+}
+
+TextRenderRow _textRenderRowFor(RuntimeRoot root) {
+  final output = root.buildResourceFreeMainFrame(
+    viewportWorldBounds: const Rect.fromLTWH(-20, -20, 220, 120),
+    devicePixelRatio: 1,
+    selectionStyle: CanvasSelectionStyle.defaultStyle,
+    gridStyle: CanvasGridStyle.defaultStyle,
+  );
+  final row = output.ordinaryPlan.ordinaryRecords
+      .singleWhere((record) => record.id == _textId)
+      .row;
+  if (row is! TextRenderRow) {
+    throw StateError('Expected a text render row.');
+  }
+
+  return row;
 }
 
 // The accepted deletion, fallible close notifier, and committed lease are one

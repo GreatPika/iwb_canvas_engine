@@ -1,5 +1,9 @@
 import 'dart:ui';
 
+// This public update declaration exposes every DTO field type directly; keeping
+// those imports together makes its compatibility surface auditable.
+// ignore_for_file: number-of-imports
+
 import 'canvas_contract_limits.dart';
 import 'canvas_element.dart';
 import 'canvas_errors.dart';
@@ -7,6 +11,7 @@ import 'canvas_field_update.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 import 'canvas_metadata.dart';
+import 'canvas_text_font_family_admission.dart';
 import 'canvas_transform_admission.dart';
 import 'canvas_value_validators.dart';
 
@@ -339,14 +344,7 @@ void _validateText(String value) {
 }
 
 void _validateNullableFontFamily(String? value) {
-  if (value != null &&
-      (value.isEmpty || value.length > canvasMaxFontFamilyLength)) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.fieldMaxLength,
-      message: 'font family length is invalid.',
-      path: 'text.fontFamily',
-    );
-  }
+  validateCanvasTextFontFamily(value);
 }
 
 void Function(double?) _validateNullablePositiveDimension(String path) {

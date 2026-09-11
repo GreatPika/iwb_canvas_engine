@@ -256,6 +256,11 @@ void main() {
     expect(jsonDecode(encodeCanvasDocumentToJson(document)), isA<Map<String, Object?>>());
   });
 
+  test('runtime default family remains absent from schema v1 text data', () {
+    _expectRuntimeDefaultFamilyRoundtrip(null);
+    _expectRuntimeDefaultFamilyRoundtrip('Inter');
+  });
+
   test('canonical schema v1 roundtrips descriptor-only vector resources', () {
     final document = CanvasDocument(
       resources: [
@@ -526,6 +531,81 @@ Map<String, Object?> _encodedRelationshipDocument({
   encodedElement['kind'] = encodedElementKind;
 
   return encoded;
+}
+
+void _expectRuntimeDefaultFamilyRoundtrip(String? storedFontFamily) {
+  final elementId = CanvasElementId(
+    storedFontFamily == null ? 'runtime-font-null' : 'runtime-font-explicit',
+  );
+  final runtime = CanvasRuntime(
+    config: CanvasRuntimeConfig(
+      commitResolver: (_) => const CanvasCommitAccept(
+        lease: _RuntimeDefaultFontLease(),
+      ),
+      defaultFontFamily: 'RuntimeDefaultFamily',
+    ),
+  );
+  try {
+    runtime.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(
+        CanvasDocument(
+          layers: [
+            CanvasLayer(
+              id: CanvasLayerId('runtime-font-layer'),
+              elements: [
+                CanvasTextElement(
+                  id: elementId,
+                  text: 'before',
+                  fontSize: 16,
+                  color: const Color(0xFF111111),
+                  textDirection: TextDirection.ltr,
+                  fontFamily: storedFontFamily,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    final session = switch (runtime.textEditing.startForElement(elementId)) {
+      CanvasTextEditStartSuccess(:final session) => session,
+      CanvasTextEditStartRefusal(:final reason) => throw StateError(
+        'Unexpected text admission refusal: $reason',
+      ),
+    };
+    expect(
+      session.style.fontFamily,
+      storedFontFamily ?? 'RuntimeDefaultFamily',
+    );
+    session.updateText('after');
+    expect(session.commit(), isTrue);
+
+    final persisted = runtime.readDocument();
+    final text = persisted.layers.single.elements.single as CanvasTextElement;
+    expect(text.fontFamily, storedFontFamily);
+    final encoded = encodeCanvasDocument(persisted);
+    final encodedText = ((encoded['layers'] as List<Object?>).single
+            as Map<String, Object?>)['elements'] as List<Object?>;
+    final textMap = encodedText.single as Map<String, Object?>;
+    _expectKeys(textMap, _textElementKeys);
+    expect(textMap['fontFamily'], storedFontFamily);
+    final decoded = decodeSchemaV1Document(encoded);
+    final decodedText =
+        decoded.layers.single.elements.single as CanvasTextElement;
+    expect(decodedText.fontFamily, storedFontFamily);
+  } finally {
+    runtime.dispose();
+  }
+}
+
+final class _RuntimeDefaultFontLease implements CanvasCommitLease {
+  const _RuntimeDefaultFontLease();
+
+  @override
+  void aborted() {}
+
+  @override
+  void committed() {}
 }
 
 void _expectKeys(Map<String, Object?> value, Set<String> expected) {

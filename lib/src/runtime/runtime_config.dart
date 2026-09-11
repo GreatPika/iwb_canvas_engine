@@ -4,6 +4,7 @@ import '../contracts/public/canvas_deletion.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../contracts/public/canvas_text_font_family_admission.dart';
 import '../contracts/public/canvas_tools.dart';
 
 final class RuntimeConfig {
@@ -14,6 +15,9 @@ final class RuntimeConfig {
       clearSelectionOnDrawModeEnter = config.clearSelectionOnDrawModeEnter,
       commitResolver = config.commitResolver,
       selectionDeletePolicy = config.selectionDeletePolicy,
+      defaultFontFamily = validateCanvasTextFontFamily(
+        config.defaultFontFamily,
+      ),
       eraserElementKinds = _materializeEraserElementKinds(
         config.eraserElementKinds,
       ),
@@ -25,6 +29,7 @@ final class RuntimeConfig {
   final bool clearSelectionOnDrawModeEnter;
   final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
+  final String? defaultFontFamily;
   final Set<CanvasElementKind>? eraserElementKinds;
   final RuntimeDiagnosticsConfig diagnostics;
 }

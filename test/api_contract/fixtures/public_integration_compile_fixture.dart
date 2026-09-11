@@ -312,6 +312,7 @@ CanvasRuntimeConfig _runtimeConfig() {
     initialMode: CanvasInteractionMode.move,
     initialDrawStyle: CanvasDrawStyle(),
     clearSelectionOnDrawModeEnter: true,
+    defaultFontFamily: 'Roboto',
     diagnosticPolicy: CanvasDiagnosticPolicy.verbose(),
   );
 }

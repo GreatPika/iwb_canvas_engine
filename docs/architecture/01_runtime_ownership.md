@@ -52,7 +52,7 @@ Runtime responsibilities are split as follows:
 |---|---|---|
 | Public API | stable DTOs, operations, events, errors, and application-owned prepared vector values | expose tables, handles, caches, runtime internals, raw Picture liveness, or upstream types |
 | DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache, coherent appearance reads | read gesture state, selection state, Flutter widget state, or a second stored appearance value |
-| FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
+| FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, resourceRevision, and runtime-resolved effective text-family inputs | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
 | InteractionEngine | pointer sessions, immutable selected-move participant basis/conflict state, tools, preview state, terminal commit requests, one non-consuming issued/current text-guard comparison, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
@@ -264,6 +264,13 @@ and effective color calculation so the existing layout cache can be reused. It
 does not own Flutter
 `EditableText`, app decoration, context menus, or visibility hiding; active
 paint suppression is frame output behavior and stops for a stale session.
+
+`RuntimeRoot` resolves a text element's effective family once at its handoff
+from stored facts: a stored family wins, otherwise the immutable
+`CanvasRuntimeConfig.defaultFontFamily` is used. Frame facts and the session's
+initial measured input carry that effective value to frame, cache, paint, and
+surface consumers. The stored nullable family remains the base/serialization
+value; a runtime default is neither persisted nor shared between runtimes.
 
 Composition root:
 

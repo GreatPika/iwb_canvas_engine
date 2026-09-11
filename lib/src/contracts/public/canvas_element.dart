@@ -5,6 +5,7 @@ import 'canvas_errors.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 import 'canvas_metadata.dart';
+import 'canvas_text_font_family_admission.dart';
 import 'canvas_transform_admission.dart';
 import 'canvas_value_validators.dart';
 
@@ -205,15 +206,7 @@ final class CanvasTextElement extends CanvasElement {
       path: 'text.fontSize',
       max: canvasMaxThickness,
     );
-    final fontFamily = this.fontFamily;
-    if (fontFamily != null &&
-        (fontFamily.isEmpty || fontFamily.length > canvasMaxFontFamilyLength)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.fieldMaxLength,
-        message: 'font family length is invalid.',
-        path: 'text.fontFamily',
-      );
-    }
+    validateCanvasTextFontFamily(fontFamily);
     final maxWidth = this.maxWidth;
     if (maxWidth != null) {
       validatePositiveDouble(

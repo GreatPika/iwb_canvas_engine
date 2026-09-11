@@ -270,6 +270,13 @@ LineRenderRow: start, end, thickness, color
 RectRenderRow: size, fillColor, strokeColor, strokeWidth
 ```
 
+For a text row, `fontFamily` is the effective frame value. `RuntimeRoot`
+resolves it from the stored element family or, only when that value is null,
+the immutable runtime default before row and initial-session measurement
+handoff. The same effective value therefore reaches `FrameTextLayoutMeasurer`,
+its cache key and painter, render records, and the editing overlay style. The
+stored nullable family is not replaced in committed document or codec data.
+
 ### 15.3 Selected supplement staging
 
 Algorithm:

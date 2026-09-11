@@ -12,6 +12,7 @@ import '../../support/runtime_with_document.dart';
 
 void main() {
   _testOverlayUsesEditableTextAndSessionGeometry();
+  _testOverlayUsesEffectiveRuntimeFontFamily();
   _testFormattingRetainsInputObjectsAndEditingValue();
   _testOverlayAnchorsLiveWidthToTextAlignment();
   _testOverlayAppliesSessionTransform();
@@ -26,6 +27,35 @@ void main() {
   _testDisposesListeners();
   _testOverlayDoesNotMeasureText();
 }
+
+// The stock editor receives the runtime-resolved frame style. Checking both
+// Flutter style carriers keeps a TextStyle-only fallback from appearing valid.
+void _testOverlayUsesEffectiveRuntimeFontFamily() {
+  testWidgets('overlay applies the effective family to text and strut styles', (
+    tester,
+  ) async {
+    final scenario = _OverlayScenario(
+      inlineEditOnDoubleTap: true,
+      config: const CanvasRuntimeConfig(
+        commitResolver: acceptCommit,
+        defaultFontFamily: _unit7OverlayRobotoFamily,
+      ),
+    );
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    expect(_editableTextFinder(), findsOneWidget);
+    _expectEffectiveEditorFamily(tester, _unit7OverlayRobotoFamily);
+  });
+}
+
+void _expectEffectiveEditorFamily(WidgetTester tester, String family) {
+  final editable = tester.widget<EditableText>(_editableTextFinder());
+  expect(editable.style.fontFamily, family);
+  expect(editable.strutStyle.fontFamily, family);
+}
+
+const _unit7OverlayRobotoFamily = 'Unit7OverlayRoboto';
 
 // The widget path keeps stale confirmation and explicit cancellation together
 // so the official overlay's terminal behavior remains visible end to end.

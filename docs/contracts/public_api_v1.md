@@ -525,6 +525,7 @@ final class CanvasRuntimeConfig {
     this.clearSelectionOnDrawModeEnter = false,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.eraserElementKinds,
+    this.defaultFontFamily,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -535,6 +536,7 @@ final class CanvasRuntimeConfig {
   final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final Set<CanvasElementKind>? eraserElementKinds;
+  final String? defaultFontFamily;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 ```
@@ -544,6 +546,13 @@ runtime. `null` preserves unrestricted v1 erasing, an empty set disables
 erasure, and a non-empty set is an exact allow-list of
 `CanvasElementKind` values. The runtime takes one unmodifiable copy of a
 supplied set; later caller mutation cannot change a running runtime's policy.
+
+`defaultFontFamily` is an immutable runtime-local fallback for a text element
+whose stored `fontFamily` is null. It uses the same nullable family validation
+as text element construction and updates. Resolution feeds frame layout, paint,
+and text-edit style inputs but does not write the fallback into an element,
+document, action, or Schema v1 payload. A stored non-null family wins; a null
+default preserves Flutter's fallback behavior.
 
 `commitResolver` is required. It receives exactly one fully-qualified request
 for every admitted changed Draw, Delete, Erase, Move, Rotate, Reflect, or Text

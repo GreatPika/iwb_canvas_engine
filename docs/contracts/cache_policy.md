@@ -36,7 +36,7 @@ Do not assume:
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
 | DocumentProjectionCache | Store | projectionRevision | document/projection change, including accepted sparse commits | 1 committed projection per revision | replace on projectionRevision | projection read hit/miss | no in pointer/paint/hit/edit commit |
-| TextLayoutCache | Frame | text/style/font/width/direction/lineHeight | committed text/style update or a live text/B/I/U draft measurement | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
+| TextLayoutCache | Frame | text/style/effective font/width/direction/lineHeight | committed text/style update or a live text/B/I/U draft measurement | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StaticBackgroundCache | Frame | backgroundRevision, gridRevision, gridStrokeWidth, viewCameraBucket, viewportRect, devicePixelRatio | view camera bucket/background/grid/captured grid style input | 1 latest picture for the current full static-background key | replace and dispose previous picture on key change or invalidation | picture count, rebuild count | yes bounded |

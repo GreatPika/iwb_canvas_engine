@@ -30,6 +30,7 @@ final class CanvasRuntimeConfig {
     this.clearSelectionOnDrawModeEnter = false,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.eraserElementKinds,
+    this.defaultFontFamily,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -39,6 +40,12 @@ final class CanvasRuntimeConfig {
   final bool clearSelectionOnDrawModeEnter;
   final CanvasCommitResolver commitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
+
+  /// Resolves nullable stored text families for this runtime's frame input.
+  ///
+  /// The runtime validates this value while materializing its immutable config
+  /// so `const CanvasRuntimeConfig` construction stays source-compatible.
+  final String? defaultFontFamily;
 
   /// Limits eraser reads to these element kinds; null admits every kind.
   ///

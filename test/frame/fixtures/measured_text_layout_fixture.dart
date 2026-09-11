@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,13 +7,20 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/measured_text_layout.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
+import 'package:iwb_canvas_engine/src/frame/main_frame_record_painter.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_entry.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+
+import '../../support/accept_commit.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testTextCacheEntryMetrics();
   _testLoadedFontStyleMetrics();
+  _testRuntimeDefaultFontReachesMeasuredAndPaintedFrame();
   _testTextAlignmentAnchors();
   _testBoundedMeasurementFailure();
   _testGeometryAndRenderRecords();
@@ -20,6 +28,164 @@ void main() {
   _testLiveMultilineMeasurement();
   _testUnmeasuredTextFailure();
   _testMeasurementOwnerBoundary();
+}
+
+// This crosses the Store-to-frame projection, measured cache and record painter
+// so a surface-only fallback or a suppressed empty paint cannot appear correct.
+// ignore: halstead-volume, source-lines-of-code
+void _testRuntimeDefaultFontReachesMeasuredAndPaintedFrame() {
+  testWidgets(
+    'runtime default family matches stored family through geometry, cache, and pixels',
+    (tester) async {
+      await tester.runAsync(_loadRobotoForStyleMetrics);
+      final inherited = _runtimeWithFontFamily(
+        storedFontFamily: null,
+        defaultFontFamily: _unit3RobotoFamily,
+      );
+      final explicit = _runtimeWithFontFamily(
+        storedFontFamily: _unit3RobotoFamily,
+        defaultFontFamily: null,
+      );
+      final fallback = _runtimeWithFontFamily(
+        storedFontFamily: null,
+        defaultFontFamily: null,
+      );
+      try {
+        final inheritedFacts = _runtimeTextFacts(inherited);
+        final explicitFacts = _runtimeTextFacts(explicit);
+        final fallbackFacts = _runtimeTextFacts(fallback);
+        final inheritedRow = _runtimeTextRow(inherited);
+        final explicitRow = _runtimeTextRow(explicit);
+        final fallbackRow = _runtimeTextRow(fallback);
+
+        expect(inheritedFacts.fontFamily, _unit3RobotoFamily);
+        expect(explicitFacts.fontFamily, _unit3RobotoFamily);
+        expect(fallbackFacts.fontFamily, isNull);
+        final inheritedLayout = inheritedFacts.measuredTextLayout;
+        final explicitLayout = explicitFacts.measuredTextLayout;
+        expect(inheritedLayout, isNotNull);
+        expect(explicitLayout, isNotNull);
+        expect(
+          inheritedLayout?.paintBoundsLocal,
+          explicitLayout?.paintBoundsLocal,
+        );
+        expect(inheritedRow.layoutInput.fontFamily, _unit3RobotoFamily);
+        expect(inheritedRow.layoutCacheKey.fontFamily, _unit3RobotoFamily);
+        expect(inheritedRow.layoutCacheKey, explicitRow.layoutCacheKey);
+        expect(fallbackRow.layoutCacheKey.fontFamily, isNull);
+
+        final pixels = await tester.runAsync(
+          () async => (
+            inherited: await _paintRuntimeTextPixels(inherited),
+            explicit: await _paintRuntimeTextPixels(explicit),
+            fallback: await _paintRuntimeTextPixels(fallback),
+          ),
+        );
+        if (pixels == null) {
+          throw StateError('Text paint did not complete.');
+        }
+        final inheritedPixels = pixels.inherited;
+        final explicitPixels = pixels.explicit;
+        final fallbackPixels = pixels.fallback;
+        expect(_nonTransparentPixels(inheritedPixels), greaterThan(0));
+        expect(inheritedPixels, orderedEquals(explicitPixels));
+        expect(fallbackPixels, isNot(orderedEquals(inheritedPixels)));
+      } finally {
+        inherited.dispose();
+        explicit.dispose();
+        fallback.dispose();
+      }
+    },
+  );
+}
+
+RuntimeRoot _runtimeWithFontFamily({
+  required String? storedFontFamily,
+  required String? defaultFontFamily,
+}) {
+  return runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('font-layer'),
+          elements: [
+            CanvasTextElement(
+              id: CanvasElementId('font-text'),
+              text: 'WMWMWM',
+              fontSize: 48,
+              color: const Color(0xFF111111),
+              textDirection: TextDirection.ltr,
+              fontFamily: storedFontFamily,
+              transform: CanvasTransform.translation(const Offset(100, 60)),
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: CanvasRuntimeConfig(
+      commitResolver: acceptCommit,
+      defaultFontFamily: defaultFontFamily,
+    ),
+  );
+}
+
+FrameElementFacts _runtimeTextFacts(RuntimeRoot root) {
+  final frame = root.frameFactsPort;
+  final handle = frame
+      .elementHandles(frame.frameRevisions.structuralRevision)
+      .single;
+  final facts = frame.resolveElement(handle);
+  if (facts == null) {
+    throw StateError('Expected current runtime text frame facts.');
+  }
+
+  return facts;
+}
+
+TextRenderRow _runtimeTextRow(RuntimeRoot root) {
+  final output = _runtimeTextFrame(root);
+  final record = output.ordinaryPlan.ordinaryRecords.single;
+  final row = record.row;
+  if (row is! TextRenderRow) {
+    throw StateError('Expected a text render row.');
+  }
+
+  return row;
+}
+
+Future<Uint8List> _paintRuntimeTextPixels(RuntimeRoot root) async {
+  final output = _runtimeTextFrame(root);
+  final record = output.ordinaryPlan.ordinaryRecords.single;
+  final recorder = ui.PictureRecorder();
+  paintMainFrameRecord(
+    ui.Canvas(recorder),
+    record,
+    output.assetBindings.assets,
+    output.renderPrimitiveSnapshot,
+  );
+  final image = await recorder.endRecording().toImage(200, 120);
+  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  image.dispose();
+  if (data == null) {
+    throw StateError('Text paint did not produce pixel data.');
+  }
+
+  return Uint8List.fromList(data.buffer.asUint8List());
+}
+
+int _nonTransparentPixels(Uint8List pixels) {
+  return [
+    for (var offset = 3; offset < pixels.length; offset += 4) pixels[offset],
+  ].where((alpha) => alpha > 0).length;
+}
+
+MainFramePaintOutput _runtimeTextFrame(RuntimeRoot root) {
+  return root.buildResourceFreeMainFrame(
+    viewportWorldBounds: const Rect.fromLTWH(0, 0, 200, 120),
+    devicePixelRatio: 1,
+    selectionStyle: CanvasSelectionStyle.defaultStyle,
+    gridStyle: CanvasGridStyle.defaultStyle,
+  );
 }
 
 void _testTextCacheEntryMetrics() {

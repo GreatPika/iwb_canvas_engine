@@ -452,7 +452,9 @@ frame-owned `FrameTextLayoutMeasurer` produces the local text bounds that
 geometry, spatial membership, frame painting, and live edit geometry consume,
 and those bounds stay stable across left, center, and right alignment changes.
 Its test-only loaded Roboto fixture proves normal, bold, and italic inputs use
-distinguishable real font metrics.
+distinguishable real font metrics. It also proves a runtime default produces
+the same geometry, layout key, and painted pixels as the corresponding stored
+family, while a null default preserves Flutter fallback.
 
 `test.runtime.text_editing_port` and `test.surface.text_editing_overlay` cover
 runtime-owned active text editing sessions, partial B/I/U drafts, stale/read-only admission, guarded
@@ -465,6 +467,10 @@ top edit edge, committed preservation of the same anchors after text size
 changes, formatting-only and mixed-draft geometry/anchor agreement with accepted
 frame facts, input controller/focus/selection/composing retention through
 formatting, and paint suppression without document visibility mutation. The runtime
+and surface fixtures prove the immutable per-runtime default family reaches
+session style and overlay `TextStyle`/`StrutStyle`, while explicit stored
+families win and the inherited family remains absent from stored and encoded
+Schema v1 text data. The runtime
 fixture also uses real external text/style, visibility, kind, relocation,
 removal, and same-ID replacement changes to prove stale draft identity/text/
 style/geometry retention, immutable retries, resolver/action/revision silence,

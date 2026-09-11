@@ -649,6 +649,7 @@ void _exerciseP2ContractSurface() {
         eraserThickness: 20,
       ),
       clearSelectionOnDrawModeEnter: true,
+      defaultFontFamily: 'Roboto',
       diagnosticPolicy: CanvasDiagnosticPolicy.verbose(
         maxPreviewLength: 128,
         maxListEntries: 8,
@@ -670,6 +671,7 @@ void _exerciseP2ContractSurface() {
     hasAnySelectedElementDeletable: true,
   );
   _use(defaultSelectionDeleteConfig.selectionDeletePolicy);
+  _use(defaultSelectionDeleteConfig.defaultFontFamily);
   _use(explicitSelectionDeleteConfig.selectionDeletePolicy);
   _use(deleteAvailability);
   _use(explicitDeleteAvailability.hasAnySelectedElementDeletable);
