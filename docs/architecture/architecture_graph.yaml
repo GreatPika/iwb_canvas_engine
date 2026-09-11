@@ -711,11 +711,10 @@ edges:
     sourceDocs:
       - path: docs/contracts/operation_matrix.md
     evidence:
-      - RuntimeRoot delivers accepted pencil, marker, and line terminal commit intents through EditKernel.prepareInteractionCommit and CanvasEdit.addElement.
+      - RuntimeRoot._prepareInsertion delivers accepted pencil, marker, and line terminal commit intents through EditKernel.prepareDeferredInteractionCommit and CanvasEdit.addElement.
     actual:
       delegationMembers:
-        - RuntimeRoot._prepareDrawStrokeCommit
-        - RuntimeRoot._prepareDrawLineCommit
+        - RuntimeRoot._prepareInsertion
       delegationTargets:
         - EditKernel
   - id: draw.tools.delegate_lifecycle_decisions

@@ -243,6 +243,21 @@ final class _PreparedElementRemoval {
   final CanvasDeleteCommitRequest request;
 }
 
+/// Runtime's closed insertion handoff for resolver-owned draw delivery.
+final class _PreparedInsertion {
+  const _PreparedInsertion({
+    required this.prepared,
+    required this.entry,
+    required this.layerIndex,
+    required this.createsLayer,
+  });
+
+  final PreparedInteractionCommit prepared;
+  final CanvasCommitElementEntry entry;
+  final int layerIndex;
+  final bool createsLayer;
+}
+
 // Common delivery has public callback seams for resource, frame, state, action,
 // and observer facts. This assert-only event supplies only their semantic
 // ordering and guard boundaries; sealed-collection work is observed at its
@@ -3499,18 +3514,24 @@ final class RuntimeRoot
   }) {
     try {
       final elementId = _store.readElementIdCandidate();
-      CanvasCommitElementEntry? entry;
-      int? layerIndex;
-      var createsLayer = false;
-      final prepared = _prepareDrawStrokeCommit(
-        intent: intent,
-        elementId: elementId,
-        timestampHintMs: timestampHintMs,
-        onPreparedEntry: (preparedEntry) {
-          entry = preparedEntry.entry;
-          layerIndex = preparedEntry.layerIndex;
-          createsLayer = preparedEntry.createsLayer;
-        },
+      final element = CanvasStrokeElement(
+        id: elementId,
+        points: intent.points,
+        color: intent.color,
+        thickness: intent.thickness,
+        opacity: intent.opacity,
+      );
+      final insertion = _prepareInsertion(
+        element: element,
+        actionIntent: DrawStrokeActionIntent(
+          elementId: elementId,
+          tool: intent.tool,
+          color: intent.color,
+          thickness: intent.thickness,
+          opacity: intent.opacity,
+          pointCount: intent.points.length,
+          timestampHintMs: timestampHintMs,
+        ),
       );
       assert(
         _recordRouteTemporalEvent(
@@ -3524,16 +3545,16 @@ final class RuntimeRoot
           documentSummary: _documentSummary(),
           documentRevision: _store.documentRevision,
           selectedElementIdsBefore: _selection.selectedElementIds,
-          entry: entry ?? (throw StateError('Draw lost its prepared entry.')),
+          entry: insertion.entry,
           tool: intent.tool,
-          layerIndex: layerIndex ?? 0,
-          createsLayer: createsLayer,
+          layerIndex: insertion.layerIndex,
+          createsLayer: insertion.createsLayer,
         ),
         isMove: false,
       );
       final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
       if (!resolution.accepted) {
-        prepared.discard();
+        insertion.prepared.discard();
         leaseAttempt.aborted(this);
         _cleanupDrawStroke(
           resolution.resolverFailed
@@ -3544,7 +3565,7 @@ final class RuntimeRoot
       }
       final CommitDeliveryResult applyResult;
       try {
-        applyResult = prepared.consume();
+        applyResult = insertion.prepared.consume();
       } on Object {
         leaseAttempt.aborted(this);
         rethrow;
@@ -3575,45 +3596,6 @@ final class RuntimeRoot
     }
   }
 
-  PreparedInteractionCommit _prepareDrawStrokeCommit({
-    required DrawStrokeCommitIntent intent,
-    required CanvasElementId elementId,
-    required int? timestampHintMs,
-    required void Function(
-      ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer}),
-    )
-    onPreparedEntry,
-  }) {
-    final element = CanvasStrokeElement(
-      id: elementId,
-      points: intent.points,
-      color: intent.color,
-      thickness: intent.thickness,
-      opacity: intent.opacity,
-    );
-
-    return _editKernel.prepareDeferredInteractionCommit(
-      (edit) {
-        edit.addElement(element);
-      },
-      augmentAcceptedPlan: (document, plan) {
-        final preparedEntry = _preparedDrawEntry(document, elementId);
-        onPreparedEntry(preparedEntry);
-        return plan.withActionIntents([
-          DrawStrokeActionIntent(
-            elementId: elementId,
-            tool: intent.tool,
-            color: intent.color,
-            thickness: intent.thickness,
-            opacity: intent.opacity,
-            pointCount: intent.points.length,
-            timestampHintMs: timestampHintMs,
-          ),
-        ]);
-      },
-    );
-  }
-
   InteractionCleanupOutcome _cleanupDrawStroke(
     PointerCleanupReason reason, {
     bool publish = true,
@@ -3628,14 +3610,41 @@ final class RuntimeRoot
     return outcome;
   }
 
+  _PreparedInsertion _prepareInsertion({
+    required CanvasElement element,
+    required CommitActionIntent actionIntent,
+    CanvasLayerId? layerId,
+    int? index,
+  }) {
+    late final ({
+      CanvasCommitElementEntry entry,
+      int layerIndex,
+      bool createsLayer,
+    })
+    preparedEntry;
+    final prepared = _editKernel.prepareDeferredInteractionCommit(
+      (edit) => edit.addElement(element, layerId: layerId, index: index),
+      augmentAcceptedPlan: (document, plan) {
+        preparedEntry = _preparedInsertionEntry(document, element.id);
+        return plan.withActionIntents([actionIntent]);
+      },
+    );
+    return _PreparedInsertion(
+      prepared: prepared,
+      entry: preparedEntry.entry,
+      layerIndex: preparedEntry.layerIndex,
+      createsLayer: preparedEntry.createsLayer,
+    );
+  }
+
   // Sparse lookup, placement validation, order validation, and public entry
   // projection are one candidate-placement proof and are safer read together.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer})
-  _preparedDrawEntry(AcceptedCommitDocument document, CanvasElementId id) {
+  _preparedInsertionEntry(AcceptedCommitDocument document, CanvasElementId id) {
     final sparse = switch (document) {
       AcceptedSparseStoreDocument(:final commit) => commit,
-      _ => throw StateError('Draw requires a sparse prepared candidate.'),
+      _ => throw StateError('Insertion requires a sparse prepared candidate.'),
     };
     final candidate = sparse.document;
     final element = candidate.readSparseTouchedElement(
@@ -3648,14 +3657,16 @@ final class RuntimeRoot
         location is! ElementLocationFacts ||
         location.kind != ElementLocationKind.content ||
         layerId == null) {
-      throw StateError('Draw candidate did not retain a content placement.');
+      throw StateError(
+        'Insertion candidate did not retain a content placement.',
+      );
     }
     final layerLocation = LayerTable.withReadScope(
       LayerTableReadScope.placement,
       () => candidate.elements.layerTable.locationFor(layerId),
     );
     if (layerLocation == null) {
-      throw StateError('Draw candidate is missing its target layer.');
+      throw StateError('Insertion candidate is missing its target layer.');
     }
     final orderToken = candidate.elements.frameOrderTokensById[id];
     final firstElementId = layerLocation.row.elementIds.isEmpty
@@ -3665,13 +3676,17 @@ final class RuntimeRoot
         ? null
         : candidate.elements.frameOrderTokensById[firstElementId];
     if (orderToken == null || firstToken == null) {
-      throw StateError('Draw candidate is missing its target element order.');
+      throw StateError(
+        'Insertion candidate is missing its target element order.',
+      );
     }
     final elementIndex = orderToken - firstToken;
     if (elementIndex < 0 ||
         elementIndex >= layerLocation.row.elementIds.length ||
         layerLocation.row.elementIds[elementIndex] != id) {
-      throw StateError('Draw candidate has an invalid target element order.');
+      throw StateError(
+        'Insertion candidate has an invalid target element order.',
+      );
     }
     return (
       entry: CanvasCommitElementEntry(
@@ -3686,25 +3701,32 @@ final class RuntimeRoot
 
   // The prepared entry, resolver, lease, route cleanup, and delivery stay in
   // one line lifecycle so cancellation and consume failure cannot diverge.
-  // ignore: halstead-volume, source-lines-of-code
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index
   void _deliverDrawLineCommit(
     DrawLineCommitIntent intent, {
     required int? timestampHintMs,
   }) {
     try {
       final elementId = _store.readElementIdCandidate();
-      CanvasCommitElementEntry? entry;
-      int? layerIndex;
-      var createsLayer = false;
-      final prepared = _prepareDrawLineCommit(
-        intent: intent,
-        elementId: elementId,
-        timestampHintMs: timestampHintMs,
-        onPreparedEntry: (preparedEntry) {
-          entry = preparedEntry.entry;
-          layerIndex = preparedEntry.layerIndex;
-          createsLayer = preparedEntry.createsLayer;
-        },
+      final element = CanvasLineElement(
+        id: elementId,
+        start: intent.startWorld,
+        end: intent.endWorld,
+        color: intent.color,
+        thickness: intent.thickness,
+        opacity: intent.opacity,
+      );
+      final insertion = _prepareInsertion(
+        element: element,
+        actionIntent: DrawLineActionIntent(
+          elementId: elementId,
+          color: intent.color,
+          thickness: intent.thickness,
+          opacity: intent.opacity,
+          startWorld: intent.startWorld,
+          endWorld: intent.endWorld,
+          timestampHintMs: timestampHintMs,
+        ),
       );
       assert(
         _recordRouteTemporalEvent(
@@ -3718,16 +3740,16 @@ final class RuntimeRoot
           documentSummary: _documentSummary(),
           documentRevision: _store.documentRevision,
           selectedElementIdsBefore: _selection.selectedElementIds,
-          entry: entry ?? (throw StateError('Draw lost its prepared entry.')),
+          entry: insertion.entry,
           tool: CanvasDrawTool.line,
-          layerIndex: layerIndex ?? 0,
-          createsLayer: createsLayer,
+          layerIndex: insertion.layerIndex,
+          createsLayer: insertion.createsLayer,
         ),
         isMove: false,
       );
       final leaseAttempt = _CommitLeaseAttempt(resolution.lease);
       if (!resolution.accepted) {
-        prepared.discard();
+        insertion.prepared.discard();
         leaseAttempt.aborted(this);
         _cleanupLineEndpoint(
           resolution.resolverFailed
@@ -3738,7 +3760,7 @@ final class RuntimeRoot
       }
       final CommitDeliveryResult applyResult;
       try {
-        applyResult = prepared.consume();
+        applyResult = insertion.prepared.consume();
       } on Object {
         leaseAttempt.aborted(this);
         rethrow;
@@ -3767,46 +3789,6 @@ final class RuntimeRoot
       _cleanupLineEndpoint(PointerCleanupReason.editFailure);
       rethrow;
     }
-  }
-
-  PreparedInteractionCommit _prepareDrawLineCommit({
-    required DrawLineCommitIntent intent,
-    required CanvasElementId elementId,
-    required int? timestampHintMs,
-    required void Function(
-      ({CanvasCommitElementEntry entry, int layerIndex, bool createsLayer}),
-    )
-    onPreparedEntry,
-  }) {
-    final element = CanvasLineElement(
-      id: elementId,
-      start: intent.startWorld,
-      end: intent.endWorld,
-      color: intent.color,
-      thickness: intent.thickness,
-      opacity: intent.opacity,
-    );
-
-    return _editKernel.prepareDeferredInteractionCommit(
-      (edit) {
-        edit.addElement(element);
-      },
-      augmentAcceptedPlan: (document, plan) {
-        final preparedEntry = _preparedDrawEntry(document, elementId);
-        onPreparedEntry(preparedEntry);
-        return plan.withActionIntents([
-          DrawLineActionIntent(
-            elementId: elementId,
-            color: intent.color,
-            thickness: intent.thickness,
-            opacity: intent.opacity,
-            startWorld: intent.startWorld,
-            endWorld: intent.endWorld,
-            timestampHintMs: timestampHintMs,
-          ),
-        ]);
-      },
-    );
   }
 
   InteractionCleanupOutcome _cleanupLineEndpoint(

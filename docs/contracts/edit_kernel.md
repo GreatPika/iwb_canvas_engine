@@ -228,10 +228,15 @@ public document membership from the current store. Sparse
 selection preparation retains the Store-owned prepared-commit stale check; a
 stale payload fails before every installer and leaves accepted state unchanged.
 For one-element stroke and line routes, RuntimeRoot supplies the Store's current
-non-mutating ID candidate to preparation. The accepted Store installer admits
-that element ID through its existing ledger; preparation rejection or a final
-no-op installs nothing and leaves the candidate available for the next explicit
-generation.
+non-mutating ID candidate, route-specific element, action intent, and optional
+existing add layer/index placement to one private prepared-insertion handoff.
+It invokes deferred `EditKernel` preparation once, projects the exact sparse entry,
+layer index, and operation-created-layer fact once from the accepted candidate,
+and seals the one route action before returning the already-closed prepared
+package and those facts to the route-owned resolver/delivery lifecycle. It does
+not resolve or install. The accepted Store installer admits that element ID
+through its existing ledger; preparation rejection or a final no-op installs
+nothing and leaves the candidate available for the next explicit generation.
 
 For direct sparse preparation, the Store keeps one private candidate over the
 existing family, descriptor, and structural working owners plus scalar working
