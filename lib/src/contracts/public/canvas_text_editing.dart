@@ -6,6 +6,36 @@ import 'canvas_actions.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 
+/// The terminal choice for an active text-editing session.
+enum CanvasTextEditFinishIntent {
+  /// Confirms the current runtime-owned draft.
+  commit,
+
+  /// Discards the current runtime-owned draft.
+  cancel,
+}
+
+/// The observable outcome of completing an active text-editing session.
+enum CanvasTextEditFinishResult {
+  /// A changed draft was installed.
+  committed,
+
+  /// A net-equal draft closed without document work.
+  unchanged,
+
+  /// The active draft was discarded.
+  cancelled,
+
+  /// The resolver refused the prepared draft, which remains retryable.
+  rejected,
+
+  /// The draft's captured existing-target guard no longer matches.
+  stale,
+
+  /// No active draft was available to complete.
+  noActiveSession,
+}
+
 @immutable
 /// Public API v1 declaration for [CanvasTextEditGeometry].
 final class CanvasTextEditGeometry {
@@ -172,6 +202,10 @@ abstract interface class CanvasTextEditingPort {
   // runtime.textEditing.setReadOnly(true) calls.
   // ignore: avoid_positional_boolean_parameters
   void setReadOnly(bool value);
+  CanvasTextEditFinishResult finishActive(
+    CanvasTextEditFinishIntent intent, {
+    int? timestampMs,
+  });
   void dismissActive();
 }
 

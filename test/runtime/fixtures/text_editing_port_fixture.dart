@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 // This one cohesive runtime fixture observes both the Store pair seam and its
 // existing committed-document preparation trace; a second fixture would hide
@@ -29,6 +30,8 @@ void main() {
   _testChangedTextListenerRunsAfterOuterDelivery();
   _testLateCloseListenerCanDisposeRuntime();
   _testChangedTextListenerFailureReportsAndContinuesDelivery();
+  _testTypedFinishReportsNoActiveSession();
+  _testDirectTerminalInputAndSharedValidation();
   _testSessionCommitDelegatesToCommandPath();
   _testCommitPreservesTextAlignmentAnchor();
   _testDirectCommandCommitClearsActiveSession();
@@ -50,6 +53,252 @@ void main() {
   _testFailedLoadPreservesActiveSession();
   _testDisposedRuntimeRejectsTextEditingPortOperations();
   _testDisposedRuntimeRejectsTextEditingSessionCallbacks();
+}
+
+// Direct command input must reach the terminal unchanged, while all committing
+// adapters validate before no-op closure or resolver work.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
+void _testDirectTerminalInputAndSharedValidation() {
+  test(
+    'direct command input does not publish a draft before terminal delivery',
+    () async {
+      CanvasTextEditCommitRequest? proposed;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            proposed = request as CanvasTextEditCommitRequest;
+
+            return acceptCommit(request);
+          },
+        ),
+      );
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('retained draft');
+        var notifications = 0;
+        void listener() {
+          notifications += 1;
+          if (session.isActive) {
+            session.updateText('listener replacement');
+            session.dismiss();
+          }
+        }
+
+        scenario.root.textEditing.activeSession.addListener(listener);
+        try {
+          expect(
+            scenario.root.commands.commitTextEdit(
+              request.requestId,
+              'command terminal input',
+              timestampMs: 82,
+            ),
+            isTrue,
+          );
+        } finally {
+          scenario.root.textEditing.activeSession.removeListener(listener);
+        }
+
+        expect(proposed?.after.text, 'command terminal input');
+        expect(_textValue(scenario.root), 'command terminal input');
+        expect(session.liveText, 'retained draft');
+        expect(notifications, 1);
+        expect(session.isActive, isFalse);
+        expect(scenario.actions, hasLength(1));
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+
+  test(
+    'session and port commits validate timestamps before no-op closure',
+    () async {
+      final scenario = _Scenario();
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(request),
+        );
+
+        expect(
+          () => session.commit(timestampMs: -1),
+          throwsA(isA<CanvasDataException>()),
+        );
+        expect(
+          () => scenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+            timestampMs: -2,
+          ),
+          throwsA(isA<CanvasDataException>()),
+        );
+        expect(session.isActive, isTrue);
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        _expectRequestFactsLive(scenario.root, request);
+        expect(_textValue(scenario.root), 'hello');
+        expect(scenario.actions, isEmpty);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
+}
+
+// The terminal outcome matrix keeps each independently observable session
+// lifecycle beside its shared public seam, which is clearer than scattering
+// setup and state assertions across test-only helpers.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testTypedFinishReportsNoActiveSession() {
+  test('typed finish reports an absent active session', () async {
+    final scenario = _Scenario();
+    try {
+      expect(
+        scenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.noActiveSession,
+      );
+      expect(_textValue(scenario.root), 'hello');
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('typed finish commits and closes a changed active draft', () async {
+    final scenario = _Scenario();
+    try {
+      final session = await _startTextSession(scenario);
+      session.updateText('typed finish');
+      final projections = <StoreAffectedElementProjection>[];
+      final work = <PreparedInteractionApplyWorkEvent>[];
+
+      CommitApplier.observePreparedInteractionWork(
+        work.add,
+        () => DocumentStoreKernel.observeAffectedElementProjection(
+          projections.add,
+          () => expect(
+            scenario.root.textEditing.finishActive(
+              CanvasTextEditFinishIntent.commit,
+              timestampMs: 81,
+            ),
+            CanvasTextEditFinishResult.committed,
+          ),
+        ),
+      );
+      expect(projections, hasLength(1));
+      expect(
+        work,
+        containsAllInOrder([
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.consumed,
+        ]),
+      );
+      expect(_textValue(scenario.root), 'typed finish');
+      expect(session.isActive, isFalse);
+      expect(scenario.actions, hasLength(1));
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('typed finish closes a net-equal draft as unchanged', () async {
+    var resolverCalls = 0;
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) {
+          resolverCalls += 1;
+          return const CanvasCommitCancel();
+        },
+      ),
+    );
+    try {
+      final session = await _startTextSession(scenario);
+
+      expect(
+        scenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.unchanged,
+      );
+      expect(_textValue(scenario.root), 'hello');
+      expect(session.isActive, isFalse);
+      expect(resolverCalls, 0);
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('typed finish cancels even a stale active draft', () async {
+    final scenario = _Scenario();
+    try {
+      final session = await _startTextSession(scenario);
+      session.updateText('discard this draft');
+      _makeTextRequestStale(scenario);
+
+      expect(
+        scenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.cancel,
+        ),
+        CanvasTextEditFinishResult.cancelled,
+      );
+      expect(_textValue(scenario.root), 'hello');
+      expect(session.isActive, isFalse);
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('typed finish keeps a resolver-rejected draft retryable', () async {
+    final scenario = _Scenario(
+      config: CanvasRuntimeConfig(
+        commitResolver: (_) => const CanvasCommitCancel(),
+      ),
+    );
+    try {
+      final session = await _startTextSession(scenario);
+      session.updateText('retryable');
+
+      expect(
+        scenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.rejected,
+      );
+      expect(_textValue(scenario.root), 'hello');
+      expect(session.isActive, isTrue);
+      expect(session.liveText, 'retryable');
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('typed finish retains a stale draft', () async {
+    final scenario = _Scenario();
+    try {
+      final session = await _startTextSession(scenario);
+      session.updateText('retained stale draft');
+      _makeTextRequestStale(scenario);
+
+      expect(
+        scenario.root.textEditing.finishActive(
+          CanvasTextEditFinishIntent.commit,
+        ),
+        CanvasTextEditFinishResult.stale,
+      );
+      expect(_textValue(scenario.root), 'hello');
+      expect(session.isActive, isTrue);
+      expect(session.liveText, 'retained stale draft');
+      expect(scenario.actions, isEmpty);
+    } finally {
+      await scenario.dispose();
+    }
+  });
 }
 
 void _testCandidateLookup() {
@@ -1012,6 +1261,10 @@ void _testDirectStaleCommandRetainsActiveSession() {
         expect(
           scenario.root.commands.commitTextEdit(request.requestId, 'stale'),
           isFalse,
+        );
+        expect(
+          scenario.root.interactionEngine.requestFactsFor(request.requestId),
+          isNull,
         );
 
         expect(_textValue(scenario.root), 'hello');

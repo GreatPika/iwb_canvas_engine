@@ -392,18 +392,22 @@ final class _CanvasTextEditingOverlayState
 
   void _commitSession() {
     final session = _session;
-    if (session == null || !session.isActive) {
+    if (session == null ||
+        !identical(widget.runtime.textEditing.activeSession.value, session) ||
+        !session.isActive) {
       return;
     }
-    session.commit();
+    widget.runtime.textEditing.finishActive(CanvasTextEditFinishIntent.commit);
   }
 
   void _dismissSession() {
     final session = _session;
-    if (session == null || !session.isActive) {
+    if (session == null ||
+        !identical(widget.runtime.textEditing.activeSession.value, session) ||
+        !session.isActive) {
       return;
     }
-    session.dismiss();
+    widget.runtime.textEditing.finishActive(CanvasTextEditFinishIntent.cancel);
   }
 
   Size _editorSizeFor(Size editSize) {

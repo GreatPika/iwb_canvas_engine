@@ -1512,22 +1512,43 @@ final class RuntimeRoot
     String newText, {
     int? timestampMs,
   }) {
+    return _textEditingPort.commitTextEdit(
+      requestId,
+      newText,
+      timestampMs: timestampMs,
+    );
+  }
+
+  // The compatible command and active-session adapters converge here before
+  // preparation so they cannot produce different terminal outcomes; keeping
+  // their ordered failure and delivery checks together is safer than splitting
+  // the terminal solely to lower a metric.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  CanvasTextEditFinishResult _finishTextEdit(
+    CanvasInteractionRequestId requestId,
+    String newText, {
+    required _RuntimeTextEditSessionState? completingSession,
+    int? timestampMs,
+  }) {
     ensureRuntimeMutationAllowed();
     _validateTextEditCommandInput(requestId, newText, timestampMs);
 
     final guard = _interactionEngine.textEditGuardDecision(requestId);
-    if (guard.kind != TextEditGuardDecisionKind.accepted) {
+    if (guard.kind != TextEditGuardDecisionKind.accepted ||
+        completingSession?.stale == true) {
       _textEditingPort.clearConsumedRequest(requestId);
 
-      return false;
+      return completingSession == null
+          ? CanvasTextEditFinishResult.rejected
+          : CanvasTextEditFinishResult.stale;
     }
     final targetElementId = guard.targetElementId as CanvasElementId;
     final previousText = guard.currentText as String;
     if (previousText == newText) {
       _interactionEngine.consumeTextEditRequest(requestId);
-      _textEditingPort.clearAcceptedRequest(requestId);
+      _textEditingPort.clearAcceptedSession(completingSession);
 
-      return true;
+      return CanvasTextEditFinishResult.unchanged;
     }
     final preparedText = _prepareTextEditCommit((
       requestId: requestId,
@@ -1536,7 +1557,7 @@ final class RuntimeRoot
       timestampMs: timestampMs,
     ));
     if (preparedText == null) {
-      return false;
+      return CanvasTextEditFinishResult.rejected;
     }
     final resolution = _resolveCommit(
       CanvasTextEditCommitRequest(
@@ -1552,7 +1573,7 @@ final class RuntimeRoot
     if (!resolution.accepted) {
       preparedText.prepared.discard();
       leaseAttempt.aborted(this);
-      return false;
+      return CanvasTextEditFinishResult.rejected;
     }
     final CommitDeliveryResult applyResult;
     try {
@@ -1562,8 +1583,8 @@ final class RuntimeRoot
       rethrow;
     }
     _interactionEngine.consumeTextEditRequest(requestId);
-    final didClearTextEditSuppression = _textEditingPort.clearAcceptedRequest(
-      requestId,
+    final didClearTextEditSuppression = _textEditingPort.clearAcceptedSession(
+      completingSession,
       publishState: false,
     );
     if (didClearTextEditSuppression) {
@@ -1576,7 +1597,7 @@ final class RuntimeRoot
       );
     }
 
-    return true;
+    return CanvasTextEditFinishResult.committed;
   }
 
   _PreparedTextEditCommit? _prepareTextEditCommit(TextEditPrepareInput input) {
@@ -4610,8 +4631,23 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
 
   @override
   void dismissActive() {
+    finishActive(CanvasTextEditFinishIntent.cancel);
+  }
+
+  @override
+  CanvasTextEditFinishResult finishActive(
+    CanvasTextEditFinishIntent intent, {
+    int? timestampMs,
+  }) {
     _ensurePublicOperationAllowed();
-    _dismissActiveWithoutGuard();
+    final state = _active;
+    if (state == null) {
+      _pruneExpiredCandidateStates();
+
+      return CanvasTextEditFinishResult.noActiveSession;
+    }
+
+    return _finishState(state, intent, timestampMs: timestampMs);
   }
 
   bool _dismissActiveWithoutGuard({
@@ -4681,12 +4717,11 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     }
   }
 
-  bool clearAcceptedRequest(
-    CanvasInteractionRequestId requestId, {
+  bool clearAcceptedSession(
+    _RuntimeTextEditSessionState? state, {
     bool publishState = true,
   }) {
-    final state = _active;
-    if (state != null && state.requestId == requestId) {
+    if (state != null && identical(_active, state)) {
       return _dismissActiveWithoutGuard(
         publishState: publishState,
         notifyActiveSession: publishState,
@@ -4695,6 +4730,25 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _pruneExpiredCandidateStates();
 
     return false;
+  }
+
+  bool commitTextEdit(
+    CanvasInteractionRequestId requestId,
+    String newText, {
+    int? timestampMs,
+  }) {
+    final state = _active;
+    final result = state != null && state.requestId == requestId
+        ? _finishCommandForState(state, newText, timestampMs: timestampMs)
+        : _root._finishTextEdit(
+            requestId,
+            newText,
+            completingSession: null,
+            timestampMs: timestampMs,
+          );
+
+    return result == CanvasTextEditFinishResult.committed ||
+        result == CanvasTextEditFinishResult.unchanged;
   }
 
   void clearConsumedRequest(CanvasInteractionRequestId requestId) {
@@ -4778,8 +4832,19 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
           return _isStale(state);
         },
         updateText: (text) => _updateText(state, text),
-        commit: ({timestampMs}) => _commit(state, timestampMs),
-        dismiss: () => _dismiss(state),
+        commit: ({timestampMs}) {
+          final result = _finishState(
+            state,
+            CanvasTextEditFinishIntent.commit,
+            timestampMs: timestampMs,
+          );
+
+          return result == CanvasTextEditFinishResult.committed ||
+              result == CanvasTextEditFinishResult.unchanged;
+        },
+        dismiss: () {
+          _finishState(state, CanvasTextEditFinishIntent.cancel);
+        },
       ),
     );
 
@@ -4874,29 +4939,40 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _activeSession.notifyLiveTextChanged();
   }
 
-  bool _commit(_RuntimeTextEditSessionState state, int? timestampMs) {
-    _ensurePublicOperationAllowed();
-    if (!identical(_active?.session, state.session)) {
-      return false;
-    }
-    final didCommit = _root.commitTextEdit(
-      state.requestId,
-      state.liveText,
+  CanvasTextEditFinishResult _finishCommandForState(
+    _RuntimeTextEditSessionState state,
+    String newText, {
+    int? timestampMs,
+  }) {
+    return _finishState(
+      state,
+      CanvasTextEditFinishIntent.commit,
+      terminalText: newText,
       timestampMs: timestampMs,
     );
-    if (!_root.isDisposed && didCommit) {
-      _dismiss(state);
-    }
-
-    return didCommit;
   }
 
-  void _dismiss(_RuntimeTextEditSessionState state) {
+  CanvasTextEditFinishResult _finishState(
+    _RuntimeTextEditSessionState state,
+    CanvasTextEditFinishIntent intent, {
+    String? terminalText,
+    int? timestampMs,
+  }) {
     _ensurePublicOperationAllowed();
-    if (!identical(_active?.session, state.session)) {
-      return;
+    if (!identical(_active, state)) {
+      return CanvasTextEditFinishResult.noActiveSession;
     }
-    _dismissActiveWithoutGuard();
+    if (intent == CanvasTextEditFinishIntent.cancel) {
+      _dismissActiveWithoutGuard();
+
+      return CanvasTextEditFinishResult.cancelled;
+    }
+    return _root._finishTextEdit(
+      state.requestId,
+      terminalText ?? state.liveText,
+      completingSession: state,
+      timestampMs: timestampMs,
+    );
   }
 
   CanvasTextEditGeometry _geometryFor(_RuntimeTextEditSessionState state) {

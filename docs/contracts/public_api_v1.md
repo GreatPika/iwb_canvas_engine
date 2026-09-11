@@ -1737,7 +1737,10 @@ Rules:
 - commitTextEdit treats documentRevision as an observation fact, not a stale
   guard, so unrelated document edits do not reject a still-current text edit;
 - commitTextEdit returns true, consumes the request id, and emits no document
-  revision, repaint, or action event when newText equals the current text;
+  revision, repaint, or action event when its effective text equals the current
+  text. A matching active session passes newText as the terminal candidate and
+  finishes through the same terminal without publishing a draft update; without
+  a matching active session, the command remains a guarded text-only update;
 - commitTextEdit changed-text commits run through EditKernel preparation, resolve
   exactly one `CanvasTextEditCommitRequest` from the retained complete before/after
   pair, and consume the request only after compatible acceptance, installation,
@@ -2737,8 +2740,9 @@ Context-action and text editing model:
   and must not mutate CanvasTextElement.isVisible, remove the element from hit
   or context membership, or change document visibility as a hide/show bridge;
 - CanvasTextEditSession.updateText updates live session text and live measured
-  geometry without committing document state; commit() delegates to the guarded
-  text command path and dismiss() exits without document or action effects;
+  geometry without committing document state. commit() delegates to the active
+  finish terminal and returns true only for committed or unchanged; dismiss()
+  delegates to cancellation and exits without document or action effects;
 - a session asks the InteractionEngine-owned non-consuming issued/current guard
   comparison for admission and staleness. If the captured epoch, kind,
   generation, elementRevision, or visible content eligibility is no longer
@@ -2758,8 +2762,11 @@ Context-action and text editing model:
   session has no dismissal notification or interaction revision; rejected,
   failed, and equal-text requests do not publish this window;
 - application commits request-originated text changes through
-  CanvasCommandPort.commitTextEdit(requestId, newText) or the active session
-  commit() helper;
+  CanvasCommandPort.commitTextEdit(requestId, newText), the active session
+  commit() helper, or CanvasTextEditingPort.finishActive. finishActive reports
+  committed, unchanged, cancelled, rejected, stale, or noActiveSession;
+  rejected keeps a retryable draft, stale retains its readable draft, and
+  cancellation closes even a stale draft without requiring a valid guard;
 - request facts are live and consumed/removed once rather than kept as durable
   registry state. A command terminal retires a known invalid request, but stale
   retention never recreates it; unknown and already-consumed ids are no-effect
@@ -2834,6 +2841,17 @@ final class CanvasTextEditStyle {
   final double? lineHeight;
 }
 
+enum CanvasTextEditFinishIntent { commit, cancel }
+
+enum CanvasTextEditFinishResult {
+  committed,
+  unchanged,
+  cancelled,
+  rejected,
+  stale,
+  noActiveSession,
+}
+
 final class CanvasTextEditSession {
   final CanvasElementId elementId;
   final CanvasInteractionRequestId requestId;
@@ -2864,6 +2882,10 @@ abstract interface class CanvasTextEditingPort {
     CanvasContextActionRequested request,
   );
   void setReadOnly(bool value);
+  CanvasTextEditFinishResult finishActive(
+    CanvasTextEditFinishIntent intent, {
+    int? timestampMs,
+  });
   void dismissActive();
 }
 
@@ -2897,6 +2919,13 @@ final class CanvasTextEditingOverlay extends StatefulWidget {
 // CanvasRuntime exposes:
 // CanvasTextEditingPort get textEditing;
 ```
+
+Port implementers add `finishActive`; existing callers may retain
+`CanvasTextEditSession.commit`, `CanvasTextEditSession.dismiss`, and
+`CanvasTextEditingPort.dismissActive`. Consumers that need the terminal outcome
+call `finishActive(CanvasTextEditFinishIntent.commit)` or `.cancel` and branch
+on the returned result. The root-barrel integration fixture compiles a concrete
+port implementation against this migration surface.
 
 ### 4.20 Unified commit confirmation
 

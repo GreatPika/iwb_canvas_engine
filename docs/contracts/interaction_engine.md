@@ -473,6 +473,12 @@ selection controls.
 
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
+An active session can instead finish through
+`CanvasTextEditingPort.finishActive(CanvasTextEditFinishIntent.commit)` or
+cancel through the same terminal. Session bool/void helpers, direct command
+completion with a matching active request, and the stock overlay are compatible
+adapters over that runtime terminal. Direct commands without a matching session
+remain guarded text-only updates.
 When there is no live `InteractionRequestRegistry` entry, a commitTextEdit
 request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private request-consumption effects.

@@ -276,7 +276,9 @@ may catch that rejection and still return its valid current decision. This does
 not change the ordinary edit rollback boundary before any accepted install.
 
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
-orchestrates the accepted result. For changed request-originated text,
+orchestrates the accepted result. For changed request-originated text, the
+typed `CanvasTextEditingPort.finishActive` terminal and its compatible command
+and session adapters use this same prepared package and delivery sequence.
 RuntimeRoot consumes the request, silently clears only a matching active session
 and its owned suppression/candidate state, and records the outer interaction
 revision before capture. It completes outer common delivery, releases its guard,

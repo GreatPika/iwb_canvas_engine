@@ -1135,6 +1135,13 @@ void _exerciseInlineTextEditingContractSurface(
   _use(textEditing.start);
   _use(textEditing.startFromContextAction);
   textEditing.setReadOnly(true);
+  _use(
+    textEditing.finishActive(
+      CanvasTextEditFinishIntent.commit,
+      timestampMs: 11,
+    ),
+  );
+  _use(CanvasTextEditFinishResult.values);
   _use(textEditing.dismissActive);
   _use(session?.geometry ?? geometry);
   _use(session?.style ?? style);

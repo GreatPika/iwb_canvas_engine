@@ -180,9 +180,54 @@ final class PublicIntegrationCompileFixture {
     });
   }
 
+  CanvasTextEditFinishResult exerciseTextEditingPortImplementation() {
+    final port = PublicIntegrationTextEditingPort();
+    port.setReadOnly(false);
+
+    return port.finishActive(CanvasTextEditFinishIntent.cancel);
+  }
+
   void dispose() {
     runtime.dispose();
   }
+}
+
+/// A root-barrel consumer implementation that migrates with port additions.
+final class PublicIntegrationTextEditingPort implements CanvasTextEditingPort {
+  @override
+  Never get activeSession => _compileOnly();
+
+  @override
+  bool get readOnly => false;
+
+  @override
+  void dismissActive() => _use(null);
+
+  @override
+  CanvasTextEditFinishResult finishActive(
+    CanvasTextEditFinishIntent intent, {
+    int? timestampMs,
+  }) {
+    _use((intent, timestampMs));
+
+    return CanvasTextEditFinishResult.noActiveSession;
+  }
+
+  @override
+  CanvasTextEditSession? sessionCandidateFor(
+    CanvasContextActionRequested request,
+  ) => null;
+
+  @override
+  void setReadOnly(bool value) => _use(value);
+
+  @override
+  CanvasTextEditSession? start(CanvasTextEditSession session) => session;
+
+  @override
+  CanvasTextEditSession? startFromContextAction(
+    CanvasContextActionRequested request,
+  ) => null;
 }
 
 final class PublicIntegrationResourceResolver

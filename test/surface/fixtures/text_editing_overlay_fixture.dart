@@ -17,10 +17,58 @@ void main() {
   _testReadOnlyPolicy();
   _testCameraPanRepositionsActiveEditor();
   _testCommitAndDismiss();
+  _testOverlayRetainsStaleDraftUntilCancellation();
   _testFocusLossCommit();
   _testMultilineGrowthAndMaxHeightPolicy();
   _testDisposesListeners();
   _testOverlayDoesNotMeasureText();
+}
+
+// The widget path keeps stale confirmation and explicit cancellation together
+// so the official overlay's terminal behavior remains visible end to end.
+// ignore: halstead-volume
+void _testOverlayRetainsStaleDraftUntilCancellation() {
+  testWidgets('overlay finishes a stale draft only when explicitly cancelled', (
+    tester,
+  ) async {
+    final scenario = _OverlayScenario(inlineEditOnDoubleTap: true);
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    final elementId = scenario.activeSession.elementId;
+    await tester.enterText(
+      find.byKey(canvasTextEditingOverlayEditableTextKey),
+      'overlay draft',
+    );
+    await tester.pump();
+
+    scenario.runtime.edits.edit(
+      (edit) => edit.updateElement(
+        CanvasTextElementUpdate(
+          id: elementId,
+          text: const CanvasFieldSet('external text'),
+        ),
+      ),
+    );
+    await tester.pump();
+    tester
+        .widget<EditableText>(_editableTextFinder())
+        .onEditingComplete
+        ?.call();
+    await tester.pump();
+
+    expect(_textElement(scenario.runtime).text, 'external text');
+    expect(scenario.activeSession.liveText, 'overlay draft');
+    expect(scenario.activeSession.isStale, isTrue);
+    expect(scenario.actions, isEmpty);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+
+    expect(scenario.runtime.textEditing.activeSession.value, isNull);
+    expect(_textElement(scenario.runtime).text, 'external text');
+    expect(scenario.actions, isEmpty);
+  });
 }
 
 void _testOverlayAnchorsLiveWidthToTextAlignment() {
