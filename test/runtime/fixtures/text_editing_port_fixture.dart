@@ -362,7 +362,11 @@ void _testNewTextAdmission() {
       final prospectiveConflictDocument = scenario.root.readDocument();
       expect(session.isStale, isTrue);
       session.updateText('must not mutate retained draft');
-      session.updateFormatting(isBold: false, isItalic: false, isUnderline: false);
+      session.updateFormatting(
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+      );
       expect(session.liveText, 'draft before prospective conflict');
       expect(session.style, prospectiveStyle);
       expect(session.geometry, prospectiveGeometry);
@@ -385,7 +389,11 @@ void _testNewTextAdmission() {
         ),
       );
       idSession.updateText('draft before occupied-id conflict');
-      idSession.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
+      idSession.updateFormatting(
+        isBold: true,
+        isItalic: true,
+        isUnderline: true,
+      );
       final idStyle = idSession.style;
       final idGeometry = idSession.geometry;
       scenario.root.edits.edit((edit) {
@@ -400,7 +408,11 @@ void _testNewTextAdmission() {
       final idConflictDocument = scenario.root.readDocument();
       expect(idSession.isStale, isTrue);
       idSession.updateText('must not mutate the occupied-id draft');
-      idSession.updateFormatting(isBold: false, isItalic: false, isUnderline: false);
+      idSession.updateFormatting(
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+      );
       expect(idSession.liveText, 'draft before occupied-id conflict');
       expect(idSession.style, idStyle);
       expect(idSession.geometry, idGeometry);
@@ -621,9 +633,9 @@ void _testNewTextAdmission() {
         expect(requests.single.layerIndex, appendOracle.layerIndex);
         expect(requests.single.entry.elementIndex, appendOracle.elementIndex);
         final appendDocument = scenario.root.readDocument();
-        final appendInstalled =
-            appendDocument.layers[appendOracle.layerIndex]
-                .elements[appendOracle.elementIndex];
+        final appendInstalled = appendDocument
+            .layers[appendOracle.layerIndex]
+            .elements[appendOracle.elementIndex];
         expect(appendInstalled.id, append.elementId);
 
         final numeric = _expectStartSuccess(
@@ -649,9 +661,9 @@ void _testNewTextAdmission() {
         expect(requests.last.layerIndex, numericOracle.layerIndex);
         expect(requests.last.entry.elementIndex, numericOracle.elementIndex);
         final numericDocument = scenario.root.readDocument();
-        final numericInstalled =
-            numericDocument.layers[numericOracle.layerIndex]
-                .elements[numericOracle.elementIndex];
+        final numericInstalled = numericDocument
+            .layers[numericOracle.layerIndex]
+            .elements[numericOracle.elementIndex];
         expect(numericInstalled.id, numeric.elementId);
         expect(
           scenario.root
@@ -1197,82 +1209,88 @@ TextRenderRow _textRenderRowFor(RuntimeRoot root) {
 // failure boundary, so keeping their assertions together is clearer.
 // ignore: halstead-volume
 void _testEmptyPolicyDeletionCloseFailureRemainsCommitted() {
-  test('deletion close notification failure cannot abort accepted deletion', () async {
-    final errors = <FlutterErrorDetails>[];
-    final previousErrorHandler = FlutterError.onError;
-    final lease = _TextCommitLease();
-    final scenario = _Scenario(
-      config: CanvasRuntimeConfig(
-        commitResolver: (_) => CanvasCommitAccept(lease: lease),
-      ),
-    );
-    void onClose() {
-      if (scenario.root.textEditing.activeSession.value == null) {
-        throw StateError('deletion close listener failed');
-      }
-    }
-
-    scenario.root.textEditing.activeSession.addListener(onClose);
-    FlutterError.onError = errors.add;
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  test(
+    'deletion close notification failure cannot abort accepted deletion',
+    () async {
+      final errors = <FlutterErrorDetails>[];
+      final previousErrorHandler = FlutterError.onError;
+      final lease = _TextCommitLease();
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (_) => CanvasCommitAccept(lease: lease),
         ),
       );
-      session.updateText(' ');
+      void onClose() {
+        if (scenario.root.textEditing.activeSession.value == null) {
+          throw StateError('deletion close listener failed');
+        }
+      }
 
-      expect(session.commit(), isTrue);
-      expect(_containsElement(scenario.root, _textId), isFalse);
-      expect(session.isActive, isFalse);
-      expect(lease.committedCalls, 1);
-      expect(lease.abortedCalls, 0);
-      expect(scenario.actions.single.type, CanvasActionType.deleteElements);
-      expect(errors.single.exception, isA<StateError>());
-    } finally {
-      FlutterError.onError = previousErrorHandler;
-      scenario.root.textEditing.activeSession.removeListener(onClose);
-      await scenario.dispose();
-    }
-  });
+      scenario.root.textEditing.activeSession.addListener(onClose);
+      FlutterError.onError = errors.add;
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        session.updateText(' ');
+
+        expect(session.commit(), isTrue);
+        expect(_containsElement(scenario.root, _textId), isFalse);
+        expect(session.isActive, isFalse);
+        expect(lease.committedCalls, 1);
+        expect(lease.abortedCalls, 0);
+        expect(scenario.actions.single.type, CanvasActionType.deleteElements);
+        expect(errors.single.exception, isA<StateError>());
+      } finally {
+        FlutterError.onError = previousErrorHandler;
+        scenario.root.textEditing.activeSession.removeListener(onClose);
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 // This pre-install failure keeps all retained-draft assertions at the one
 // request-construction seam instead of scattering partial snapshots.
 // ignore: halstead-volume
 void _testEmptyPolicyDeletionPreparationFailureRetainsDraft() {
-  test('deletion request preparation failure keeps original draft and state', () async {
-    final scenario = _Scenario();
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
-        ),
-      );
-      final failure = StateError('deletion request construction failed');
-      final beforeRevisions = scenario.root.state.value.revisions;
-      session.updateText('\n');
+  test(
+    'deletion request preparation failure keeps original draft and state',
+    () async {
+      final scenario = _Scenario();
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        final failure = StateError('deletion request construction failed');
+        final beforeRevisions = scenario.root.state.value.revisions;
+        session.updateText('\n');
 
-      RuntimeRoot.injectDeletionRequestPreparationFailure(
-        RuntimeDeletionRequestPreparationPhase.requestConstruction,
-        failure,
-        () => expect(session.commit, throwsA(same(failure))),
-      );
+        RuntimeRoot.injectDeletionRequestPreparationFailure(
+          RuntimeDeletionRequestPreparationPhase.requestConstruction,
+          failure,
+          () => expect(session.commit, throwsA(same(failure))),
+        );
 
-      expect(_containsElement(scenario.root, _textId), isTrue);
-      expect(scenario.root.state.value.revisions, beforeRevisions);
-      expect(session.liveText, '\n');
-      expect(scenario.root.textEditing.activeSession.value, same(session));
-      _expectRequestFactsLive(scenario.root, request);
-      expect(scenario.actions, isEmpty);
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        expect(_containsElement(scenario.root, _textId), isTrue);
+        expect(scenario.root.state.value.revisions, beforeRevisions);
+        expect(session.liveText, '\n');
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        _expectRequestFactsLive(scenario.root, request);
+        expect(scenario.actions, isEmpty);
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 // Resolver guard, accepted delivery, and close replacement are one causal
@@ -1304,7 +1322,9 @@ void _testEmptyPolicyDeletionDelivery() {
         },
       );
       final requests = <CanvasContextActionRequested>[];
-      final requestSubscription = root.contextActionRequests.listen(requests.add);
+      final requestSubscription = root.contextActionRequests.listen(
+        requests.add,
+      );
       final actionSubscription = root.actions.listen((_) {
         if (committing) trace.add('action');
       });
@@ -1394,54 +1414,56 @@ void _testEmptyPolicyDeletionDelivery() {
 // together so a lost draft cannot hide behind the retry result.
 // ignore: halstead-volume, source-lines-of-code
 void _testRejectedEmptyPolicyDeletionRetainsDraft() {
-  test('rejected empty deletion retains its draft and request for retry', () async {
-    var accept = false;
-    final scenario = _Scenario(
-      config: CanvasRuntimeConfig(
-        commitResolver: (request) => accept
-            ? acceptCommit(request)
-            : const CanvasCommitCancel(),
-      ),
-    );
-    try {
-      final request = await scenario.issueTextRequest();
-      final session = _expectSession(
-        scenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  test(
+    'rejected empty deletion retains its draft and request for retry',
+    () async {
+      var accept = false;
+      final scenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) =>
+              accept ? acceptCommit(request) : const CanvasCommitCancel(),
         ),
       );
-      final work = <PreparedInteractionApplyWorkEvent>[];
-      session.updateText('  ');
-
-      expect(
-        CommitApplier.observePreparedInteractionWork(
-          work.add,
-          () => scenario.root.textEditing.finishActive(
-            CanvasTextEditFinishIntent.commit,
+      try {
+        final request = await scenario.issueTextRequest();
+        final session = _expectSession(
+          scenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
           ),
-        ),
-        CanvasTextEditFinishResult.rejected,
-      );
-      expect(_containsElement(scenario.root, _textId), isTrue);
-      expect(session.liveText, '  ');
-      expect(scenario.root.textEditing.activeSession.value, same(session));
-      _expectRequestFactsLive(scenario.root, request);
-      expect(scenario.actions, isEmpty);
-      expect(work, [
-        PreparedInteractionApplyWorkEvent.prepared,
-        PreparedInteractionApplyWorkEvent.ownershipReleased,
-        PreparedInteractionApplyWorkEvent.discarded,
-      ]);
+        );
+        final work = <PreparedInteractionApplyWorkEvent>[];
+        session.updateText('  ');
 
-      accept = true;
-      expect(session.commit(), isTrue);
-      expect(_containsElement(scenario.root, _textId), isFalse);
-      expect(scenario.actions, hasLength(1));
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        expect(
+          CommitApplier.observePreparedInteractionWork(
+            work.add,
+            () => scenario.root.textEditing.finishActive(
+              CanvasTextEditFinishIntent.commit,
+            ),
+          ),
+          CanvasTextEditFinishResult.rejected,
+        );
+        expect(_containsElement(scenario.root, _textId), isTrue);
+        expect(session.liveText, '  ');
+        expect(scenario.root.textEditing.activeSession.value, same(session));
+        _expectRequestFactsLive(scenario.root, request);
+        expect(scenario.actions, isEmpty);
+        expect(work, [
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.ownershipReleased,
+          PreparedInteractionApplyWorkEvent.discarded,
+        ]);
+
+        accept = true;
+        expect(session.commit(), isTrue);
+        expect(_containsElement(scenario.root, _textId), isFalse);
+        expect(scenario.actions, hasLength(1));
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 }
 
 // Resolver exception and incompatible acceptance each retain a retryable draft
@@ -1450,192 +1472,233 @@ void _testRejectedEmptyPolicyDeletionRetainsDraft() {
 // either failure from its successful retry solely for a metric.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testEmptyPolicyDeletionResolverFailuresRetainDraft() {
-  test('deletion resolver exception and incompatible acceptance discard before install', () async {
-    var exceptionAcceptsRetry = false;
-    CanvasTextEditCommitRequest? exceptionRetryProposal;
-    final exceptionRetryLease = _TextCommitLease();
-    final exceptionScenario = _Scenario(
-      config: CanvasRuntimeConfig(
-        commitResolver: (request) {
-          if (!exceptionAcceptsRetry) {
-            throw StateError('deletion resolver failed');
-          }
-          exceptionRetryProposal = request as CanvasTextEditCommitRequest;
-          return CanvasCommitAccept(lease: exceptionRetryLease);
-        },
-      ),
-    );
-    try {
-      final request = await exceptionScenario.issueTextRequest();
-      final session = _expectSession(
-        exceptionScenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  test(
+    'deletion resolver exception and incompatible acceptance discard before install',
+    () async {
+      var exceptionAcceptsRetry = false;
+      CanvasTextEditCommitRequest? exceptionRetryProposal;
+      final exceptionRetryLease = _TextCommitLease();
+      final exceptionScenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            if (!exceptionAcceptsRetry) {
+              throw StateError('deletion resolver failed');
+            }
+            exceptionRetryProposal = request as CanvasTextEditCommitRequest;
+            return CanvasCommitAccept(lease: exceptionRetryLease);
+          },
         ),
       );
-      final original = _textElement(exceptionScenario.root);
-      final documentBeforeFailure = exceptionScenario.root.readDocument();
-      final revisionBeforeFailure =
-          exceptionScenario.root.state.value.revisions.document;
-      session.updateText(' \n');
-      session.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
-      final retainedText = session.liveText;
-      final retainedStyle = session.style;
-      final retainedGeometry = session.geometry;
+      try {
+        final request = await exceptionScenario.issueTextRequest();
+        final session = _expectSession(
+          exceptionScenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        final original = _textElement(exceptionScenario.root);
+        final documentBeforeFailure = exceptionScenario.root.readDocument();
+        final revisionBeforeFailure =
+            exceptionScenario.root.state.value.revisions.document;
+        session.updateText(' \n');
+        session.updateFormatting(
+          isBold: true,
+          isItalic: true,
+          isUnderline: true,
+        );
+        final retainedText = session.liveText;
+        final retainedStyle = session.style;
+        final retainedGeometry = session.geometry;
 
-      expect(
-        exceptionScenario.root.textEditing.finishActive(
-          CanvasTextEditFinishIntent.commit,
-        ),
-        CanvasTextEditFinishResult.rejected,
-      );
-      expect(_containsElement(exceptionScenario.root, _textId), isTrue);
-      expect(session.isActive, isTrue);
-      expect(session.isStale, isFalse);
-      expect(session.liveText, retainedText);
-      expect(session.style, retainedStyle);
-      expect(session.geometry, retainedGeometry);
-      expect(exceptionScenario.root.textEditing.activeSession.value, same(session));
-      _expectRequestFactsLive(exceptionScenario.root, request);
-      expect(exceptionScenario.root.readDocument(), same(documentBeforeFailure));
-      expect(
-        exceptionScenario.root.state.value.revisions.document,
-        revisionBeforeFailure,
-      );
-      expect(exceptionScenario.actions, isEmpty);
+        expect(
+          exceptionScenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+          CanvasTextEditFinishResult.rejected,
+        );
+        expect(_containsElement(exceptionScenario.root, _textId), isTrue);
+        expect(session.isActive, isTrue);
+        expect(session.isStale, isFalse);
+        expect(session.liveText, retainedText);
+        expect(session.style, retainedStyle);
+        expect(session.geometry, retainedGeometry);
+        expect(
+          exceptionScenario.root.textEditing.activeSession.value,
+          same(session),
+        );
+        _expectRequestFactsLive(exceptionScenario.root, request);
+        expect(
+          exceptionScenario.root.readDocument(),
+          same(documentBeforeFailure),
+        );
+        expect(
+          exceptionScenario.root.state.value.revisions.document,
+          revisionBeforeFailure,
+        );
+        expect(exceptionScenario.actions, isEmpty);
 
-      exceptionAcceptsRetry = true;
-      const retryText = 'retried after exception';
-      session.updateText(retryText);
-      expect(session.style, retainedStyle);
-      expect(
-        exceptionScenario.root.textEditing.finishActive(
-          CanvasTextEditFinishIntent.commit,
-        ),
-        CanvasTextEditFinishResult.committed,
-      );
-      final proposal = exceptionRetryProposal;
-      if (proposal == null) fail('Expected an exception retry text proposal.');
-      _expectCompleteTextElement(proposal.before, original);
-      expect(proposal.after.text, retryText);
-      expect(proposal.after.isBold, isTrue);
-      expect(proposal.after.isItalic, isTrue);
-      expect(proposal.after.isUnderline, isTrue);
-      _expectCompleteTextElement(_textElement(exceptionScenario.root), proposal.after);
-      expect(
-        exceptionScenario.root.state.value.revisions.document,
-        revisionBeforeFailure + 1,
-      );
-      expect(exceptionRetryLease.committedCalls, 1);
-      expect(exceptionRetryLease.abortedCalls, 0);
-      expect(exceptionScenario.actions, hasLength(1));
-      expect(exceptionScenario.actions.single.type, CanvasActionType.editText);
-      final exceptionAction =
-          exceptionScenario.actions.single.payload as CanvasTextEditActionPayload;
-      expect(exceptionAction.requestId, request.requestId);
-      expect(exceptionScenario.root.textEditing.activeSession.value, isNull);
-    } finally {
-      await exceptionScenario.dispose();
-    }
+        exceptionAcceptsRetry = true;
+        const retryText = 'retried after exception';
+        session.updateText(retryText);
+        expect(session.style, retainedStyle);
+        expect(
+          exceptionScenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+          CanvasTextEditFinishResult.committed,
+        );
+        final proposal = exceptionRetryProposal;
+        if (proposal == null) {
+          fail('Expected an exception retry text proposal.');
+        }
+        _expectCompleteTextElement(proposal.before, original);
+        expect(proposal.after.text, retryText);
+        expect(proposal.after.isBold, isTrue);
+        expect(proposal.after.isItalic, isTrue);
+        expect(proposal.after.isUnderline, isTrue);
+        _expectCompleteTextElement(
+          _textElement(exceptionScenario.root),
+          proposal.after,
+        );
+        expect(
+          exceptionScenario.root.state.value.revisions.document,
+          revisionBeforeFailure + 1,
+        );
+        expect(exceptionRetryLease.committedCalls, 1);
+        expect(exceptionRetryLease.abortedCalls, 0);
+        expect(exceptionScenario.actions, hasLength(1));
+        expect(
+          exceptionScenario.actions.single.type,
+          CanvasActionType.editText,
+        );
+        final exceptionAction =
+            exceptionScenario.actions.single.payload
+                as CanvasTextEditActionPayload;
+        expect(exceptionAction.requestId, request.requestId);
+        expect(exceptionScenario.root.textEditing.activeSession.value, isNull);
+      } finally {
+        await exceptionScenario.dispose();
+      }
 
-    var incompatibleAcceptsRetry = false;
-    CanvasTextEditCommitRequest? incompatibleRetryProposal;
-    final rejectedLease = _TextCommitLease();
-    final incompatibleRetryLease = _TextCommitLease();
-    final incompatibleScenario = _Scenario(
-      config: CanvasRuntimeConfig(
-        commitResolver: (request) {
-          if (!incompatibleAcceptsRetry) {
-            return CanvasMoveCommitAccept(
-              delta: const Offset(1, 0),
-              lease: rejectedLease,
-            );
-          }
-          incompatibleRetryProposal = request as CanvasTextEditCommitRequest;
-          return CanvasCommitAccept(lease: incompatibleRetryLease);
-        },
-      ),
-    );
-    try {
-      final request = await incompatibleScenario.issueTextRequest();
-      final session = _expectSession(
-        incompatibleScenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+      var incompatibleAcceptsRetry = false;
+      CanvasTextEditCommitRequest? incompatibleRetryProposal;
+      final rejectedLease = _TextCommitLease();
+      final incompatibleRetryLease = _TextCommitLease();
+      final incompatibleScenario = _Scenario(
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            if (!incompatibleAcceptsRetry) {
+              return CanvasMoveCommitAccept(
+                delta: const Offset(1, 0),
+                lease: rejectedLease,
+              );
+            }
+            incompatibleRetryProposal = request as CanvasTextEditCommitRequest;
+            return CanvasCommitAccept(lease: incompatibleRetryLease);
+          },
         ),
       );
-      final original = _textElement(incompatibleScenario.root);
-      final documentBeforeFailure = incompatibleScenario.root.readDocument();
-      final revisionBeforeFailure =
-          incompatibleScenario.root.state.value.revisions.document;
-      session.updateText(' \n');
-      session.updateFormatting(isBold: true, isItalic: true, isUnderline: true);
-      final retainedText = session.liveText;
-      final retainedStyle = session.style;
-      final retainedGeometry = session.geometry;
+      try {
+        final request = await incompatibleScenario.issueTextRequest();
+        final session = _expectSession(
+          incompatibleScenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        final original = _textElement(incompatibleScenario.root);
+        final documentBeforeFailure = incompatibleScenario.root.readDocument();
+        final revisionBeforeFailure =
+            incompatibleScenario.root.state.value.revisions.document;
+        session.updateText(' \n');
+        session.updateFormatting(
+          isBold: true,
+          isItalic: true,
+          isUnderline: true,
+        );
+        final retainedText = session.liveText;
+        final retainedStyle = session.style;
+        final retainedGeometry = session.geometry;
 
-      expect(
-        incompatibleScenario.root.textEditing.finishActive(
-          CanvasTextEditFinishIntent.commit,
-        ),
-        CanvasTextEditFinishResult.rejected,
-      );
-      expect(_containsElement(incompatibleScenario.root, _textId), isTrue);
-      expect(session.isActive, isTrue);
-      expect(session.isStale, isFalse);
-      expect(session.liveText, retainedText);
-      expect(session.style, retainedStyle);
-      expect(session.geometry, retainedGeometry);
-      expect(incompatibleScenario.root.textEditing.activeSession.value, same(session));
-      _expectRequestFactsLive(incompatibleScenario.root, request);
-      expect(incompatibleScenario.root.readDocument(), same(documentBeforeFailure));
-      expect(
-        incompatibleScenario.root.state.value.revisions.document,
-        revisionBeforeFailure,
-      );
-      expect(rejectedLease.committedCalls, 0);
-      expect(rejectedLease.abortedCalls, 1);
-      expect(incompatibleScenario.actions, isEmpty);
+        expect(
+          incompatibleScenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+          CanvasTextEditFinishResult.rejected,
+        );
+        expect(_containsElement(incompatibleScenario.root, _textId), isTrue);
+        expect(session.isActive, isTrue);
+        expect(session.isStale, isFalse);
+        expect(session.liveText, retainedText);
+        expect(session.style, retainedStyle);
+        expect(session.geometry, retainedGeometry);
+        expect(
+          incompatibleScenario.root.textEditing.activeSession.value,
+          same(session),
+        );
+        _expectRequestFactsLive(incompatibleScenario.root, request);
+        expect(
+          incompatibleScenario.root.readDocument(),
+          same(documentBeforeFailure),
+        );
+        expect(
+          incompatibleScenario.root.state.value.revisions.document,
+          revisionBeforeFailure,
+        );
+        expect(rejectedLease.committedCalls, 0);
+        expect(rejectedLease.abortedCalls, 1);
+        expect(incompatibleScenario.actions, isEmpty);
 
-      incompatibleAcceptsRetry = true;
-      const retryText = 'retried after incompatible acceptance';
-      session.updateText(retryText);
-      expect(session.style, retainedStyle);
-      expect(
-        incompatibleScenario.root.textEditing.finishActive(
-          CanvasTextEditFinishIntent.commit,
-        ),
-        CanvasTextEditFinishResult.committed,
-      );
-      final proposal = incompatibleRetryProposal;
-      if (proposal == null) fail('Expected an incompatible retry text proposal.');
-      _expectCompleteTextElement(proposal.before, original);
-      expect(proposal.after.text, retryText);
-      expect(proposal.after.isBold, isTrue);
-      expect(proposal.after.isItalic, isTrue);
-      expect(proposal.after.isUnderline, isTrue);
-      _expectCompleteTextElement(
-        _textElement(incompatibleScenario.root),
-        proposal.after,
-      );
-      expect(
-        incompatibleScenario.root.state.value.revisions.document,
-        revisionBeforeFailure + 1,
-      );
-      expect(rejectedLease.committedCalls, 0);
-      expect(rejectedLease.abortedCalls, 1);
-      expect(incompatibleRetryLease.committedCalls, 1);
-      expect(incompatibleRetryLease.abortedCalls, 0);
-      expect(incompatibleScenario.actions, hasLength(1));
-      expect(incompatibleScenario.actions.single.type, CanvasActionType.editText);
-      final incompatibleAction =
-          incompatibleScenario.actions.single.payload as CanvasTextEditActionPayload;
-      expect(incompatibleAction.requestId, request.requestId);
-      expect(incompatibleScenario.root.textEditing.activeSession.value, isNull);
-    } finally {
-      await incompatibleScenario.dispose();
-    }
-  });
+        incompatibleAcceptsRetry = true;
+        const retryText = 'retried after incompatible acceptance';
+        session.updateText(retryText);
+        expect(session.style, retainedStyle);
+        expect(
+          incompatibleScenario.root.textEditing.finishActive(
+            CanvasTextEditFinishIntent.commit,
+          ),
+          CanvasTextEditFinishResult.committed,
+        );
+        final proposal = incompatibleRetryProposal;
+        if (proposal == null) {
+          fail('Expected an incompatible retry text proposal.');
+        }
+        _expectCompleteTextElement(proposal.before, original);
+        expect(proposal.after.text, retryText);
+        expect(proposal.after.isBold, isTrue);
+        expect(proposal.after.isItalic, isTrue);
+        expect(proposal.after.isUnderline, isTrue);
+        _expectCompleteTextElement(
+          _textElement(incompatibleScenario.root),
+          proposal.after,
+        );
+        expect(
+          incompatibleScenario.root.state.value.revisions.document,
+          revisionBeforeFailure + 1,
+        );
+        expect(rejectedLease.committedCalls, 0);
+        expect(rejectedLease.abortedCalls, 1);
+        expect(incompatibleRetryLease.committedCalls, 1);
+        expect(incompatibleRetryLease.abortedCalls, 0);
+        expect(incompatibleScenario.actions, hasLength(1));
+        expect(
+          incompatibleScenario.actions.single.type,
+          CanvasActionType.editText,
+        );
+        final incompatibleAction =
+            incompatibleScenario.actions.single.payload
+                as CanvasTextEditActionPayload;
+        expect(incompatibleAction.requestId, request.requestId);
+        expect(
+          incompatibleScenario.root.textEditing.activeSession.value,
+          isNull,
+        );
+      } finally {
+        await incompatibleScenario.dispose();
+      }
+    },
+  );
 }
 
 // These public text-session witnesses keep independent deletion outcomes
@@ -1665,7 +1728,10 @@ void _testEmptyPolicyDeletion() {
             emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
           ),
         );
-        expect(session.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+        expect(
+          session.emptyTextBehavior,
+          CanvasTextEditEmptyTextBehavior.deleteElement,
+        );
         expect(
           whitespaceScenario.root.textEditing.sessionCandidateFor(
             request,
@@ -1673,7 +1739,10 @@ void _testEmptyPolicyDeletion() {
           ),
           same(session),
         );
-        expect(whitespaceScenario.root.textEditing.start(session), same(session));
+        expect(
+          whitespaceScenario.root.textEditing.start(session),
+          same(session),
+        );
         expect(
           whitespaceScenario.root.textEditing.startFromContextAction(
             request,
@@ -1736,41 +1805,44 @@ void _testEmptyPolicyDeletion() {
     },
   );
 
-  test('delete policy removes originally empty nondeletable text directly', () async {
-    CanvasDeleteCommitRequest? emptyProposal;
-    final emptyScenario = _Scenario(
-      document: _document(text: '', isDeletable: false),
-      config: CanvasRuntimeConfig(
-        commitResolver: (request) {
-          emptyProposal = request as CanvasDeleteCommitRequest;
-          return acceptCommit(request);
-        },
-      ),
-    );
-    try {
-      final request = await emptyScenario.issueTextRequest();
-      final session = _expectSession(
-        emptyScenario.root.textEditing.startFromContextAction(
-          request,
-          emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  test(
+    'delete policy removes originally empty nondeletable text directly',
+    () async {
+      CanvasDeleteCommitRequest? emptyProposal;
+      final emptyScenario = _Scenario(
+        document: _document(text: '', isDeletable: false),
+        config: CanvasRuntimeConfig(
+          commitResolver: (request) {
+            emptyProposal = request as CanvasDeleteCommitRequest;
+            return acceptCommit(request);
+          },
         ),
       );
-      final original = _textElement(emptyScenario.root);
+      try {
+        final request = await emptyScenario.issueTextRequest();
+        final session = _expectSession(
+          emptyScenario.root.textEditing.startFromContextAction(
+            request,
+            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+          ),
+        );
+        final original = _textElement(emptyScenario.root);
 
-      expect(session.commit(), isTrue);
+        expect(session.commit(), isTrue);
 
-      final proposal = emptyProposal;
-      if (proposal == null) fail('Expected an empty-text deletion proposal.');
-      _expectCompleteTextElement(
-        _asTextElement(proposal.entries.single.element),
-        original,
-      );
-      expect(proposal.entries.single.element.isDeletable, isFalse);
-      expect(_containsElement(emptyScenario.root, _textId), isFalse);
-    } finally {
-      await emptyScenario.dispose();
-    }
-  });
+        final proposal = emptyProposal;
+        if (proposal == null) fail('Expected an empty-text deletion proposal.');
+        _expectCompleteTextElement(
+          _asTextElement(proposal.entries.single.element),
+          original,
+        );
+        expect(proposal.entries.single.element.isDeletable, isFalse);
+        expect(_containsElement(emptyScenario.root, _textId), isFalse);
+      } finally {
+        await emptyScenario.dispose();
+      }
+    },
+  );
 
   test('empty text keeps its element by default', () async {
     CanvasCommitRequest? keepProposal;
@@ -2178,7 +2250,8 @@ void _testReadOnlyAdmission() {
       expect(
         await _observeAdmissionRefusal(
           scenario,
-          () => scenario.root.textEditing.startFromContextAction(readOnlyRequest),
+          () =>
+              scenario.root.textEditing.startFromContextAction(readOnlyRequest),
         ),
         isNull,
       );
@@ -2215,92 +2288,103 @@ void _testSingleActiveAdmission() {
 // slot policy with context candidates without fabricating a context event.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _testIdAdmission() {
-  test('ID admission returns typed outcomes and retains valid session policy', () async {
-    final scenario = _Scenario();
-    try {
-      final beforeDocument = scenario.root.readDocument();
-      final first = _expectStartSuccess(
-        _observeNoTextAdmissionWork(
-          scenario.root,
-          () => scenario.root.textEditing.startForElement(
-            _textId,
-            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
-          ),
-        ),
-      );
-      expect(scenario.requests, isEmpty);
-      expect(scenario.root.textEditing.activeSession.value, same(first));
-      expect(first.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
-      await Future<void>.delayed(Duration.zero);
-      expect(scenario.requests, isEmpty);
-      expect(scenario.actions, isEmpty);
-
-      first.updateText('ID-origin draft');
-      first.updateFormatting(isBold: true);
-      final repeated = _expectStartSuccess(
-        _observeNoTextAdmissionWork(
-          scenario.root,
-          () => scenario.root.textEditing.startForElement(_textId),
-        ),
-      );
-      expect(repeated, same(first));
-      expect(repeated.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
-      expect(repeated.liveText, 'ID-origin draft');
-      expect(repeated.style.isBold, isTrue);
-      expect(scenario.root.readDocument(), same(beforeDocument));
-      expect(scenario.requests, isEmpty);
-      await Future<void>.delayed(Duration.zero);
-      expect(scenario.requests, isEmpty);
-      expect(scenario.actions, isEmpty);
-      expect(first.commit(), isTrue);
-      expect(_textValue(scenario.root), 'ID-origin draft');
-
-      await _observeAdmissionRefusal(
-        scenario,
-        () => scenario.root.textEditing.startForElement(CanvasElementId('missing')),
-        reason: CanvasTextEditStartRefusalReason.notFound,
-      );
-      await _observeAdmissionRefusal(
-        scenario,
-        () => scenario.root.textEditing.startForElement(_rectId),
-        reason: CanvasTextEditStartRefusalReason.unsupportedType,
-      );
-
-      scenario.root.edits.edit(
-        (edit) => edit.updateElement(
-          CanvasTextElementUpdate(
-            id: _textId,
-            isVisible: const CanvasFieldSet(false),
-          ),
-        ),
-      );
-      await _observeAdmissionRefusal(
-        scenario,
-        () => scenario.root.textEditing.startForElement(_textId),
-        reason: CanvasTextEditStartRefusalReason.unavailable,
-      );
-
-      scenario.root.edits.edit((edit) {
-        edit.removeElement(_textId);
-        edit.addBackgroundElement(
-          CanvasTextElement(
-            id: _textId,
-            text: 'background text',
-            fontSize: 16,
-            color: const Color(0xFF111111),
-            textDirection: TextDirection.ltr,
+  test(
+    'ID admission returns typed outcomes and retains valid session policy',
+    () async {
+      final scenario = _Scenario();
+      try {
+        final beforeDocument = scenario.root.readDocument();
+        final first = _expectStartSuccess(
+          _observeNoTextAdmissionWork(
+            scenario.root,
+            () => scenario.root.textEditing.startForElement(
+              _textId,
+              emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+            ),
           ),
         );
-      });
-      await _observeAdmissionRefusal(
-        scenario,
-        () => scenario.root.textEditing.startForElement(_textId),
-        reason: CanvasTextEditStartRefusalReason.unavailable,
-      );
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        expect(scenario.requests, isEmpty);
+        expect(scenario.root.textEditing.activeSession.value, same(first));
+        expect(
+          first.emptyTextBehavior,
+          CanvasTextEditEmptyTextBehavior.deleteElement,
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(scenario.requests, isEmpty);
+        expect(scenario.actions, isEmpty);
+
+        first.updateText('ID-origin draft');
+        first.updateFormatting(isBold: true);
+        final repeated = _expectStartSuccess(
+          _observeNoTextAdmissionWork(
+            scenario.root,
+            () => scenario.root.textEditing.startForElement(_textId),
+          ),
+        );
+        expect(repeated, same(first));
+        expect(
+          repeated.emptyTextBehavior,
+          CanvasTextEditEmptyTextBehavior.deleteElement,
+        );
+        expect(repeated.liveText, 'ID-origin draft');
+        expect(repeated.style.isBold, isTrue);
+        expect(scenario.root.readDocument(), same(beforeDocument));
+        expect(scenario.requests, isEmpty);
+        await Future<void>.delayed(Duration.zero);
+        expect(scenario.requests, isEmpty);
+        expect(scenario.actions, isEmpty);
+        expect(first.commit(), isTrue);
+        expect(_textValue(scenario.root), 'ID-origin draft');
+
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startForElement(
+            CanvasElementId('missing'),
+          ),
+          reason: CanvasTextEditStartRefusalReason.notFound,
+        );
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startForElement(_rectId),
+          reason: CanvasTextEditStartRefusalReason.unsupportedType,
+        );
+
+        scenario.root.edits.edit(
+          (edit) => edit.updateElement(
+            CanvasTextElementUpdate(
+              id: _textId,
+              isVisible: const CanvasFieldSet(false),
+            ),
+          ),
+        );
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startForElement(_textId),
+          reason: CanvasTextEditStartRefusalReason.unavailable,
+        );
+
+        scenario.root.edits.edit((edit) {
+          edit.removeElement(_textId);
+          edit.addBackgroundElement(
+            CanvasTextElement(
+              id: _textId,
+              text: 'background text',
+              fontSize: 16,
+              color: const Color(0xFF111111),
+              textDirection: TextDirection.ltr,
+            ),
+          );
+        });
+        await _observeAdmissionRefusal(
+          scenario,
+          () => scenario.root.textEditing.startForElement(_textId),
+          reason: CanvasTextEditStartRefusalReason.unavailable,
+        );
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 
   test('ID admission retains stale and other active sessions', () async {
     final staleScenario = _Scenario();
@@ -2368,9 +2452,18 @@ void _testIdAdmission() {
         ),
       );
       final request = await scenario.issueTextRequest();
-      expect(scenario.root.textEditing.sessionCandidateFor(request), same(active));
-      expect(scenario.root.textEditing.startFromContextAction(request), same(active));
-      expect(active.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
+      expect(
+        scenario.root.textEditing.sessionCandidateFor(request),
+        same(active),
+      );
+      expect(
+        scenario.root.textEditing.startFromContextAction(request),
+        same(active),
+      );
+      expect(
+        active.emptyTextBehavior,
+        CanvasTextEditEmptyTextBehavior.deleteElement,
+      );
       await Future<void>.delayed(Duration.zero);
       expect(scenario.requests, isEmpty);
       expect(scenario.actions, isEmpty);
@@ -2380,38 +2473,44 @@ void _testIdAdmission() {
     }
   });
 
-  test('ID start reuses a valid context candidate and its captured policy', () async {
-    final scenario = _Scenario();
-    try {
-      final request = await scenario.issueTextRequest();
-      final candidate = _expectSession(
-        _observeNoTextAdmissionWork(
-          scenario.root,
-          () => scenario.root.textEditing.sessionCandidateFor(
-            request,
-            emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+  test(
+    'ID start reuses a valid context candidate and its captured policy',
+    () async {
+      final scenario = _Scenario();
+      try {
+        final request = await scenario.issueTextRequest();
+        final candidate = _expectSession(
+          _observeNoTextAdmissionWork(
+            scenario.root,
+            () => scenario.root.textEditing.sessionCandidateFor(
+              request,
+              emptyTextBehavior: CanvasTextEditEmptyTextBehavior.deleteElement,
+            ),
           ),
-        ),
-      );
-      final started = _expectStartSuccess(
-        _observeNoTextAdmissionWork(
-          scenario.root,
-          () => scenario.root.textEditing.startForElement(_textId),
-        ),
-      );
-      expect(started, same(candidate));
-      expect(started.requestId, request.requestId);
-      expect(started.emptyTextBehavior, CanvasTextEditEmptyTextBehavior.deleteElement);
-      await Future<void>.delayed(Duration.zero);
-      expect(scenario.requests, isEmpty);
-      expect(scenario.actions, isEmpty);
-      started.updateText('candidate ID commit');
-      expect(started.commit(), isTrue);
-      expect(_textValue(scenario.root), 'candidate ID commit');
-    } finally {
-      await scenario.dispose();
-    }
-  });
+        );
+        final started = _expectStartSuccess(
+          _observeNoTextAdmissionWork(
+            scenario.root,
+            () => scenario.root.textEditing.startForElement(_textId),
+          ),
+        );
+        expect(started, same(candidate));
+        expect(started.requestId, request.requestId);
+        expect(
+          started.emptyTextBehavior,
+          CanvasTextEditEmptyTextBehavior.deleteElement,
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(scenario.requests, isEmpty);
+        expect(scenario.actions, isEmpty);
+        started.updateText('candidate ID commit');
+        expect(started.commit(), isTrue);
+        expect(_textValue(scenario.root), 'candidate ID commit');
+      } finally {
+        await scenario.dispose();
+      }
+    },
+  );
 
   test('ID admission discards an expired inactive context candidate', () async {
     final scenario = _Scenario();
@@ -2953,8 +3052,7 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
       'style-only ${formatting.name} draft commits one complete text update',
       () async {
         final expectedIsBold = formatting.isBold ?? formatting.baseIsBold;
-        final expectedIsItalic =
-            formatting.isItalic ?? formatting.baseIsItalic;
+        final expectedIsItalic = formatting.isItalic ?? formatting.baseIsItalic;
         final expectedIsUnderline =
             formatting.isUnderline ?? formatting.baseIsUnderline;
         CanvasTextEditCommitRequest? proposal;
@@ -3036,10 +3134,7 @@ void _testFormattingDraftCommitsOneCompleteUpdate() {
           expect(projectedBefore.text, 'hello');
           expect(projectedBefore.isBold, formatting.baseIsBold);
           expect(projectedBefore.isItalic, formatting.baseIsItalic);
-          expect(
-            projectedBefore.isUnderline,
-            formatting.baseIsUnderline,
-          );
+          expect(projectedBefore.isUnderline, formatting.baseIsUnderline);
           expect(projectedAfter.text, 'hello');
           expect(projectedAfter.isBold, expectedIsBold);
           expect(projectedAfter.isItalic, expectedIsItalic);
@@ -3346,17 +3441,17 @@ void _expectAcceptedTextFrameMatchesDraftGeometry(
   );
   expect((
     elementId: record.id,
-      text: row.text,
-      isBold: row.isBold,
-      isItalic: row.isItalic,
-      isUnderline: row.isUnderline,
+    text: row.text,
+    isBold: row.isBold,
+    isItalic: row.isItalic,
+    isUnderline: row.isUnderline,
   ), expectedRow);
   expect((
     elementId: record.id,
-      text: row.layoutInput.text,
-      isBold: row.layoutInput.isBold,
-      isItalic: row.layoutInput.isItalic,
-      isUnderline: row.layoutInput.isUnderline,
+    text: row.layoutInput.text,
+    isBold: row.layoutInput.isBold,
+    isItalic: row.layoutInput.isItalic,
+    isUnderline: row.layoutInput.isUnderline,
   ), expectedRow);
 }
 
@@ -4493,7 +4588,8 @@ Future<T> _observeAdmissionRefusal<T>(
 }) async {
   final documentBefore = scenario.root.readDocument();
   final revisionsBefore = scenario.root.state.value.revisions;
-  final activeBefore = expectedActive ?? scenario.root.textEditing.activeSession.value;
+  final activeBefore =
+      expectedActive ?? scenario.root.textEditing.activeSession.value;
   final draftTextBefore = activeBefore?.liveText;
   final draftStyleBefore = activeBefore?.style;
   final actionCountBefore = scenario.actions.length;

@@ -33,48 +33,52 @@ void main() {
 /// Covers both closing paths together to observe the unchanged canvas state.
 // ignore: halstead-volume, reason: The mounted widget scenario must retain both close paths to observe unchanged canvas state.
 void _testOverlayClosesNewOriginDraftsWithoutInstallation() {
-  testWidgets('stock overlay cancels and empties a new draft without a placeholder', (
-    tester,
-  ) async {
-    final scenario = _OverlayScenario(inlineEditOnDoubleTap: false);
-    addTearDown(scenario.dispose);
-    await scenario.pump(tester);
-    final documentRevision = scenario.runtime.state.value.revisions.document;
-    final seed = CanvasTextElement(
-      id: CanvasElementId('overlay-new-text'),
-      revision: 4,
-      text: 'seed',
-      color: const Color(0xFF222244),
-      textDirection: TextDirection.ltr,
-      transform: CanvasTransform.translation(const Offset(24, 12)),
-    );
+  testWidgets(
+    'stock overlay cancels and empties a new draft without a placeholder',
+    (tester) async {
+      final scenario = _OverlayScenario(inlineEditOnDoubleTap: false);
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
+      final documentRevision = scenario.runtime.state.value.revisions.document;
+      final seed = CanvasTextElement(
+        id: CanvasElementId('overlay-new-text'),
+        revision: 4,
+        text: 'seed',
+        color: const Color(0xFF222244),
+        textDirection: TextDirection.ltr,
+        transform: CanvasTransform.translation(const Offset(24, 12)),
+      );
 
-    final admitted = scenario.runtime.textEditing.startNew(seed);
-    expect(admitted, isA<CanvasTextEditStartSuccess>());
-    await tester.pump();
-    expect(_editableTextFinder(), findsOneWidget);
-    expect(scenario.activeSession.origin, CanvasTextEditOrigin.newElement);
-    await tester.enterText(_editableTextFinder(), 'cancelled new text');
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pump();
-    expect(scenario.runtime.textEditing.activeSession.value, isNull);
-    expect(_containsElement(scenario.runtime, seed.id), isFalse);
-    expect(scenario.runtime.state.value.revisions.document, documentRevision);
-    expect(scenario.actions, isEmpty);
+      final admitted = scenario.runtime.textEditing.startNew(seed);
+      expect(admitted, isA<CanvasTextEditStartSuccess>());
+      await tester.pump();
+      expect(_editableTextFinder(), findsOneWidget);
+      expect(scenario.activeSession.origin, CanvasTextEditOrigin.newElement);
+      await tester.enterText(_editableTextFinder(), 'cancelled new text');
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(scenario.runtime.textEditing.activeSession.value, isNull);
+      expect(_containsElement(scenario.runtime, seed.id), isFalse);
+      expect(scenario.runtime.state.value.revisions.document, documentRevision);
+      expect(scenario.actions, isEmpty);
 
-    final empty = scenario.runtime.textEditing.startNew(seed);
-    expect(empty, isA<CanvasTextEditStartSuccess>());
-    await tester.pump();
-    await tester.enterText(_editableTextFinder(), ' \n ');
-    await tester.pump();
-    tester.widget<EditableText>(_editableTextFinder()).onEditingComplete?.call();
-    await tester.pump();
-    expect(scenario.runtime.textEditing.activeSession.value, isNull);
-    expect(_containsElement(scenario.runtime, seed.id), isFalse);
-    expect(scenario.runtime.state.value.revisions.document, documentRevision);
-    expect(scenario.actions, isEmpty);
-  });
+      final empty = scenario.runtime.textEditing.startNew(seed);
+      expect(empty, isA<CanvasTextEditStartSuccess>());
+      await tester.pump();
+      await tester.enterText(_editableTextFinder(), ' \n ');
+      await tester.pump();
+      tester
+          .widget<EditableText>(_editableTextFinder())
+          .onEditingComplete
+          ?.call();
+      await tester.pump();
+      expect(scenario.runtime.textEditing.activeSession.value, isNull);
+      expect(_containsElement(scenario.runtime, seed.id), isFalse);
+      expect(scenario.runtime.state.value.revisions.document, documentRevision);
+      expect(scenario.actions, isEmpty);
+    },
+  );
 }
 
 // The stock editor receives the runtime-resolved frame style. Checking both
